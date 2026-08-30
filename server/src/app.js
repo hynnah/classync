@@ -3,6 +3,7 @@ const express = require('express');
 const session = require('express-session');
 const config = require('./config/env');
 const { sessionStore } = require('./auth/sessionStore');
+const { requireLogin } = require('./auth/guard');
 
 function createApp() {
   const app = express();
@@ -26,6 +27,16 @@ function createApp() {
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', env: config.nodeEnv });
+  });
+
+  app.get('/api/me', requireLogin, (req, res) => {
+    res.json({
+      id: req.user.id,
+      email: req.user.email,
+      firstName: req.user.first_name,
+      lastName: req.user.last_name,
+      isAdmin: !!req.user.is_admin,
+    });
   });
 
   return app;
