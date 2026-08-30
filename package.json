@@ -16,7 +16,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
+    "dotenv": "^17.4.2",
     "express": "^4.19.2",
     "express-mysql-session": "^3.0.3",
     "express-session": "^1.19.0",
