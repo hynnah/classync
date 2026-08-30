@@ -1,0 +1,20 @@
+# Claude Design handoff bundle — kept on disk for local reference (the build
+# prompts in docs/CLASYNC_MASTER_PLAN.md §9 read these), never pushed to GitHub
+/DESIGN_HANDOFF.md
+/chats/
+/project/
+
+# Secrets — never committed
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# OS / editor cruft
+.DS_Store
+
+#docs files
+/docs/CLASYNC_MASTER_PLAN.md
+/docs/CHECKLIST_10_DAY.md

@@ -1,0 +1,93 @@
+:root {
+  /* Fonts */
+  --font-heading: 'Cormorant Garamond', serif;
+  --font-body: 'Jost', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* Base surfaces */
+  --color-bg: #f4efe4;
+  --color-bg-landing: #f6f1e6;
+  --color-bg-card: #fdfcf8;
+  --color-bg-panel: #f9f5ec;
+  --color-bg-app-shell-start: #f6f1e6;
+  --color-bg-app-shell-mid: #efe8da;
+  --color-bg-app-shell-end: #e8e0cf;
+
+  /* Text */
+  --color-text: #262521;
+  --color-text-muted: #4a4740;
+  --color-text-soft: #56534b;
+  --color-text-faint: #8b8579;
+  --color-text-faintest: #a09889;
+
+  /* Accent (gold) */
+  --color-accent: #b68235;
+  --color-accent-link: #a2732c;
+  --color-accent-link-hover: #8d6222;
+  --color-accent-hover-bg: #fdf7ec;
+  --color-selection-bg: #f0e2c8;
+
+  /* Secondary (sky blue-grey) */
+  --color-secondary-border: #c3d2d9;
+  --color-secondary-border-hover: #7f97a3;
+  --color-secondary-text: #4c5c63;
+
+  /* Dividers / borders */
+  --color-divider: #ded5c2;
+  --color-divider-soft: #ece5d6;
+  --color-cell-border: #f2ecdf;
+
+  /* item-type colors*/
+  --color-space-task: #e9ae3f;
+  --color-space-task-border: #c98f1f;
+  --color-space-task-tint: #fdf1d8;
+  --color-space-task-deep: #b07d24;
+
+  --color-space-event: #6fb6cf;
+  --color-space-event-border: #3d8aa5;
+  --color-space-event-tint: #e6f4f9;
+  --color-space-event-deep: #3d6b7e;
+
+  --color-personal: #9bba63;
+  --color-personal-border: #6d8a3c;
+  --color-personal-tint: #f0f6e2;
+  --color-personal-deep: #6d7a4c;
+
+  /* destructive (sign out) */
+  --color-danger-border: rgba(176, 48, 40, 0.5);
+  --color-danger-text: #a5382f;
+  --color-danger-hover-bg: rgba(176, 48, 40, 0.78);
+  --color-danger-hover-border: rgba(176, 48, 40, 0.82);
+  --color-danger-hover-text: #fdf6f2;
+
+  /* dark sections (privacy quote band, footer) */
+  --color-dark-bg: #211f1b;
+  --color-dark-text: #f2ece0;
+  --color-dark-muted: #8a7b5f;
+  --color-dark-muted-2: #8a8375;
+  --color-dark-label: #6f6959;
+  --color-dark-link: #d8d1c3;
+  --color-dark-link-hover: #f2ece0;
+
+  /* focus ring */
+  --focus-ring: 2px solid var(--color-accent);
+  --focus-ring-offset: 2px;
+
+  /*
+   * same single asset everywhere; the footer's "inverted" look is a CSS filter, not a
+   * separate light-color file. Values below are read directly off the live bundle, not estimated.
+   */
+  --mark-nav-size: 27px;          /* ~28x26 in the bundle, nav placement */
+  --mark-footer-size: 35px;       /* ~37x34, footer placement */
+  --mark-footer-filter: invert(1) brightness(1.06);
+  --mark-entrance-size: 77px;     /* ~80x74, sign-in/entrance placement */
+  --mark-entrance-opacity: 0.86;
+  --color-entrance-mark-bg: #fffdf9;
+  --radius-mark-container: 22px;
+
+  /* entrance (sign-in) page background — deeper/longer than the landing gradient,
+   * 4 stops instead of 3, stays blue-toned further down the page. */
+  --gradient-entrance-bg: linear-gradient(#d5e3ea 0px, #dde7ea 240px, #efe9dc 640px, #fbf8f1 1010px);
+
+  --color-entrance-wordmark: #3a352d;
+}

@@ -1,0 +1,28 @@
+{
+  "name": "classync",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Classync — a shared calendar for Spaces (tasks/events) and a private personal planner.",
+  "type": "commonjs",
+  "main": "server/src/app.js",
+  "scripts": {
+    "start": "node server/src/app.js",
+    "dev": "node --watch server/src/app.js",
+    "test": "jest",
+    "test:e2e": "playwright test",
+    "db:migrate": "node server/src/db/migrate.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mysql2": "^3.11.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
+  }
+}
