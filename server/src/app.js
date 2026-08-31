@@ -5,6 +5,7 @@ const config = require('./config/env');
 const { sessionStore } = require('./auth/sessionStore');
 const { requireLogin } = require('./auth/guard');
 const { mountTestBypass } = require('./auth/testBypass');
+const { authRouter } = require('./routes/auth.routes');
 
 function createApp() {
   const app = express();
@@ -21,10 +22,12 @@ function createApp() {
     cookie: {
       httpOnly: true,
       secure: config.nodeEnv === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 1000 * 60 * 60 * 24 * 7,
     },
   }));
+
+  app.use(authRouter);
 
   if (config.testAuthBypass) {
     mountTestBypass(app);

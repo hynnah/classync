@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classync — Sign in</title>
+<link rel="stylesheet" href="/styles/tokens.css">
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-landing);
+    font-family: var(--font-body);
+    color: var(--color-text);
+  }
+  main {
+    width: 380px;
+    max-width: 90vw;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  h1 {
+    font-family: var(--font-heading);
+    font-weight: 300;
+    font-size: 56px;
+    margin: 0;
+  }
+  #google-signin {
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-accent);
+    padding: 17px 20px;
+    cursor: pointer;
+  }
+  #google-signin:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  #google-signin:not(:disabled):hover {
+    background: var(--color-accent-hover-bg);
+  }
+  .age-confirm {
+    display: flex;
+    gap: 12px;
+    text-align: left;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+  .age-confirm input {
+    width: 14px;
+    height: 14px;
+    margin: 2px 0 0;
+    accent-color: var(--color-accent);
+    flex-shrink: 0;
+  }
+  .age-confirm small {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    color: var(--color-text-faint);
+    margin-top: 4px;
+  }
+  #signin-error {
+    color: var(--color-danger-text);
+    font-size: 12.5px;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Classync</h1>
+  <p>Together or on your own, everything belongs on the same calendar.</p>
+
+  <button id="google-signin" type="button" disabled>Continue with Google</button>
+
+  <label class="age-confirm" for="age-confirm">
+    <input type="checkbox" id="age-confirm">
+    <span>I am 13 years old or older.<small>Required once, on first sign-in</small></span>
+  </label>
+
+  <p id="signin-error" role="alert" hidden></p>
+</main>
+<script src="/js/entrance.js"></script>
+</body>
+</html>

@@ -20,6 +20,7 @@
     "express": "^4.19.2",
     "express-mysql-session": "^3.0.3",
     "express-session": "^1.19.0",
+    "googleapis": "^144.0.0",
     "mysql2": "^3.11.0"
   },
   "devDependencies": {

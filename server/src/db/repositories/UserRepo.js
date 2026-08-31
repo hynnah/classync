@@ -18,4 +18,23 @@ async function create({ googleSub, email, firstName, lastName }) {
   return findById(result.insertId);
 }
 
-module.exports = { UserRepo: { findByGoogleSub, findById, create } };
+async function upsertFromGoogle({ googleSub, email, firstName, lastName, ageConfirmed }) {
+  const existing = await findByGoogleSub(googleSub);
+  if (existing) {
+    if (existing.email !== email || existing.first_name !== firstName || existing.last_name !== lastName) {
+      await getPool().query(
+        'UPDATE users SET email = ?, first_name = ?, last_name = ? WHERE id = ?',
+        [email, firstName, lastName, existing.id]
+      );
+      return findById(existing.id);
+    }
+    return existing;
+  }
+  const [result] = await getPool().query(
+    'INSERT INTO users (google_sub, email, first_name, last_name, age_confirmed_at) VALUES (?, ?, ?, ?, ?)',
+    [googleSub, email, firstName, lastName, ageConfirmed ? new Date() : null]
+  );
+  return findById(result.insertId);
+}
+
+module.exports = { UserRepo: { findByGoogleSub, findById, create, upsertFromGoogle } };
