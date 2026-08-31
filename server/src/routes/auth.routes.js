@@ -48,7 +48,7 @@ router.get('/auth/google/callback', async (req, res) => {
       req.session.save(() => res.redirect('/'));
     });
   } catch (err) {
-    console.error('Google OAuth callback failed:', err);
+    console.error('Google OAuth callback failed:', err.message);
     res.status(500).send('Sign-in failed. Please try again.');
   }
 });

@@ -1,16 +1,20 @@
 const { UserRepo } = require('../db/repositories/UserRepo');
 
 async function requireLogin(req, res, next) {
-  if (!req.session || !req.session.userId) {
-    return res.status(401).json({ error: 'Not signed in.' });
+  try {
+    if (!req.session || !req.session.userId) {
+      return res.status(401).json({ error: 'Not signed in.' });
+    }
+    const user = await UserRepo.findById(req.session.userId);
+    if (!user || !user.is_active) {
+      req.session.destroy(() => {});
+      return res.status(401).json({ error: 'Session no longer valid.' });
+    }
+    req.user = user;
+    next();
+  } catch (err) {
+    next(err);
   }
-  const user = await UserRepo.findById(req.session.userId);
-  if (!user || !user.is_active) {
-    req.session.destroy(() => {});
-    return res.status(401).json({ error: 'Session no longer valid.' });
-  }
-  req.user = user;
-  next();
 }
 
 function requireRole(role) {
