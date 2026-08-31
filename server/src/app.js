@@ -4,6 +4,7 @@ const session = require('express-session');
 const config = require('./config/env');
 const { sessionStore } = require('./auth/sessionStore');
 const { requireLogin } = require('./auth/guard');
+const { mountTestBypass } = require('./auth/testBypass');
 
 function createApp() {
   const app = express();
@@ -24,6 +25,17 @@ function createApp() {
       maxAge: 1000 * 60 * 60 * 24 * 7,
     },
   }));
+
+  if (config.testAuthBypass) {
+    mountTestBypass(app);
+  }
+
+  app.post('/auth/logout', (req, res) => {
+    req.session.destroy(() => {
+      res.clearCookie('classync_sid');
+      res.json({ ok: true });
+    });
+  });
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', env: config.nodeEnv });
