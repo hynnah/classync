@@ -3,97 +3,135 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Classync — Sign in</title>
-<link rel="stylesheet" href="/styles/tokens.css">
-<style>
-  body {
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-bg-landing);
-    font-family: var(--font-body);
-    color: var(--color-text);
-  }
-  main {
-    width: 380px;
-    max-width: 90vw;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-  }
-  h1 {
-    font-family: var(--font-heading);
-    font-weight: 300;
-    font-size: 56px;
-    margin: 0;
-  }
-  #google-signin {
-    width: 100%;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--color-text);
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-accent);
-    padding: 17px 20px;
-    cursor: pointer;
-  }
-  #google-signin:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-  #google-signin:not(:disabled):hover {
-    background: var(--color-accent-hover-bg);
-  }
-  .age-confirm {
-    display: flex;
-    gap: 12px;
-    text-align: left;
-    font-size: 12.5px;
-    line-height: 1.6;
-    color: var(--color-text);
-    cursor: pointer;
-  }
-  .age-confirm input {
-    width: 14px;
-    height: 14px;
-    margin: 2px 0 0;
-    accent-color: var(--color-accent);
-    flex-shrink: 0;
-  }
-  .age-confirm small {
-    display: block;
-    font-family: var(--font-mono);
-    font-size: 9.5px;
-    letter-spacing: 0.06em;
-    color: var(--color-text-faint);
-    margin-top: 4px;
-  }
-  #signin-error {
-    color: var(--color-danger-text);
-    font-size: 12.5px;
-  }
-</style>
+<title>Classync — Together or on your own</title>
+<link rel="stylesheet" href="/styles/style.css">
 </head>
-<body>
-<main>
-  <h1>Classync</h1>
-  <p>Together or on your own, everything belongs on the same calendar.</p>
+<body class="page-landing">
 
-  <button id="google-signin" type="button" disabled>Continue with Google</button>
+<nav>
+  <div>
+    <span>Classync</span>
+    <span>Classic way to stay in sync</span>
+  </div>
+  <div>
+    <a href="#how">How it works</a>
+    <a href="#three">Spaces</a>
+    <a href="#planner">My Planner</a>
+    <a href="/signin.html">Sign in</a>
+  </div>
+</nav>
 
-  <label class="age-confirm" for="age-confirm">
-    <input type="checkbox" id="age-confirm">
-    <span>I am 13 years old or older.<small>Required once, on first sign-in</small></span>
-  </label>
+<header>
+  <div>
+    <div>Est. MMXXVI</div>
+    <h1>For the things you do in quiet, and the things you build together.</h1>
+  </div>
+  <p>Classync keeps a shared Space — a class, a team, a trip — beside a planner only you can see. Organizers assign; members see what is theirs; nothing personal ever crosses over.</p>
+  <div>
+    <a href="/firstrun.html">Create a Space</a>
+    <a href="/app">See the app</a>
+  </div>
+</header>
 
-  <p id="signin-error" role="alert" hidden></p>
-</main>
-<script src="/js/entrance.js"></script>
+<section id="three">
+  <div>
+    <span>01</span>
+    <h2>Three ways to keep time</h2>
+  </div>
+  <div>
+    <div>
+      <h3>A Space</h3>
+      <p>Any shared group, not only a class. Name it, share the six-character code, and you become its Organizer — the only person who can assign.</p>
+    </div>
+    <div>
+      <h3>Space tasks</h3>
+      <p>Assigned to named members or left open to everyone. Attachments, categories, and a due date that lands on one shared calendar.</p>
+    </div>
+    <div>
+      <h3>My Planner</h3>
+      <p>Yours alone, always there — whether or not you belong to a Space. No Organizer, in any Space, can see a single line of it.</p>
+    </div>
+  </div>
+</section>
+
+<section id="planner">
+  <div>02 · One view</div>
+  <h2>Everything on one grid, told apart by a stroke</h2>
+  <p>Gold for what a Space asks of you. Blue-grey for events. Warm grey for the private things. Month, week and day are the same calendar, read at three distances.</p>
+  <ul>
+    <li>Space task</li>
+    <li>Space event</li>
+    <li>Personal · private</li>
+  </ul>
+  <a href="/app">Open the calendar</a>
+</section>
+
+<section>
+  <div>On privacy</div>
+  <p>Your planner is yours. A Space only ever sees what a Space is given.</p>
+</section>
+
+<section id="how">
+  <div>
+    <span>03</span>
+    <h2>How it works</h2>
+  </div>
+  <div>
+    <span>01</span>
+    <span>Sign in with Google</span>
+    <span>No password to keep. Classync takes your name, email and avatar, and nothing else. Calendar sync is a separate step, later, if you want it.</span>
+  </div>
+  <div>
+    <span>02</span>
+    <span>Create, join, or stay solo</span>
+    <span>Create a Space and share its code. Enter someone else's code to join theirs. Or skip both and go straight to My Planner — you can change your mind at any time.</span>
+  </div>
+  <div>
+    <span>03</span>
+    <span>Read one calendar</span>
+    <span>Space tasks, Space events and your own private items sit on the same grid, told apart by colour. Members see what is assigned to them first, then what is open to everyone.</span>
+  </div>
+</section>
+
+<section>
+  <div>Begin</div>
+  <h2>Start with a Space, or start with yourself</h2>
+  <div>
+    <a href="/signin.html">Sign in with Google</a>
+    <a href="/continue-solo">Continue solo</a>
+  </div>
+</section>
+
+<footer>
+  <div>
+    <div>Classync</div>
+    <p>Classic way to stay in sync</p>
+  </div>
+  <div>
+    <div>
+      <span>Product</span>
+      <a href="#three">Spaces</a>
+      <a href="#planner">My Planner</a>
+      <a href="#how">How it works</a>
+    </div>
+    <div>
+      <span>Account</span>
+      <a href="/signin.html">Sign in</a>
+      <a href="/firstrun.html">Create a Space</a>
+      <a href="/app">Open the app</a>
+    </div>
+    <div>
+      <span>Legal</span>
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Support</a>
+    </div>
+  </div>
+  <div>
+    <span>© MMXXVI Classync</span>
+    <span>For ages 13 and over · Google sign-in only · No passwords stored</span>
+  </div>
+</footer>
+
 </body>
 </html>

@@ -1,0 +1,68 @@
+body {
+  margin: 0;
+}
+
+.page-landing nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+}
+
+.page-landing nav div {
+  display: flex;
+  gap: 16px;
+}
+
+.page-landing header {
+  padding: 48px 32px;
+}
+
+.page-landing header > div:first-child {
+  margin-bottom: 16px;
+}
+
+.page-landing header > div:last-child {
+  display: flex;
+  gap: 12px;
+}
+
+.page-landing section {
+  padding: 32px;
+}
+
+#three > div:last-child {
+  display: flex;
+  gap: 32px;
+}
+
+#three > div:last-child > div {
+  flex: 1;
+}
+
+#planner ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 16px;
+}
+
+.page-landing section:last-of-type > div:last-child {
+  display: flex;
+  gap: 12px;
+}
+
+.page-landing footer {
+  padding: 48px 32px;
+}
+
+.page-landing footer > div:nth-child(2) {
+  display: flex;
+  gap: 48px;
+  margin: 24px 0;
+}
+
+.page-landing footer > div:last-child {
+  display: flex;
+  justify-content: space-between;
+}
