@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classync — Get started</title>
+<link rel="stylesheet" href="/styles/style.css">
+</head>
+<body class="page-firstrun">
+
+<header>
+  <span>Classync</span>
+  <span>
+    <span id="user-initials"></span>
+    <span id="user-name">Loading…</span>
+  </span>
+</header>
+
+<main>
+  <div id="welcome-line">Welcome</div>
+  <h1>How do you want to start?</h1>
+  <p>You can change your mind at any time — create more Spaces, join others, and keep your own planner alongside all of them.</p>
+
+  <div>
+    <div>
+      <span>Create a Space</span>
+      <p>Name it and you get a six-character join code to share. You become its Organizer.</p>
+      <div>
+        <div>Space name</div>
+        <input placeholder="e.g. Physics 11 — Ampere" disabled>
+      </div>
+      <button type="button" disabled>Create Space</button>
+      <p>Arrives in a later build day</p>
+    </div>
+
+    <div>
+      <span>Join a Space</span>
+      <p>Enter the code the Organizer gave you. You see only what that Space shares.</p>
+      <div>
+        <div>Space code</div>
+        <input placeholder="XXXXXX" disabled>
+      </div>
+      <button type="button" disabled>Join Space</button>
+      <p>Arrives in a later build day</p>
+    </div>
+
+    <div>
+      <span>Continue solo</span>
+      <p>Go straight to your planner. Personal tasks are private — no Organizer can ever see them.</p>
+      <a href="/continue-solo">Open My Planner</a>
+    </div>
+  </div>
+</main>
+
+<script src="/js/lib/escape.js" type="module"></script>
+<script type="module">
+  import { escapeHtml } from '/js/lib/escape.js';
+
+  const res = await fetch('/api/me');
+  if (res.status === 401) {
+    window.location.href = '/signin.html?next=firstrun';
+  } else if (res.ok) {
+    const me = await res.json();
+    const name = escapeHtml(me.firstName || me.email);
+    const initials = (me.firstName?.[0] || me.email[0] || '?').toUpperCase();
+    document.getElementById('user-name').innerHTML = name;
+    document.getElementById('user-initials').textContent = initials;
+    document.getElementById('welcome-line').innerHTML = `Welcome, ${name}`;
+  }
+</script>
+</body>
+</html>
