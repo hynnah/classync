@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classync — App</title>
+<link rel="stylesheet" href="/styles/style.css">
+</head>
+<body class="page-app">
+
+<header>
+  <span>Classync</span>
+  <div>
+    <span id="user-initials"></span>
+    <span id="user-name">Loading…</span>
+    <button id="sign-out" type="button">Sign out</button>
+  </div>
+</header>
+
+<main>
+  <div>
+    <div>You're in</div>
+    <h1>The calendar arrives next</h1>
+    <p>Sign-in, the age-confirmation gate, and first-run routing are all live and working. The real shared calendar, Spaces, and My Planner are built in the days ahead.</p>
+  </div>
+</main>
+
+<script src="/js/lib/escape.js" type="module"></script>
+<script type="module">
+  import { escapeHtml } from '/js/lib/escape.js';
+
+  const res = await fetch('/api/me');
+  if (res.status === 401) {
+    window.location.href = '/signin.html?next=app';
+  } else if (res.ok) {
+    const me = await res.json();
+    document.getElementById('user-name').innerHTML = escapeHtml(me.firstName || me.email);
+    document.getElementById('user-initials').textContent = (me.firstName?.[0] || me.email[0] || '?').toUpperCase();
+  }
+
+  document.getElementById('sign-out').addEventListener('click', async () => {
+    await fetch('/auth/logout', { method: 'POST' });
+    window.location.href = '/';
+  });
+</script>
+</body>
+</html>

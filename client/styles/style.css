@@ -139,3 +139,29 @@ body {
   flex-direction: column;
   gap: 8px;
 }
+
+.page-app header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+}
+
+.page-app header > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-app main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  padding: 32px;
+  text-align: center;
+}
+
+.page-app main > div {
+  max-width: 500px;
+}
