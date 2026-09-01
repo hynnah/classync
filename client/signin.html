@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classync — Sign in</title>
+<link rel="stylesheet" href="/styles/style.css">
+</head>
+<body class="page-signin">
+
+<header>
+  <a href="/">← Back</a>
+  <span>Classic way to stay in sync</span>
+  <span>Fol. 01</span>
+</header>
+
+<main>
+  <div>
+    <div>Est. MMXXVI · Entrance</div>
+    <h1>Classync</h1>
+    <p>Together or on your own, everything belongs on the same calendar.</p>
+
+    <div>
+      <button id="google-signin" type="button" disabled>Continue with Google</button>
+
+      <label for="age-confirm">
+        <input type="checkbox" id="age-confirm">
+        <span>I am 13 years old or older.<small>Required once, on first sign-in</small></span>
+      </label>
+
+      <p>Signing in grants Classync your name, email and avatar only. Google Calendar is a separate, optional step you can take later in Settings.</p>
+
+      <p id="signin-error" role="alert" hidden></p>
+    </div>
+  </div>
+
+  <div>
+    <div>
+      <div>01</div>
+      <div>Solo works on its own. You never have to join anything.</div>
+    </div>
+    <div>
+      <div>02</div>
+      <div>Spaces when you need them. A class, a team, a trip.</div>
+    </div>
+    <div>
+      <div>03</div>
+      <div>No passwords stored. Google handles sign-in.</div>
+    </div>
+  </div>
+</main>
+
+<script src="/js/entrance.js"></script>
+</body>
+</html>
