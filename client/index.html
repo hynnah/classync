@@ -4,134 +4,211 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Classync — Classic way to stay in sync</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=IBM+Plex+Mono:wght@400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/tokens.css">
 <link rel="stylesheet" href="/styles/style.css">
 </head>
 <body class="page-landing">
 
-<nav>
-  <div>
-    <span>Classync</span>
-    <span>Classic way to stay in sync</span>
-  </div>
-  <div>
-    <a href="#how">How it works</a>
-    <a href="#three">Spaces</a>
-    <a href="#planner">My Planner</a>
-    <a href="/signin.html">Sign in</a>
-  </div>
-</nav>
+<div class="bg-gradient drift-layer" aria-hidden="true">
+  <img class="bg-drift-1" src="/assets/clouds.png" alt="">
+  <img class="bg-drift-2" src="/assets/clouds.png" alt="">
+  <img class="bg-drift-3" src="/assets/clouds.png" alt="">
+  <img class="bg-mountains" src="/assets/mountains.png" alt="">
+</div>
 
-<header>
-  <div>
-    <div>Est. MMXXVI</div>
-    <h1>For the things you do in quiet, and the things you build together.</h1>
-  </div>
-  <p>Classync is a shared task and calendar planner for groups. Create a Space for a class, study group, project team, trip, or anything else you’re planning together. Organizers can assign tasks to specific members, while everyone can still keep their own private planner.</p>
-  <div>
-    <a href="/firstrun.html">Create a Space</a>
-    <a href="/app">See the app</a>
-  </div>
-</header>
-
-<section id="three">
-  <div>
-    <span>01</span>
-    <h2>Everything you need to stay on track</h2>
-  </div>
-  <div>
-    <div>
-      <h3>A Space</h3>
-      <p>Create a shared Space for your group and invite others using a six-character code. The person who creates it becomes the Organizer and can manage the Space and assign tasks.</p>
+<div class="content">
+  <nav>
+    <div class="nav-brand">
+      <img class="mark mark--nav" src="/assets/classync-mark.png" alt="Classync">
+      <span class="wordmark">Classync</span>
+      <span class="tagline">Classic way to stay in sync</span>
     </div>
     <div>
-      <h3>Space tasks</h3>
-      <p>Create tasks for the whole Space or assign them to specific members. Add a category, description, and due date, then see everything on the shared calendar.</p>
+      <a class="plain" href="#how">How it works</a>
+      <a class="plain" href="#three">Spaces</a>
+      <a class="plain" href="#planner">My Planner</a>
+      <a class="btn-primary" href="/signin.html">Sign in</a>
     </div>
-    <div>
-      <h3>My Planner</h3>
-      <p>Keep your own personal tasks separate from the Space. These are only visible to you and stay available even if you are not part of a Space.</p>
+  </nav>
+
+  <header>
+    <img class="hero-magnolia" src="/assets/magnolia.png" alt="">
+    <div class="hero-copy">
+      <div class="eyebrow">Est. MMXXVI</div>
+      <h1>For the things you do in quiet, and the things you build together.</h1>
     </div>
-  </div>
-</section>
-
-<section id="planner">
-  <div>02 · One view</div>
-  <h2>See everything on one calendar</h2>
-  <p>Space tasks, Space events, and your personal tasks can all appear on the same calendar. Each one is shown differently so you can quickly tell what belongs to your group and what is just for you.</p>
-  <ul>
-    <li>Space task</li>
-    <li>Space event</li>
-    <li>Personal · private</li>
-  </ul>
-  <a href="/app">Open the calendar</a>
-</section>
-
-<section>
-  <div>On privacy</div>
-  <p>Your planner is yours. A Space only ever sees what a Space is given.</p>
-</section>
-
-<section id="how">
-  <div>
-    <span>03</span>
-    <h2>How it works</h2>
-  </div>
-  <div>
-    <span>01</span>
-    <span>Sign in with Google</span>
-    <span>No password to keep. Classync takes your name, email and avatar, and nothing else. Calendar sync is a separate step, later, if you want it.</span>
-  </div>
-  <div>
-    <span>02</span>
-    <span>Create, join, or stay solo</span>
-    <span>Create a Space and share its code. Enter someone else's code to join theirs. Or skip both and go straight to My Planner — you can change your mind at any time.</span>
-  </div>
-  <div>
-    <span>03</span>
-    <span>Read one calendar</span>
-    <span>Space tasks, Space events, and personal tasks appear on one calendar, while still keeping personal items private.</span>
-  </div>
-</section>
-
-<section>
-  <div>Begin</div>
-  <h2>Start with a Space, or start with yourself</h2>
-  <div>
-    <a href="/signin.html">Sign in with Google</a>
-    <a href="/continue-solo">Continue solo</a>
-  </div>
-</section>
-
-<footer>
-  <div>
-    <div>Classync</div>
-    <p>Classic way to stay in sync</p>
-  </div>
-  <div>
-    <div>
-      <span>Product</span>
-      <a href="#three">Spaces</a>
-      <a href="#planner">My Planner</a>
-      <a href="#how">How it works</a>
+    <div class="hero-bottom">
+      <p>Classync is a shared task and calendar planner for groups. Create a Space for a class, study group, project team, trip, or anything else you’re planning together. Organizers can assign tasks to specific members, while everyone can still keep their own private planner.</p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="/firstrun.html">Create a Space</a>
+        <a class="btn-secondary" href="/app">See the app</a>
+      </div>
     </div>
-    <div>
-      <span>Account</span>
-      <a href="/signin.html">Sign in</a>
-      <a href="/firstrun.html">Create a Space</a>
-      <a href="/app">Open the app</a>
-    </div>
-    <div>
-      <span>Legal</span>
-      <a href="#">Privacy</a>
-      <a href="#">Terms</a>
-      <a href="#">Support</a>
-    </div>
-  </div>
-  <div>
-    <span>© MMXXVI Classync</span>
-    <span>For ages 13 and over · Google sign-in only · No passwords stored</span>
-  </div>
-</footer>
+  </header>
 
+  <section id="three">
+    <div class="section-head">
+      <span class="num">01</span>
+      <h2>Everything you need to stay on track</h2>
+    </div>
+    <div class="three-grid">
+      <div>
+        <h3>A Space</h3>
+        <p>Create a shared Space for your group and invite others using a six-character code. The person who creates it becomes the Organizer and can manage the Space and assign tasks.</p>
+      </div>
+      <div>
+        <h3>Space tasks</h3>
+        <p>Create tasks for the whole Space or assign them to specific members. Add a category, description, and due date, then see everything on the shared calendar.</p>
+      </div>
+      <div>
+        <h3>My Planner</h3>
+        <p>Keep your own personal tasks separate from the Space. These are only visible to you and stay available even if you are not part of a Space.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="planner">
+    <div class="planner-grid">
+      <div>
+        <div class="eyebrow" style="margin-bottom: 16px">02 · One view</div>
+        <h2>See everything on one calendar</h2>
+        <p>Space tasks, Space events, and your personal tasks can all appear on the same calendar. Each one is shown differently so you can quickly tell what belongs to your group and what is just for you.</p>
+        <div class="legend">
+          <span class="row"><span class="swatch swatch--task"></span>Space task</span>
+          <span class="row"><span class="swatch swatch--event"></span>Space event</span>
+          <span class="row"><span class="swatch swatch--personal"></span>Personal · private</span>
+        </div>
+        <a class="btn-primary planner-cta" href="/app">Open the calendar</a>
+      </div>
+      <div class="preview-card">
+        <div class="preview-inner">
+          <div class="preview-window">
+            <div class="preview-head">
+              <span class="preview-month">August <span class="preview-year">2026</span></span>
+              <span class="preview-space">Physics 11 · 28 members</span>
+            </div>
+            <div class="calendar-head">
+              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+            <div class="calendar-grid">
+              <div class="cell dim">26</div>
+              <div class="cell dim">27</div>
+              <div class="cell dim">28</div>
+              <div class="cell dim">29</div>
+              <div class="cell dim">30</div>
+              <div class="cell dim">31</div>
+              <div class="cell">1</div>
+              <div class="cell">2</div>
+              <div class="cell"><span class="day">3</span><span class="pill pill--task">Lab draft</span></div>
+              <div class="cell">4</div>
+              <div class="cell"><span class="day">5</span><span class="pill pill--event">Quiz</span></div>
+              <div class="cell">6</div>
+              <div class="cell">7</div>
+              <div class="cell dim">8</div>
+              <div class="cell dim">9</div>
+              <div class="cell">10</div>
+              <div class="cell"><span class="day">11</span><span class="pill pill--personal">Dentist</span></div>
+              <div class="cell today"><span class="day-row"><span class="day">12</span><span class="today-badge">Today</span></span><span class="pill pill--task">Report due</span></div>
+              <div class="cell">13</div>
+              <div class="cell"><span class="day">14</span><span class="pill pill--event">Field trip</span></div>
+              <div class="cell dim">15</div>
+            </div>
+          </div>
+        </div>
+        <div class="sticky-note">
+          <div class="sticky-label">Note · 12 Aug</div>
+          <div class="sticky-text">Bring the second draft, and the ruler.</div>
+        </div>
+        <div class="date-chip">
+          <div class="date-chip-day">Wednesday</div>
+          <div class="date-chip-num">12</div>
+          <div class="date-chip-due">One thing due</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="quote">
+    <div class="quote-inner">
+      <div class="quote-label">On privacy</div>
+      <p>Your planner is yours. A Space only ever sees what a Space is given.</p>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="section-head how-head">
+      <span class="num">03</span>
+      <h2>How it works</h2>
+    </div>
+    <div class="how-row">
+      <span class="num">01</span>
+      <span class="title">Sign in with Google</span>
+      <span class="desc">No password to keep. Classync takes your name, email and avatar, and nothing else. Calendar sync is a separate step, later, if you want it.</span>
+    </div>
+    <div class="how-row">
+      <span class="num">02</span>
+      <span class="title">Create, join, or stay solo</span>
+      <span class="desc">Create a Space and share its code. Enter someone else's code to join theirs. Or skip both and go straight to My Planner — you can change your mind at any time.</span>
+    </div>
+    <div class="how-row">
+      <span class="num">03</span>
+      <span class="title">Read one calendar</span>
+      <span class="desc">Space tasks, Space events, and personal tasks appear on one calendar, while still keeping personal items private.</span>
+    </div>
+  </section>
+
+  <section class="begin">
+    <div class="begin-label">Begin</div>
+    <h2>Start with a Space, or start with yourself</h2>
+    <div class="begin-actions">
+      <a class="btn-primary" href="/signin.html">Sign in with Google</a>
+      <a class="btn-secondary" href="/continue-solo">Continue solo</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="wordmark">Classync</div>
+          <p class="tagline">Classic way to stay in sync</p>
+        </div>
+        <div class="footer-cols">
+          <div class="footer-col">
+            <span class="label">Product</span>
+            <a href="#three">Spaces</a>
+            <a href="#planner">My Planner</a>
+            <a href="#how">How it works</a>
+          </div>
+          <div class="footer-col">
+            <span class="label">Account</span>
+            <a href="/signin.html">Sign in</a>
+            <a href="/firstrun.html">Create a Space</a>
+            <a href="/app">Open the app</a>
+          </div>
+          <div class="footer-col">
+            <span class="label">Legal</span>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+            <a href="#">Support</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© MMXXVI Classync</span>
+        <span>For ages 13 and over · Google sign-in only · No passwords stored</span>
+      </div>
+    </div>
+  </footer>
+
+  <div data-balloon style="position: fixed; top: 0; left: 0; z-index: 20; pointer-events: none; width: 200px; will-change: transform; transform: translate3d(-9999px, 0, 0)">
+    <img decoding="async" src="/assets/balloon.png" alt="" style="display: block; width: 100%">
+  </div>
+</div>
+
+<script src="/js/balloon.js"></script>
 </body>
 </html>
