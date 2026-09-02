@@ -804,8 +804,10 @@ a.btn-secondary:hover {
   left: -140px;
   top: -40px;
   width: 640px;
-  opacity: 0.5;
+  opacity: 0.3;
   pointer-events: none;
+  animation: drift 135s linear infinite;
+  animation-delay: -22s;
 }
 
 .page-firstrun .firstrun-inner {
@@ -979,7 +981,7 @@ a.btn-secondary:hover {
   }
   .page-firstrun .bg-cloud {
     width: 420px;
-    opacity: 0.35;
+    opacity: 0.2;
   }
   .page-firstrun h1 {
     font-size: 36px;
