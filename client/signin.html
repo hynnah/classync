@@ -4,52 +4,81 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Classync — Sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=IBM+Plex+Mono:wght@400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/tokens.css">
 <link rel="stylesheet" href="/styles/style.css">
 </head>
 <body class="page-signin">
 
+<div class="signin-bg" aria-hidden="true">
+  <img class="signin-cloud-1" src="/assets/clouds.png" alt="">
+  <img class="signin-cloud-2" src="/assets/clouds.png" alt="">
+  <img class="signin-mountains" src="/assets/mountains.png" alt="">
+</div>
+
+<div id="leaf-field-root"></div>
+
 <header>
-  <a href="/">← Back</a>
+  <a class="back-link" href="/">← Back</a>
   <span>Classic way to stay in sync</span>
-  <span>Fol. 01</span>
+  <span class="fol">PAGE 01</span>
 </header>
 
 <main>
-  <div>
-    <div>Est. MMXXVI · Entrance</div>
+  <div class="entrance-card">
+    <span class="entrance-mark">
+      <img decoding="async" src="/assets/classync-mark.png" alt="Classync">
+    </span>
     <h1>Classync</h1>
-    <p>Together or on your own, everything belongs on the same calendar.</p>
+    <div class="hr"></div>
+    <div class="hr hr--soft"></div>
+    <p class="subtitle">Together or on your own, everything belongs on the same calendar.</p>
 
-    <div>
-      <button id="google-signin" type="button" disabled>Continue with Google</button>
+    <div class="signin-actions">
+      <button id="google-signin" type="button" disabled>
+        <svg class="chrome-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <circle cx="12" cy="12" r="4"/>
+          <line x1="21.17" y1="8" x2="12" y2="8"/>
+          <line x1="3.95" y1="6.06" x2="8.54" y2="14"/>
+          <line x1="10.88" y1="21.94" x2="15.46" y2="14"/>
+        </svg>
+        Continue with Google
+      </button>
 
-      <label for="age-confirm">
+      <label class="age-confirm" for="age-confirm">
         <input type="checkbox" id="age-confirm">
         <span>I am 13 years old or older.<small>Required once, on first sign-in</small></span>
       </label>
 
-      <p>Signing in grants Classync your name, email and avatar only. Google Calendar is a separate, optional step you can take later in Settings.</p>
+      <p class="grant-note">Signing in grants Classync your name, email and avatar only. Google Calendar is a separate, optional step you can take later in Settings.</p>
 
       <p id="signin-error" role="alert" hidden></p>
     </div>
   </div>
 
-  <div>
+  <div class="facts">
     <div>
-      <div>01</div>
-      <div>Solo works on its own. You never have to join anything.</div>
+      <div class="num">01</div>
+      <div class="fact"><strong>Solo works on its own.</strong> You never have to join anything.</div>
     </div>
     <div>
-      <div>02</div>
-      <div>Spaces when you need them. A class, a team, a trip.</div>
+      <div class="num">02</div>
+      <div class="fact"><strong>Spaces when you need them.</strong> A class, a team, a trip.</div>
     </div>
     <div>
-      <div>03</div>
-      <div>No passwords stored. Google handles sign-in.</div>
+      <div class="num">03</div>
+      <div class="fact"><strong>No passwords stored.</strong> Google handles sign-in.</div>
     </div>
   </div>
 </main>
 
+<script src="/js/calendar-leaves.js"></script>
+<script>
+  ClassyncLeaves.initCalendarLeaves(document.getElementById('leaf-field-root'));
+</script>
 <script src="/js/entrance.js"></script>
 </body>
 </html>

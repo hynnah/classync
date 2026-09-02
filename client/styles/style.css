@@ -67,6 +67,7 @@ a.btn-secondary:hover {
 .mark--nav {
   width: var(--mark-nav-size);
   height: var(--mark-nav-size);
+  aspect-ratio: 2260 / 2087;
 }
 .mark--footer {
   width: var(--mark-footer-size);
@@ -96,6 +97,7 @@ a.btn-secondary:hover {
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
+  .page-signin .leaf-field { display: none; }
 }
 
 .drift-layer {
@@ -402,47 +404,352 @@ a.btn-secondary:hover {
   }
 }
 
+.page-signin {
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  background: var(--gradient-entrance-bg);
+  display: flex;
+  flex-direction: column;
+  padding: 26px 56px 34px;
+}
+
+.page-signin .signin-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.page-signin .signin-cloud-1 { position: absolute; left: -240px; top: -20px; width: 620px; opacity: 0.45; animation: drift 135s linear infinite; animation-delay: -22s; }
+.page-signin .signin-cloud-2 { position: absolute; right: -200px; top: 120px; width: 320px; opacity: 0.3; animation: driftSlow 180s linear infinite; animation-delay: -92s; }
+.page-signin .signin-mountains {
+  position: absolute; left: 0; right: 0; bottom: -20px; width: 100%; aspect-ratio: 652 / 484; height: auto; opacity: 0.26;
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 26%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 26%);
+}
+
+.page-signin #leaf-field-root {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.page-signin .leaf-field {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.62;
+}
+.page-signin .leaf-flight {
+  position: absolute;
+  left: 0;
+  perspective: 900px;
+  animation-name: leafFly;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+}
+.page-signin .leaf-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5%;
+  padding: 8% 8% 11%;
+  border: 1px solid #d9d0bd;
+  border-radius: 1px;
+  background: linear-gradient(118deg, #fffdf8 0%, #fbf7ec 58%, #f4eddd 100%);
+  box-shadow: 0 10px 26px rgba(38, 37, 33, 0.09), inset 0 0 18px rgba(214, 203, 180, 0.22);
+  transform-origin: 55% 45%;
+  transform: skewY(var(--sk, 0deg));
+  animation-name: leafFlutter;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+.page-signin .leaf-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(38deg, rgba(174, 163, 140, 0.2) 0%, rgba(255, 255, 255, 0) 26%, rgba(255, 255, 255, 0) 74%, rgba(196, 185, 163, 0.16) 100%);
+}
+.page-signin .leaf-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3%;
+  padding-bottom: 4%;
+  border-bottom: 1px solid #ded5c2;
+}
+.page-signin .leaf-month {
+  font-family: var(--font-heading);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: #3f3d36;
+}
+.page-signin .leaf-year {
+  font-family: var(--font-mono);
+  letter-spacing: 0.22em;
+  color: var(--color-accent-link);
+  font-feature-settings: 'tnum';
+}
+.page-signin .leaf-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3% 2%;
+  font-family: var(--font-mono);
+  line-height: 1.35;
+  text-align: center;
+  color: var(--color-text-faint);
+  font-feature-settings: 'tnum';
+}
+.page-signin .leaf-dow { color: #b8b0a0; }
+.page-signin .leaf-cell {
+  position: relative;
+  border-bottom: 1px solid transparent;
+}
+.page-signin .leaf-cell.is-blank { color: transparent; }
+.page-signin .leaf-cell.is-marked {
+  color: var(--color-accent-link);
+  border-bottom-color: var(--color-accent);
+}
+.page-signin .leaf-cell.is-hearted { color: var(--color-accent-link); }
+.page-signin .leaf-heart {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  width: 150%;
+  height: 150%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+@keyframes leafFly {
+  0%   { transform: translate3d(-16vw, 29vh, 0) scale(0.8);  opacity: 0 }
+  9%   { transform: translate3d(-4vw, 24vh, 0)  scale(0.84); opacity: 0.92 }
+  34%  { transform: translate3d(26vw, 11vh, 0)  scale(0.95); opacity: 0.92 }
+  62%  { transform: translate3d(58vw, -3vh, 0)  scale(1);    opacity: 0.92 }
+  88%  { transform: translate3d(92vw, -18vh, 0) scale(0.92); opacity: 0.5 }
+  100% { transform: translate3d(112vw, -27vh, 0) scale(0.86); opacity: 0 }
+}
+@keyframes leafFlutter {
+  0%   { transform: rotate(-9deg) rotateY(-12deg) skewY(var(--sk, 0deg)) }
+  28%  { transform: rotate(-2deg) rotateY(26deg)  skewY(var(--sk, 0deg)) }
+  54%  { transform: rotate(4deg)  rotateY(-8deg)  skewY(var(--sk, 0deg)) }
+  78%  { transform: rotate(-1deg) rotateY(18deg)  skewY(var(--sk, 0deg)) }
+  100% { transform: rotate(-9deg) rotateY(-12deg) skewY(var(--sk, 0deg)) }
+}
+
 .page-signin header {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 32px;
+  gap: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(120,134,142,0.28);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #4a5a61;
 }
+.page-signin header .back-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  color: var(--color-text);
+  background: rgba(255,253,248,0.92);
+  border: 1px solid rgba(120,134,142,0.42);
+  cursor: pointer;
+}
+.page-signin header .fol { color: #8d6222; }
 
 .page-signin main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 70vh;
-  padding: 32px;
+  padding: clamp(24px, 6vh, 140px) 0 12px;
+  overflow: hidden;
+}
+
+.page-signin .entrance-card {
+  position: relative;
+  width: 640px;
+  max-width: 100%;
   text-align: center;
-}
-
-.page-signin main > div:first-child {
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 500px;
+}
+.page-signin .entrance-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 132px;
+  height: 132px;
+  margin: 0 auto;
+  background: var(--color-entrance-mark-bg);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-mark-container);
+  box-shadow: 0 10px 30px rgba(58,53,45,0.07);
+}
+.page-signin .entrance-mark img { height: 74px; width: auto; aspect-ratio: 2260 / 2087; display: block; opacity: var(--mark-entrance-opacity); }
+.page-signin .entrance-card h1 {
+  font-family: var(--font-heading);
+  font-weight: 300;
+  font-size: 88px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  margin: 6px 0 0;
+  color: var(--color-entrance-wordmark);
+}
+.page-signin .hr { width: 220px; height: 1px; background: #d8cfbc; margin: 14px 0 4px; }
+.page-signin .hr--soft { background: #e8e1d2; }
+.page-signin .subtitle {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 27px;
+  line-height: 1.45;
+  color: #3f3d36;
+  margin: 14px 0 0;
+  max-width: 26ch;
 }
 
-.page-signin main > div:first-child > div:last-child {
+.page-signin .signin-actions {
   display: flex;
   flex-direction: column;
+  gap: 14px;
   align-items: center;
-  gap: 16px;
+  margin-top: 20px;
+  width: 380px;
+  max-width: 100%;
+}
+.page-signin #google-signin {
   width: 100%;
-  margin-top: 32px;
+  font-size: 11px;
+  color: var(--color-text);
+  background: rgba(253,252,248,0.9);
+  border: 1px solid var(--color-accent);
+  padding: 17px 20px;
+  gap: 12px;
 }
+.page-signin #google-signin:hover { background: var(--color-accent-hover-bg); }
+.page-signin .chrome-icon { width: 15px; height: 15px; color: var(--color-accent); }
 
-.page-signin main > div:last-child {
+.page-signin .age-confirm {
   display: flex;
-  gap: 32px;
-  margin-top: 48px;
+  gap: 12px;
+  text-align: left;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #3f3d36;
+  cursor: pointer;
 }
+.page-signin .age-confirm input {
+  width: 14px;
+  height: 14px;
+  margin: 2px 0 0;
+  accent-color: var(--color-accent);
+  flex-shrink: 0;
+}
+.page-signin .age-confirm small {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--color-text-faint);
+  margin-top: 4px;
+  white-space: nowrap;
+}
+.page-signin .grant-note { font-size: 11.5px; line-height: 1.8; color: #6b665c; margin: 0; max-width: 42ch; }
+.page-signin #signin-error { color: var(--color-danger-text); font-size: 12.5px; margin-top: 14px; }
+.page-signin #signin-error[hidden] { display: none; }
 
-.page-signin main > div:last-child > div {
-  flex: 1;
+.page-signin .facts {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--color-divider);
+  max-width: 1000px;
+  width: 100%;
+  margin: 20px auto 0;
+}
+.page-signin .facts > div { padding: 12px 48px 0; }
+.page-signin .facts > div:not(:last-child) { border-right: 1px solid var(--color-divider); }
+.page-signin .facts > div:first-child { padding-left: 0; }
+.page-signin .facts > div:last-child { padding-right: 0; }
+.page-signin .facts .num { font-family: var(--font-mono); font-size: 10px; color: var(--color-accent); letter-spacing: 0.12em; }
+.page-signin .facts .fact { font-size: 13px; line-height: 1.7; color: #56534b; margin-top: 8px; }
+.page-signin .facts .fact strong { color: var(--color-text); font-weight: 400; }
+
+@media (max-width: 640px) {
+  .page-signin {
+    padding: 16px 20px 24px;
+  }
+  .page-signin header .fol {
+    display: none;
+  }
+  .page-signin main {
+    padding: 8px 0 4px;
+  }
+  .page-signin .signin-mountains {
+    opacity: 0.1;
+  }
+  .page-signin .entrance-mark {
+    width: 56px;
+    height: 56px;
+  }
+  .page-signin .entrance-mark img {
+    height: 30px;
+  }
+  .page-signin .entrance-card h1 {
+    font-size: 32px;
+  }
+  .page-signin .hr {
+    margin: 6px 0 2px;
+  }
+  .page-signin .subtitle {
+    font-size: 14px;
+    margin-top: 6px;
+  }
+  .page-signin .signin-actions {
+    margin-top: 12px;
+    gap: 10px;
+  }
+  .page-signin .grant-note {
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .page-signin .facts {
+    grid-template-columns: 1fr;
+    row-gap: 8px;
+    margin-top: 10px;
+    background: rgba(251, 248, 241, 0.82);
+    padding: 10px 14px;
+  }
+  .page-signin .facts > div {
+    padding: 8px 0 0 !important;
+    border-right: 0 !important;
+    border-top: 1px solid var(--color-divider);
+  }
+  .page-signin .facts > div:first-child {
+    border-top: 0;
+    padding-top: 0 !important;
+  }
+  .page-signin .facts .fact {
+    font-size: 11.5px;
+    margin-top: 3px;
+  }
 }
 
 .page-firstrun header {
