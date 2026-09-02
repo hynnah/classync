@@ -4,50 +4,62 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Classync — Get started</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=IBM+Plex+Mono:wght@400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/tokens.css">
 <link rel="stylesheet" href="/styles/style.css">
 </head>
 <body class="page-firstrun">
 
 <header>
-  <span>Classync</span>
-  <span>
-    <span id="user-initials"></span>
+  <span class="wordmark">Classync</span>
+  <span class="user-chip">
+    <span id="user-initials" class="user-avatar"></span>
     <span id="user-name">Loading…</span>
   </span>
 </header>
 
 <main>
-  <div id="welcome-line">Welcome</div>
-  <h1>How do you want to start?</h1>
-  <p>You can change your mind at any time — create more Spaces, join others, and keep your own planner alongside all of them.</p>
+  <img class="bg-cloud" src="/assets/clouds.png" alt="">
 
-  <div>
-    <div>
-      <span>Create a Space</span>
-      <p>Name it and you get a six-character join code to share. You become its Organizer.</p>
-      <div>
-        <div>Space name</div>
-        <input placeholder="e.g. Physics 11 — Ampere" disabled>
+  <div class="firstrun-inner">
+    <div id="welcome-line" class="eyebrow">Welcome</div>
+    <h1>How do you want to start?</h1>
+    <p class="lede">You can change your mind at any time — create more Spaces, join others, and keep your own planner alongside all of them.</p>
+
+    <div class="start-grid">
+      <div class="start-card">
+        <span class="card-title">Create a Space</span>
+        <p>Name it and you get a six-character join code to share. You become its Organizer.</p>
+        <div class="field">
+          <div class="field-label">Space name</div>
+          <input placeholder="e.g. Physics 11 — Ampere" disabled>
+        </div>
+        <span class="card-spacer"></span>
+        <button type="button" class="card-btn card-btn--primary" disabled>Create Space</button>
+        <p class="soon">Arrives in a later build day</p>
       </div>
-      <button type="button" disabled>Create Space</button>
-      <p>Arrives in a later build day</p>
-    </div>
 
-    <div>
-      <span>Join a Space</span>
-      <p>Enter the code the Organizer gave you. You see only what that Space shares.</p>
-      <div>
-        <div>Space code</div>
-        <input placeholder="XXXXXX" disabled>
+      <div class="start-card">
+        <span class="card-title">Join a Space</span>
+        <p>Enter the code the Organizer gave you. You see only what that Space shares.</p>
+        <div class="field">
+          <div class="field-label">Space code</div>
+          <input class="field-mono" placeholder="XXXXXX" disabled>
+        </div>
+        <span class="card-spacer"></span>
+        <button type="button" class="card-btn card-btn--secondary" disabled>Join Space</button>
+        <p class="soon">Arrives in a later build day</p>
       </div>
-      <button type="button" disabled>Join Space</button>
-      <p>Arrives in a later build day</p>
-    </div>
 
-    <div>
-      <span>Continue solo</span>
-      <p>Go straight to your planner. Personal tasks are private — no Organizer can ever see them.</p>
-      <a href="/continue-solo">Open My Planner</a>
+      <div class="start-card start-card--solo">
+        <img class="card-swan" src="/assets/swan.png" alt="">
+        <span class="card-title">Continue solo</span>
+        <p>Go straight to your planner. Personal tasks are private — no Organizer can ever see them.</p>
+        <span class="card-spacer"></span>
+        <a class="card-btn card-btn--solo" href="/continue-solo">Open My Planner</a>
+      </div>
     </div>
   </div>
 </main>
