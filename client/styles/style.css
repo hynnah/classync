@@ -126,7 +126,7 @@ a.btn-secondary:hover {
   padding: 20px 56px; border-bottom: 1px solid rgba(216,207,188,0.7);
   background: rgba(246,241,230,0.72); backdrop-filter: blur(9px);
 }
-.page-landing .nav-brand { display: flex; align-items: baseline; gap: 14px; }
+.page-landing .nav-brand { display: flex; align-items: center; gap: 14px; }
 .page-landing .nav-brand .wordmark { font-family: var(--font-heading); font-size: 25px; letter-spacing: 0.01em; }
 .page-landing .nav-brand .tagline { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase; color: #7d8b91; }
 .page-landing nav > div:last-child { display: flex; align-items: center; gap: 34px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; }
