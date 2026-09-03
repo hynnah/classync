@@ -7,6 +7,7 @@ const { requireLogin } = require('./auth/guard');
 const { mountTestBypass } = require('./auth/testBypass');
 const { authRouter } = require('./routes/auth.routes');
 const { pagesRouter } = require('./routes/pages.routes');
+const { itemsRouter } = require('./routes/items.routes');
 
 function createApp() {
   const app = express();
@@ -28,6 +29,7 @@ function createApp() {
   }));
 
   app.use(pagesRouter);
+  app.use(itemsRouter);
 
   app.use(express.static(path.join(__dirname, '..', '..', 'client')));
 
