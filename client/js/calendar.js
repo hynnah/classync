@@ -1,5 +1,6 @@
 (function () {
   const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const DAY_HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6:00–23:00
 
   function isoDate(y, m, d) {
     return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -149,5 +150,68 @@
     };
   }
 
-  window.ClassyncCalendar = { initMonthCalendar };
+  // Day view — a single day's items in an hourly grid, plus an "All day"
+  // section for items with no due time. Pure render, no internal state
+  // (unlike initMonthCalendar): the caller re-invokes this on every date
+  // change, same as calling paint() directly.
+  //
+  // items: array of { title, type, tag?, done?, dueTime? } — dueTime as
+  // "HH:MM" or "HH:MM:SS" (MySQL TIME string) or omitted/null for all-day.
+  function renderDayView(root, { year, month, day, items = [] }) {
+    root.innerHTML = '';
+
+    const allDay = [];
+    const byHour = new Map();
+    items.forEach((item) => {
+      if (!item.dueTime) {
+        allDay.push(item);
+        return;
+      }
+      const hour = parseInt(item.dueTime.slice(0, 2), 10);
+      if (!byHour.has(hour)) byHour.set(hour, []);
+      byHour.get(hour).push(item);
+    });
+
+    const view = document.createElement('div');
+    view.className = 'day-view';
+
+    if (allDay.length) {
+      const section = document.createElement('div');
+      section.className = 'day-view-allday';
+      const label = document.createElement('span');
+      label.className = 'day-view-allday-label';
+      label.textContent = 'All day';
+      section.appendChild(label);
+      const list = document.createElement('div');
+      list.className = 'day-view-allday-list';
+      allDay.forEach((item) => list.appendChild(itemPill(item)));
+      section.appendChild(list);
+      view.appendChild(section);
+    }
+
+    const hours = document.createElement('div');
+    hours.className = 'day-view-hours';
+    DAY_HOURS.forEach((hour) => {
+      const row = document.createElement('div');
+      row.className = 'day-hour-row';
+
+      const label = document.createElement('span');
+      label.className = 'day-hour-label';
+      const h12 = hour % 12 === 0 ? 12 : hour % 12;
+      label.textContent = `${h12}:00 ${hour < 12 ? 'AM' : 'PM'}`;
+      row.appendChild(label);
+
+      const content = document.createElement('div');
+      content.className = 'day-hour-content';
+      (byHour.get(hour) || []).forEach((item) => content.appendChild(itemPill(item)));
+      row.appendChild(content);
+
+      hours.appendChild(row);
+    });
+    view.appendChild(hours);
+
+    root.appendChild(view);
+  }
+
+  window.ClassyncCalendar = { initMonthCalendar, renderDayView };
 })();

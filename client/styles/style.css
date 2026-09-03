@@ -1685,3 +1685,308 @@ a.btn-secondary:hover {
   .page-app .calendar-days { grid-auto-rows: minmax(84px, 1fr); }
   .page-app .cal-item-tag { display: none; }
 }
+
+/* Day view (client/js/calendar.js renderDayView). Items reuse .cal-item —
+   same pill styling as the month grid, since both render into #cal-root. */
+.page-app .day-view {
+  padding: 22px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow-y: auto;
+}
+.page-app .day-view-allday {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-cell-border);
+}
+.page-app .day-view-allday-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+  width: 74px;
+  padding-top: 6px;
+}
+.page-app .day-view-allday-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+}
+.page-app .day-view-hours {
+  display: flex;
+  flex-direction: column;
+}
+.page-app .day-hour-row {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  border-top: 1px solid var(--color-cell-border);
+  min-height: 56px;
+}
+.page-app .day-hour-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-faintest);
+  padding: 8px 0;
+}
+.page-app .day-hour-content {
+  padding: 8px 0 8px 16px;
+  border-left: 1px solid var(--color-cell-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Urgent · Due now rail — real items */
+.page-app .urgent-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.page-app .urgent-group + .urgent-group {
+  margin-top: 22px;
+}
+.page-app .urgent-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.page-app .urgent-group-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-accent-link);
+}
+.page-app .urgent-group-line {
+  flex: 1;
+  height: 1px;
+  background: #e6dfd0;
+}
+.page-app .urgent-group-count {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--color-text-faintest);
+}
+.page-app .urgent-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-left: 2px solid var(--color-personal-border);
+  padding: 8px 0 8px 12px;
+  cursor: pointer;
+  width: 100%;
+  box-shadow: none;
+}
+.page-app .urgent-item:hover {
+  background: rgba(182, 130, 53, 0.05);
+  box-shadow: none;
+  transform: none;
+}
+.page-app .urgent-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.page-app .urgent-item-check {
+  width: 13px;
+  height: 13px;
+  border: 1px solid var(--color-personal-border);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.page-app .urgent-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.page-app .urgent-item-title {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+.page-app .urgent-item-meta {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+
+/* New Task modal */
+.page-app .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(38, 37, 33, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.page-app .modal-backdrop[hidden] {
+  display: none;
+}
+.page-app .modal {
+  width: 480px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-divider);
+  box-shadow: 0 24px 60px -20px rgba(38, 37, 33, 0.4);
+}
+.page-app .modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.page-app .modal-head h2 {
+  font-family: var(--font-heading);
+  font-weight: 300;
+  font-size: 26px;
+  margin: 0;
+}
+.page-app .modal-close {
+  background: transparent;
+  border: 0;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-text-faint);
+  padding: 4px 8px;
+  box-shadow: none;
+}
+.page-app .modal-close:hover {
+  color: var(--color-text);
+  box-shadow: none;
+  transform: none;
+}
+.page-app .modal-body {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.page-app .field-row {
+  display: flex;
+  gap: 20px;
+}
+.page-app .field-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.page-app .field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.page-app .field-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+.page-app .field-optional {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text-faintest);
+}
+.page-app .field-hint {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-text-faintest);
+}
+.page-app .field input[type="text"],
+.page-app .field input[type="date"],
+.page-app .field input[type="time"],
+.page-app .field select,
+.page-app .field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d8cfbc;
+  background: #fff;
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--color-text);
+}
+.page-app .field textarea {
+  resize: vertical;
+}
+.page-app .field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+}
+.page-app .form-error {
+  font-size: 12px;
+  color: var(--color-danger-text);
+  margin: 0;
+}
+.page-app .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+}
+.page-app .modal-cancel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--color-secondary-border);
+  color: var(--color-secondary-text);
+  padding: 12px 20px;
+  cursor: pointer;
+}
+.page-app .modal-submit {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--color-accent);
+  color: var(--color-text);
+  padding: 12px 22px;
+  cursor: pointer;
+}
+.page-app .modal-submit:hover {
+  background: var(--color-accent-hover-bg);
+}
+.page-app .modal-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .page-app .field-grid {
+    grid-template-columns: 1fr;
+  }
+  .page-app .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .page-app .modal {
+    width: 100%;
+    max-height: 85vh;
+  }
+}

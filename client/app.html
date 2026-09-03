@@ -52,7 +52,7 @@
         <span class="rail-item-label">Notes</span>
         <span class="rail-item-soon">Soon</span>
       </button>
-      <p class="rail-hint">Spaces, tasks and notes arrive in a later build day. For now this is your personal calendar.</p>
+      <p class="rail-hint">Spaces arrive in a later build day. For now this is your personal calendar.</p>
     </div>
 
     <span class="rail-fill"></span>
@@ -75,9 +75,9 @@
       <div class="cal-toolbar-left">
         <div class="cal-kicker">Personal · calendar</div>
         <div class="cal-nav">
-          <button id="cal-prev" class="cal-nav-btn" type="button" aria-label="Previous month">←</button>
+          <button id="cal-prev" class="cal-nav-btn" type="button" aria-label="Previous">←</button>
           <div class="cal-heading"><span id="cal-month"></span> <span id="cal-year" class="cal-year"></span></div>
-          <button id="cal-next" class="cal-nav-btn" type="button" aria-label="Next month">→</button>
+          <button id="cal-next" class="cal-nav-btn" type="button" aria-label="Next">→</button>
           <button id="cal-today" class="cal-today-btn" type="button">Today</button>
         </div>
       </div>
@@ -90,10 +90,10 @@
           <input id="cal-jump-input" type="date" aria-label="Jump to a date">
         </label>
         <div class="cal-segment">
-          <button class="is-active" type="button">Month</button>
-          <button type="button" disabled>Day</button>
+          <button id="seg-month" class="is-active" type="button">Month</button>
+          <button id="seg-day" type="button">Day</button>
         </div>
-        <button class="cal-new-task" type="button" disabled>New task</button>
+        <button id="new-task-btn" class="cal-new-task" type="button">New task</button>
       </div>
     </div>
 
@@ -101,11 +101,9 @@
       <div class="calendar-panel">
         <div id="cal-root"></div>
         <div class="calendar-legend">
-          <span class="row"><span class="swatch swatch--task"></span>Space task</span>
-          <span class="row"><span class="swatch swatch--event"></span>Space event</span>
           <span class="row"><span class="swatch swatch--personal"></span>Personal · private</span>
           <span class="spacer"></span>
-          <span>Sample dates · real sync arrives in a later build day</span>
+          <span id="cal-legend-note">Live</span>
         </div>
       </div>
 
@@ -114,18 +112,327 @@
           <div class="urgent-kicker">Urgent</div>
           <div class="urgent-title">Due now</div>
         </div>
-        <div class="urgent-body">
-          <p class="urgent-empty">Nothing due yet — Space tasks and due dates arrive in a later build day.</p>
+        <div id="urgent-body" class="urgent-body">
+          <p class="urgent-empty">Loading…</p>
         </div>
       </div>
     </div>
   </main>
 </div>
 
+<div id="task-modal" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
+    <div class="modal-head">
+      <h2 id="task-modal-title">New task</h2>
+      <button id="task-modal-close" class="modal-close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <form id="task-form" class="modal-body">
+      <div class="field-row">
+        <label class="field-radio"><input type="radio" name="kind" value="task" checked> Task</label>
+        <label class="field-radio"><input type="radio" name="kind" value="note"> Note</label>
+      </div>
+      <div class="field">
+        <div class="field-label">Title</div>
+        <input id="task-title" name="title" type="text" required maxlength="255" placeholder="e.g. Lab report — Ohm's Law">
+      </div>
+      <div class="field">
+        <div class="field-label">Description <span class="field-optional">optional</span></div>
+        <textarea id="task-description" name="description" rows="3" placeholder="Any extra detail"></textarea>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <div class="field-label">Category <span class="field-optional">optional</span></div>
+          <select id="task-category" name="category">
+            <option value="">—</option>
+            <option>Assignment</option>
+            <option>Activity</option>
+            <option>Quiz</option>
+            <option>Project</option>
+            <option>Presentation</option>
+            <option>Exam</option>
+            <option>Others</option>
+          </select>
+        </div>
+        <div class="field">
+          <div class="field-label">Due date <span class="field-optional">optional</span></div>
+          <input id="task-due-date" name="dueDate" type="date">
+          <span class="field-hint">Leave blank to save it without a due date — it won't appear on the calendar until My Planner arrives.</span>
+        </div>
+        <div class="field">
+          <div class="field-label">Due time <span class="field-optional">optional</span></div>
+          <input id="task-due-time" name="dueTime" type="time">
+        </div>
+      </div>
+      <p id="task-form-error" class="form-error" role="alert" hidden></p>
+      <div class="modal-actions">
+        <button type="button" id="task-modal-cancel" class="modal-cancel">Cancel</button>
+        <button type="submit" class="modal-submit">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="/js/lib/escape.js" type="module"></script>
 <script src="/js/calendar.js"></script>
 <script type="module">
   import { escapeHtml } from '/js/lib/escape.js';
+
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  function isoDate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function toCalItem(apiItem) {
+    return {
+      id: apiItem.id,
+      title: apiItem.title,
+      type: 'personal',
+      tag: apiItem.kind === 'note' ? 'NOTE' : (apiItem.category || undefined),
+      done: apiItem.status === 'completed',
+      dueTime: apiItem.due_time,
+    };
+  }
+
+  async function initApp() {
+    const catRoot = document.getElementById('cal-root');
+    const monthEl = document.getElementById('cal-month');
+    const yearEl = document.getElementById('cal-year');
+    const jumpInput = document.getElementById('cal-jump-input');
+    const urgentBody = document.getElementById('urgent-body');
+    const segMonth = document.getElementById('seg-month');
+    const segDay = document.getElementById('seg-day');
+
+    let viewMode = 'month';
+    let dayDate = new Date();
+
+    const cal = ClassyncCalendar.initMonthCalendar(catRoot, {
+      onMonthChange: (state) => {
+        if (viewMode === 'month') {
+          monthEl.textContent = MONTHS[state.month];
+          yearEl.textContent = state.year;
+        }
+      },
+    });
+
+    function updateHeading() {
+      if (viewMode === 'month') {
+        const { year, month } = cal.state;
+        monthEl.textContent = MONTHS[month];
+        yearEl.textContent = year;
+      } else {
+        monthEl.textContent = `${WEEKDAYS[dayDate.getDay()]}, ${MONTHS[dayDate.getMonth()]} ${dayDate.getDate()}`;
+        yearEl.textContent = dayDate.getFullYear();
+      }
+    }
+
+    async function fetchItems(from, to) {
+      const res = await fetch(`/api/items?from=${from}&to=${to}`);
+      if (!res.ok) return [];
+      const body = await res.json();
+      return body.items || [];
+    }
+
+    async function renderMonthView() {
+      const { year, month } = cal.state;
+      cal.setItems({});
+      const from = isoDate(new Date(year, month, 1));
+      const to = isoDate(new Date(year, month + 1, 0));
+      const items = await fetchItems(from, to);
+      const itemsByDate = {};
+      items.forEach((raw) => {
+        (itemsByDate[raw.due_date] ||= []).push(toCalItem(raw));
+      });
+      cal.setItems(itemsByDate);
+    }
+
+    async function renderDayView() {
+      catRoot.innerHTML = '';
+      const dateStr = isoDate(dayDate);
+      const items = (await fetchItems(dateStr, dateStr)).map(toCalItem);
+      ClassyncCalendar.renderDayView(catRoot, {
+        year: dayDate.getFullYear(),
+        month: dayDate.getMonth(),
+        day: dayDate.getDate(),
+        items,
+      });
+    }
+
+    async function refreshCalendarView() {
+      updateHeading();
+      if (viewMode === 'month') {
+        await renderMonthView();
+      } else {
+        await renderDayView();
+      }
+    }
+
+    async function loadUrgent() {
+      const res = await fetch('/api/items/urgent');
+      if (!res.ok) return;
+      const { dueToday, dueWeek } = await res.json();
+
+      if (!dueToday.length && !dueWeek.length) {
+        urgentBody.innerHTML = '<p class="urgent-empty">Nothing due yet — create a task to see it here.</p>';
+        return;
+      }
+
+      urgentBody.innerHTML = '';
+      const buildGroup = (label, list) => {
+        if (!list.length) return null;
+        const group = document.createElement('div');
+        group.className = 'urgent-group';
+        const head = document.createElement('div');
+        head.className = 'urgent-group-head';
+        head.innerHTML = `<span class="urgent-group-label">${label}</span><span class="urgent-group-line"></span><span class="urgent-group-count">${list.length}</span>`;
+        group.appendChild(head);
+        list.forEach((raw) => {
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.className = 'urgent-item';
+          row.dataset.id = raw.id;
+          const meta = [raw.kind === 'note' ? 'Note' : (raw.category || 'Task'), raw.due_time ? raw.due_time.slice(0, 5) : null]
+            .filter(Boolean).join(' · ');
+          row.innerHTML = `<span class="urgent-item-check" aria-hidden="true"></span><span class="urgent-item-body"><span class="urgent-item-title">${escapeHtml(raw.title)}</span><span class="urgent-item-meta">${escapeHtml(meta)}</span></span>`;
+          group.appendChild(row);
+        });
+        return group;
+      };
+      const todayGroup = buildGroup('Today', dueToday);
+      const weekGroup = buildGroup('This week', dueWeek);
+      if (todayGroup) urgentBody.appendChild(todayGroup);
+      if (weekGroup) urgentBody.appendChild(weekGroup);
+    }
+
+    urgentBody.addEventListener('click', async (e) => {
+      const row = e.target.closest('.urgent-item');
+      if (!row) return;
+      row.disabled = true;
+      await fetch(`/api/items/${row.dataset.id}/status`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      });
+      await Promise.all([loadUrgent(), refreshCalendarView()]);
+    });
+
+    document.getElementById('cal-prev').addEventListener('click', async () => {
+      if (viewMode === 'month') {
+        cal.prev();
+      } else {
+        dayDate.setDate(dayDate.getDate() - 1);
+      }
+      await refreshCalendarView();
+    });
+    document.getElementById('cal-next').addEventListener('click', async () => {
+      if (viewMode === 'month') {
+        cal.next();
+      } else {
+        dayDate.setDate(dayDate.getDate() + 1);
+      }
+      await refreshCalendarView();
+    });
+    document.getElementById('cal-today').addEventListener('click', async () => {
+      if (viewMode === 'month') {
+        cal.today();
+      } else {
+        dayDate = new Date();
+      }
+      await refreshCalendarView();
+    });
+    jumpInput.addEventListener('change', async () => {
+      if (!jumpInput.value) return;
+      const [y, m, d] = jumpInput.value.split('-').map(Number);
+      if (viewMode === 'month') {
+        cal.goTo(y, m - 1);
+      } else {
+        dayDate = new Date(y, m - 1, d);
+      }
+      jumpInput.value = '';
+      await refreshCalendarView();
+    });
+
+    segMonth.addEventListener('click', async () => {
+      if (viewMode === 'month') return;
+      viewMode = 'month';
+      segMonth.classList.add('is-active');
+      segDay.classList.remove('is-active');
+      await refreshCalendarView();
+    });
+    segDay.addEventListener('click', async () => {
+      if (viewMode === 'day') return;
+      viewMode = 'day';
+      segDay.classList.add('is-active');
+      segMonth.classList.remove('is-active');
+      await refreshCalendarView();
+    });
+
+    // --- New Task modal ---
+    const modal = document.getElementById('task-modal');
+    const form = document.getElementById('task-form');
+    const errorEl = document.getElementById('task-form-error');
+
+    function openModal() {
+      errorEl.hidden = true;
+      form.reset();
+      if (viewMode === 'day') {
+        document.getElementById('task-due-date').value = isoDate(dayDate);
+      }
+      modal.hidden = false;
+      document.getElementById('task-title').focus();
+    }
+    function closeModal() {
+      modal.hidden = true;
+    }
+
+    document.getElementById('new-task-btn').addEventListener('click', openModal);
+    document.getElementById('task-modal-close').addEventListener('click', closeModal);
+    document.getElementById('task-modal-cancel').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.hidden) closeModal();
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.hidden = true;
+      const data = new FormData(form);
+      const payload = {
+        kind: data.get('kind'),
+        title: data.get('title'),
+        description: data.get('description') || undefined,
+        category: data.get('category') || undefined,
+        dueDate: data.get('dueDate') || undefined,
+        dueTime: data.get('dueTime') || undefined,
+      };
+
+      const submitBtn = form.querySelector('.modal-submit');
+      submitBtn.disabled = true;
+      try {
+        const res = await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          errorEl.textContent = body.error || 'Could not create that — please check the form and try again.';
+          errorEl.hidden = false;
+          return;
+        }
+        closeModal();
+        await Promise.all([refreshCalendarView(), loadUrgent()]);
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    await refreshCalendarView();
+    await loadUrgent();
+  }
 
   const res = await fetch('/api/me');
   if (res.status === 401) {
@@ -137,6 +444,7 @@
     document.getElementById('user-name').innerHTML = name;
     document.getElementById('user-initials').textContent = initials;
     document.getElementById('user-initials-2').textContent = initials;
+    await initApp();
   }
 
   document.getElementById('sign-out').addEventListener('click', async () => {
@@ -150,43 +458,6 @@
   }
   document.getElementById('rail-toggle').addEventListener('click', () => {
     rail.classList.toggle('is-collapsed');
-  });
-
-  const now = new Date();
-  const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  const sampleItemsByDate = {
-    [iso(now.getFullYear(), now.getMonth(), Math.min(now.getDate() + 1, 27))]: [
-      { title: 'Report due', type: 'task' },
-    ],
-    [iso(now.getFullYear(), now.getMonth(), Math.min(now.getDate() + 4, 27))]: [
-      { title: 'Study group', type: 'event' },
-    ],
-    [iso(now.getFullYear(), now.getMonth(), Math.max(now.getDate() - 3, 1))]: [
-      { title: 'Dentist', type: 'personal' },
-    ],
-  };
-
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const monthEl = document.getElementById('cal-month');
-  const yearEl = document.getElementById('cal-year');
-  const jumpInput = document.getElementById('cal-jump-input');
-
-  const cal = ClassyncCalendar.initMonthCalendar(document.getElementById('cal-root'), {
-    itemsByDate: sampleItemsByDate,
-    onMonthChange: (state) => {
-      monthEl.textContent = MONTHS[state.month];
-      yearEl.textContent = state.year;
-      jumpInput.value = '';
-    },
-  });
-
-  document.getElementById('cal-prev').addEventListener('click', () => cal.prev());
-  document.getElementById('cal-next').addEventListener('click', () => cal.next());
-  document.getElementById('cal-today').addEventListener('click', () => cal.today());
-  jumpInput.addEventListener('change', () => {
-    if (!jumpInput.value) return;
-    const [y, m] = jumpInput.value.split('-').map(Number);
-    cal.goTo(y, m - 1);
   });
 </script>
 </body>
