@@ -1,10 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const { getPool } = require('../../server/src/db/pool');
 
-test.afterAll(async () => {
-  await getPool().end();
-});
-
 test.describe('sign-in happy path via TEST_AUTH_BYPASS', () => {
   test('bypass login is reflected in /api/me, logout blocks it again', async ({ page }) => {
     const email = `e2e-signin-${Date.now()}@example.com`;
@@ -31,7 +27,7 @@ test.describe('sign-in happy path via TEST_AUTH_BYPASS', () => {
 
 test.describe('entrance page — age-confirmation gate', () => {
   test('sign-in button stays disabled until the age checkbox is checked', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/signin.html');
 
     const button = page.getByRole('button', { name: 'Continue with Google' });
     await expect(button).toBeDisabled();
@@ -41,7 +37,7 @@ test.describe('entrance page — age-confirmation gate', () => {
   });
 
   test('unchecking the box disables the button again', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/signin.html');
 
     const checkbox = page.locator('#age-confirm');
     const button = page.getByRole('button', { name: 'Continue with Google' });
