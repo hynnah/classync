@@ -69,19 +69,6 @@ a.btn-secondary:hover {
   height: var(--mark-nav-size);
   aspect-ratio: 2260 / 2087;
 }
-.mark--footer {
-  width: var(--mark-footer-size);
-  height: var(--mark-footer-size);
-  filter: var(--mark-footer-filter);
-}
-.mark--entrance {
-  width: var(--mark-entrance-size);
-  height: var(--mark-entrance-size);
-  opacity: var(--mark-entrance-opacity);
-  background: var(--color-entrance-mark-bg);
-  border-radius: var(--radius-mark-container);
-  padding: 14px;
-}
 
 @keyframes drift {
   0% { transform: translate3d(-45vw, 10px, 0); opacity: 0; }
@@ -174,7 +161,6 @@ a.btn-secondary:hover {
 .page-landing .preview-month { font-family: var(--font-heading); font-size: 26px; font-weight: 300; }
 .page-landing .preview-year { font-family: var(--font-mono); font-size: 15px; color: var(--color-secondary-border-hover); }
 .page-landing .preview-space { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-text-faint); }
-.page-landing .preview-note { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-text-faintest); margin: 0; }
 .page-landing .calendar-head {
   display: grid; grid-template-columns: repeat(7, 1fr);
   font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.18em; text-transform: uppercase;
@@ -463,9 +449,6 @@ a.btn-secondary:hover {
   box-shadow: 0 10px 26px rgba(38, 37, 33, 0.09), inset 0 0 18px rgba(214, 203, 180, 0.22);
   transform-origin: 55% 45%;
   transform: skewY(var(--sk, 0deg));
-  animation-name: leafFlutter;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
 }
 .page-signin .leaf-sheen {
   position: absolute;
@@ -531,13 +514,6 @@ a.btn-secondary:hover {
   62%  { transform: translate3d(58vw, -3vh, 0)  scale(1);    opacity: 0.92 }
   88%  { transform: translate3d(92vw, -18vh, 0) scale(0.92); opacity: 0.5 }
   100% { transform: translate3d(112vw, -27vh, 0) scale(0.86); opacity: 0 }
-}
-@keyframes leafFlutter {
-  0%   { transform: rotate(-9deg) rotateY(-12deg) skewY(var(--sk, 0deg)) }
-  28%  { transform: rotate(-2deg) rotateY(26deg)  skewY(var(--sk, 0deg)) }
-  54%  { transform: rotate(4deg)  rotateY(-8deg)  skewY(var(--sk, 0deg)) }
-  78%  { transform: rotate(-1deg) rotateY(18deg)  skewY(var(--sk, 0deg)) }
-  100% { transform: rotate(-9deg) rotateY(-12deg) skewY(var(--sk, 0deg)) }
 }
 
 .page-signin header {

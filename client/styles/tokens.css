@@ -23,9 +23,7 @@
   /* Accent (gold) */
   --color-accent: #b68235;
   --color-accent-link: #a2732c;
-  --color-accent-link-hover: #8d6222;
   --color-accent-hover-bg: #fdf7ec;
-  --color-selection-bg: #f0e2c8;
 
   /* Secondary (sky blue-grey) */
   --color-secondary-border: #c3d2d9;
@@ -41,17 +39,14 @@
   --color-space-task: #e9ae3f;
   --color-space-task-border: #c98f1f;
   --color-space-task-tint: #fdf1d8;
-  --color-space-task-deep: #b07d24;
 
   --color-space-event: #6fb6cf;
   --color-space-event-border: #3d8aa5;
   --color-space-event-tint: #e6f4f9;
-  --color-space-event-deep: #3d6b7e;
 
   --color-personal: #9bba63;
   --color-personal-border: #6d8a3c;
   --color-personal-tint: #f0f6e2;
-  --color-personal-deep: #6d7a4c;
 
   /* destructive (sign out) */
   --color-danger-border: rgba(176, 48, 40, 0.5);
@@ -69,18 +64,11 @@
   --color-dark-link: #d8d1c3;
   --color-dark-link-hover: #f2ece0;
 
-  /* focus ring */
-  --focus-ring: 2px solid var(--color-accent);
-  --focus-ring-offset: 2px;
-
   /*
    * same single asset everywhere; the footer's "inverted" look is a CSS filter, not a
    * separate light-color file. Values below are read directly off the live bundle, not estimated.
    */
   --mark-nav-size: 27px;          /* ~28x26 in the bundle, nav placement */
-  --mark-footer-size: 35px;       /* ~37x34, footer placement */
-  --mark-footer-filter: invert(1) brightness(1.06);
-  --mark-entrance-size: 77px;     /* ~80x74, sign-in/entrance placement */
   --mark-entrance-opacity: 0.86;
   --color-entrance-mark-bg: #fffdf9;
   --radius-mark-container: 22px;
