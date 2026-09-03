@@ -6,12 +6,12 @@ const { sessionStore } = require('./auth/sessionStore');
 const { requireLogin } = require('./auth/guard');
 const { mountTestBypass } = require('./auth/testBypass');
 const { authRouter } = require('./routes/auth.routes');
+const { pagesRouter } = require('./routes/pages.routes');
 
 function createApp() {
   const app = express();
 
   app.use(express.json());
-  app.use(express.static(path.join(__dirname, '..', '..', 'client')));
 
   app.use(session({
     name: 'classync_sid',
@@ -26,6 +26,10 @@ function createApp() {
       maxAge: 1000 * 60 * 60 * 24 * 7,
     },
   }));
+
+  app.use(pagesRouter);
+
+  app.use(express.static(path.join(__dirname, '..', '..', 'client')));
 
   app.use(authRouter);
 

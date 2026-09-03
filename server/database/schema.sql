@@ -7,6 +7,7 @@ CREATE TABLE users (
   is_admin          BOOLEAN NOT NULL DEFAULT FALSE,
   is_active         BOOLEAN NOT NULL DEFAULT TRUE,
   age_confirmed_at  TIMESTAMP NULL,
+  onboarded_at      TIMESTAMP NULL,
   created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_users_google_sub (google_sub),
   UNIQUE KEY uq_users_email (email)

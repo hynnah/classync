@@ -11,7 +11,13 @@
     if (!checkbox.checked) {
       return;
     }
-    window.location.href = '/auth/google?ageConfirmed=true';
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get('next');
+    const target = new URLSearchParams({ ageConfirmed: 'true' });
+    if (next) {
+      target.set('next', next);
+    }
+    window.location.href = `/auth/google?${target.toString()}`;
   });
 
   const params = new URLSearchParams(window.location.search);

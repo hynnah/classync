@@ -37,4 +37,12 @@ async function upsertFromGoogle({ googleSub, email, firstName, lastName, ageConf
   return findById(result.insertId);
 }
 
-module.exports = { UserRepo: { findByGoogleSub, findById, create, upsertFromGoogle } };
+async function markOnboarded(userId) {
+  await getPool().query(
+    'UPDATE users SET onboarded_at = NOW() WHERE id = ? AND onboarded_at IS NULL',
+    [userId]
+  );
+  return findById(userId);
+}
+
+module.exports = { UserRepo: { findByGoogleSub, findById, create, upsertFromGoogle, markOnboarded } };
