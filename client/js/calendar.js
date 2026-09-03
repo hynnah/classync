@@ -40,6 +40,7 @@
     const el = document.createElement('span');
     el.className = `cal-item cal-item--${item.type}${item.done ? ' is-done' : ''}`;
     el.tabIndex = 0;
+    if (item.id !== undefined) el.dataset.id = item.id;
 
     const dot = document.createElement('span');
     dot.className = 'cal-item-dot';

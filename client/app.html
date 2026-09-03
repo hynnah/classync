@@ -317,6 +317,32 @@
       await Promise.all([loadUrgent(), refreshCalendarView()]);
     });
 
+    async function toggleItemStatus(pill) {
+      if (!pill || !pill.dataset.id || pill.dataset.pending) return;
+      pill.dataset.pending = 'true';
+      const nextStatus = pill.classList.contains('is-done') ? 'pending' : 'completed';
+      try {
+        await fetch(`/api/items/${pill.dataset.id}/status`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ status: nextStatus }),
+        });
+        await Promise.all([refreshCalendarView(), loadUrgent()]);
+      } finally {
+        delete pill.dataset.pending;
+      }
+    }
+    catRoot.addEventListener('click', (e) => {
+      toggleItemStatus(e.target.closest('.cal-item'));
+    });
+    catRoot.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const pill = e.target.closest('.cal-item');
+      if (!pill) return;
+      e.preventDefault();
+      toggleItemStatus(pill);
+    });
+
     document.getElementById('cal-prev').addEventListener('click', async () => {
       if (viewMode === 'month') {
         cal.prev();
