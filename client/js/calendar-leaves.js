@@ -2,18 +2,18 @@
   const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   const LEAVES = [
-    { w: 104, top: '35%', dur: '14s',   spin: '3.4s', delay: '0.2s',  month: 'January',   start: 4, days: 31, marks: [9],      skew: -5  },
-    { w: 88,  top: '24%', dur: '16.5s', spin: '4.1s', delay: '2.1s',  month: 'February',  start: 0, days: 28, marks: [14],     skew: 6   },
-    { w: 132, top: '44%', dur: '12.5s', spin: '2.8s', delay: '4.3s',  month: 'March',     start: 6, days: 31, marks: [21], heart: 21, skew: -9 },
-    { w: 92,  top: '29%', dur: '18s',   spin: '4.7s', delay: '6.6s',  month: 'April',     start: 2, days: 30, marks: [4],      skew: 4   },
-    { w: 116, top: '50%', dur: '13s',   spin: '3.2s', delay: '8.8s',  month: 'May',       start: 4, days: 31, marks: [17],     skew: -7  },
-    { w: 80,  top: '20%', dur: '19.5s', spin: '5.1s', delay: '11.2s', month: 'June',      start: 0, days: 30, marks: [6],      skew: 8   },
-    { w: 124, top: '41%', dur: '11.5s', spin: '2.6s', delay: '13.4s', month: 'July',      start: 2, days: 31, marks: [12],     skew: -4  },
-    { w: 98,  top: '28%', dur: '15.5s', spin: '3.9s', delay: '15.7s', month: 'August',    start: 5, days: 31, marks: [11, 19], skew: 7   },
-    { w: 142, top: '46%', dur: '12s',   spin: '2.9s', delay: '18s',   month: 'September', start: 1, days: 30, marks: [12],     skew: -11 },
-    { w: 86,  top: '33%', dur: '17.5s', spin: '4.5s', delay: '20.4s', month: 'October',   start: 3, days: 31, marks: [14, 27], skew: 5   },
-    { w: 110, top: '22%', dur: '14.5s', spin: '3.6s', delay: '22.6s', month: 'November',  start: 6, days: 30, marks: [3],      skew: -6  },
-    { w: 94,  top: '48%', dur: '16s',   spin: '4.2s', delay: '24.9s', month: 'December',  start: 1, days: 31, marks: [22],     skew: 9   },
+    { w: 94,  top: '35%', dur: '14s',   delay: '0.2s',  month: 'January',   start: 4, days: 31, marks: [9],      skew: -5  },
+    { w: 79,  top: '24%', dur: '16.5s', delay: '2.1s',  month: 'February',  start: 0, days: 28, marks: [14],     skew: 6   },
+    { w: 119, top: '44%', dur: '12.5s', delay: '4.3s',  month: 'March',     start: 6, days: 31, marks: [21], heart: 21, skew: -9 },
+    { w: 83,  top: '29%', dur: '18s',   delay: '6.6s',  month: 'April',     start: 2, days: 30, marks: [4],      skew: 4   },
+    { w: 104, top: '50%', dur: '13s',   delay: '8.8s',  month: 'May',       start: 4, days: 31, marks: [17],     skew: -7  },
+    { w: 72,  top: '20%', dur: '19.5s', delay: '11.2s', month: 'June',      start: 0, days: 30, marks: [6],      skew: 8   },
+    { w: 112, top: '41%', dur: '11.5s', delay: '13.4s', month: 'July',      start: 2, days: 31, marks: [12],     skew: -4  },
+    { w: 88,  top: '28%', dur: '15.5s', delay: '15.7s', month: 'August',    start: 5, days: 31, marks: [11, 19], skew: 7   },
+    { w: 128, top: '46%', dur: '12s',   delay: '18s',   month: 'September', start: 1, days: 30, marks: [12],     skew: -11 },
+    { w: 77,  top: '33%', dur: '17.5s', delay: '20.4s', month: 'October',   start: 3, days: 31, marks: [14, 27], skew: 5   },
+    { w: 99,  top: '22%', dur: '14.5s', delay: '22.6s', month: 'November',  start: 6, days: 30, marks: [3],      skew: -6  },
+    { w: 85,  top: '48%', dur: '16s',   delay: '24.9s', month: 'December',  start: 1, days: 31, marks: [22],     skew: 9   },
   ];
 
   const HEART_PATH =
@@ -45,8 +45,6 @@
 
     const page = document.createElement('div');
     page.className = 'leaf-page';
-    page.style.animationDuration = cfg.spin;
-    page.style.animationDelay = cfg.delay;
     page.style.setProperty('--sk', cfg.skew + 'deg');
 
     const sheen = document.createElement('span');
