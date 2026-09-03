@@ -4,28 +4,120 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Classync — App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=IBM+Plex+Mono:wght@400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/tokens.css">
 <link rel="stylesheet" href="/styles/style.css">
 </head>
 <body class="page-app">
 
 <header>
-  <span>Classync</span>
-  <div>
-    <span id="user-initials"></span>
-    <span id="user-name">Loading…</span>
-    <button id="sign-out" type="button">Sign out</button>
-  </div>
+  <button id="rail-toggle" class="rail-toggle" type="button" aria-label="Toggle sidebar">
+    <span></span><span></span><span></span>
+  </button>
+  <a class="brand" href="/">
+    <span class="wordmark">Classync</span>
+    <span class="tagline">Classic way to stay in sync</span>
+  </a>
+  <span class="spacer"></span>
+  <span class="role-label">Personal planner</span>
+  <span id="user-initials" class="user-avatar"></span>
 </header>
 
-<main>
-  <div>
-    <div>You're in</div>
-    <h1>The calendar arrives next</h1>
-    <p>Sign-in, the age-confirmation gate, and first-run routing are all live and working. The real shared calendar, Spaces, and My Planner are built in the days ahead.</p>
-  </div>
-</main>
+<div class="shell">
+  <aside id="rail" class="rail">
+    <div class="rail-section">
+      <div class="rail-heading">You are in</div>
+      <div class="rail-scope">
+        <span class="scope-dot"></span>
+        <span class="scope-text">
+          <span class="scope-label">Personal · private</span>
+          <span class="scope-sub">Solo</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="rail-section rail-nav">
+      <div class="rail-heading">Personal · view</div>
+      <button class="rail-item is-active" type="button">
+        <span class="rail-item-label">Calendar</span>
+      </button>
+      <button class="rail-item" type="button" disabled>
+        <span class="rail-item-label">My Planner</span>
+        <span class="rail-item-soon">Soon</span>
+      </button>
+      <button class="rail-item" type="button" disabled>
+        <span class="rail-item-label">Notes</span>
+        <span class="rail-item-soon">Soon</span>
+      </button>
+      <p class="rail-hint">Spaces, tasks and notes arrive in a later build day. For now this is your personal calendar.</p>
+    </div>
+
+    <span class="rail-fill"></span>
+
+    <div class="rail-footer">
+      <div class="rail-user">
+        <span id="user-initials-2" class="user-avatar"></span>
+        <span class="rail-user-text">
+          <span id="user-name">Loading…</span>
+          <span class="rail-user-role">Solo</span>
+        </span>
+      </div>
+      <button id="sign-out" class="rail-signout" type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="cal-toolbar">
+      <div class="cal-toolbar-left">
+        <div class="cal-kicker">Personal · calendar</div>
+        <div class="cal-nav">
+          <button id="cal-prev" class="cal-nav-btn" type="button" aria-label="Previous month">←</button>
+          <div class="cal-heading"><span id="cal-month"></span> <span id="cal-year" class="cal-year"></span></div>
+          <button id="cal-next" class="cal-nav-btn" type="button" aria-label="Next month">→</button>
+          <button id="cal-today" class="cal-today-btn" type="button">Today</button>
+        </div>
+      </div>
+      <div class="cal-toolbar-right">
+        <label class="cal-jump">
+          <input id="cal-jump-input" type="date" aria-label="Jump to a date">
+        </label>
+        <div class="cal-segment">
+          <button class="is-active" type="button">Month</button>
+          <button type="button" disabled>Day</button>
+        </div>
+        <button class="cal-new-task" type="button" disabled>New task</button>
+      </div>
+    </div>
+
+    <div class="cal-body">
+      <div class="calendar-panel">
+        <div id="cal-root"></div>
+        <div class="calendar-legend">
+          <span class="row"><span class="swatch swatch--task"></span>Space task</span>
+          <span class="row"><span class="swatch swatch--event"></span>Space event</span>
+          <span class="row"><span class="swatch swatch--personal"></span>Personal · private</span>
+          <span class="spacer"></span>
+          <span>Sample dates · real sync arrives in a later build day</span>
+        </div>
+      </div>
+
+      <div class="urgent-panel">
+        <div class="urgent-head">
+          <div class="urgent-kicker">Urgent</div>
+          <div class="urgent-title">Due now</div>
+        </div>
+        <div class="urgent-body">
+          <p class="urgent-empty">Nothing due yet — Space tasks and due dates arrive in a later build day.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
 
 <script src="/js/lib/escape.js" type="module"></script>
+<script src="/js/calendar.js"></script>
 <script type="module">
   import { escapeHtml } from '/js/lib/escape.js';
 
@@ -34,13 +126,61 @@
     window.location.href = '/signin.html?next=app';
   } else if (res.ok) {
     const me = await res.json();
-    document.getElementById('user-name').innerHTML = escapeHtml(me.firstName || me.email);
-    document.getElementById('user-initials').textContent = (me.firstName?.[0] || me.email[0] || '?').toUpperCase();
+    const name = escapeHtml(me.firstName || me.email);
+    const initials = (me.firstName?.[0] || me.email[0] || '?').toUpperCase();
+    document.getElementById('user-name').innerHTML = name;
+    document.getElementById('user-initials').textContent = initials;
+    document.getElementById('user-initials-2').textContent = initials;
   }
 
   document.getElementById('sign-out').addEventListener('click', async () => {
     await fetch('/auth/logout', { method: 'POST' });
     window.location.href = '/';
+  });
+
+  const rail = document.getElementById('rail');
+  if (window.matchMedia('(max-width: 760px)').matches) {
+    rail.classList.add('is-collapsed');
+  }
+  document.getElementById('rail-toggle').addEventListener('click', () => {
+    rail.classList.toggle('is-collapsed');
+  });
+
+  const now = new Date();
+  const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const sampleItemsByDate = {
+    [iso(now.getFullYear(), now.getMonth(), Math.min(now.getDate() + 1, 27))]: [
+      { title: 'Report due', type: 'task' },
+    ],
+    [iso(now.getFullYear(), now.getMonth(), Math.min(now.getDate() + 4, 27))]: [
+      { title: 'Study group', type: 'event' },
+    ],
+    [iso(now.getFullYear(), now.getMonth(), Math.max(now.getDate() - 3, 1))]: [
+      { title: 'Dentist', type: 'personal' },
+    ],
+  };
+
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthEl = document.getElementById('cal-month');
+  const yearEl = document.getElementById('cal-year');
+  const jumpInput = document.getElementById('cal-jump-input');
+
+  const cal = ClassyncCalendar.initMonthCalendar(document.getElementById('cal-root'), {
+    itemsByDate: sampleItemsByDate,
+    onMonthChange: (state) => {
+      monthEl.textContent = MONTHS[state.month];
+      yearEl.textContent = state.year;
+      jumpInput.value = '';
+    },
+  });
+
+  document.getElementById('cal-prev').addEventListener('click', () => cal.prev());
+  document.getElementById('cal-next').addEventListener('click', () => cal.next());
+  document.getElementById('cal-today').addEventListener('click', () => cal.today());
+  jumpInput.addEventListener('change', () => {
+    if (!jumpInput.value) return;
+    const [y, m] = jumpInput.value.split('-').map(Number);
+    cal.goTo(y, m - 1);
   });
 </script>
 </body>
