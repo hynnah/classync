@@ -90,6 +90,23 @@ async function setStatus({ itemId, userId, status }) {
   return findForUser(itemId, userId);
 }
 
+// kind is deliberately not editable here — creating the "wrong" kind means
+// delete + recreate, matching how simple the rest of this model already is.
+// Reuses the same ownership + kind !== 'event' guard as setStatus, for the same
+// reason: findForUser's re-fetch can't tell "blocked" apart from "unchanged" on
+// its own, so the check has to happen before the write, not folded into its WHERE.
+async function update({ itemId, userId, title, description, category, dueDate, dueTime }) {
+  const current = await findForUser(itemId, userId);
+  if (!current || current.kind === 'event') return null;
+  await getPool().query(
+    `UPDATE items
+     SET title = ?, description = ?, category = ?, due_date = ?, due_time = ?
+     WHERE id = ? AND created_by = ?`,
+    [title, description || null, category || null, dueDate || null, dueTime || null, itemId, userId]
+  );
+  return findForUser(itemId, userId);
+}
+
 async function remove({ itemId, userId }) {
   const [result] = await getPool().query(
     'DELETE FROM items WHERE id = ? AND created_by = ?',
@@ -99,5 +116,5 @@ async function remove({ itemId, userId }) {
 }
 
 module.exports = {
-  ItemRepo: { findById, findForUser, create, listForUser, listUrgentForUser, setStatus, remove },
+  ItemRepo: { findById, findForUser, create, listForUser, listUrgentForUser, setStatus, update, remove },
 };

@@ -10,6 +10,27 @@ const STATUSES = ['pending', 'completed'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
 
+// Shared by POST (create) and PATCH (edit) — everything but kind, which is only
+// meaningful at creation (see ItemRepo.update's note on why it's not editable).
+function validateItemFields({ title, category, dueDate, dueTime }) {
+  if (typeof title !== 'string' || !title.trim()) {
+    return 'title is required.';
+  }
+  if (title.trim().length > 255) {
+    return 'title must be 255 characters or fewer.';
+  }
+  if (category !== undefined && category !== null && !CATEGORIES.includes(category)) {
+    return `category must be one of: ${CATEGORIES.join(', ')}`;
+  }
+  if (dueDate !== undefined && dueDate !== null && !DATE_RE.test(dueDate)) {
+    return 'dueDate must be in YYYY-MM-DD format.';
+  }
+  if (dueTime !== undefined && dueTime !== null && !TIME_RE.test(dueTime)) {
+    return 'dueTime must be in HH:MM or HH:MM:SS format.';
+  }
+  return null;
+}
+
 router.get('/api/items', requireLogin, async (req, res, next) => {
   try {
     const { from, to } = req.query;
@@ -39,20 +60,9 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
     if (!PERSONAL_KINDS.includes(kind)) {
       return res.status(400).json({ error: `kind must be one of: ${PERSONAL_KINDS.join(', ')}` });
     }
-    if (typeof title !== 'string' || !title.trim()) {
-      return res.status(400).json({ error: 'title is required.' });
-    }
-    if (title.trim().length > 255) {
-      return res.status(400).json({ error: 'title must be 255 characters or fewer.' });
-    }
-    if (category !== undefined && category !== null && !CATEGORIES.includes(category)) {
-      return res.status(400).json({ error: `category must be one of: ${CATEGORIES.join(', ')}` });
-    }
-    if (dueDate !== undefined && dueDate !== null && !DATE_RE.test(dueDate)) {
-      return res.status(400).json({ error: 'dueDate must be in YYYY-MM-DD format.' });
-    }
-    if (dueTime !== undefined && dueTime !== null && !TIME_RE.test(dueTime)) {
-      return res.status(400).json({ error: 'dueTime must be in HH:MM or HH:MM:SS format.' });
+    const fieldError = validateItemFields({ title, category, dueDate, dueTime });
+    if (fieldError) {
+      return res.status(400).json({ error: fieldError });
     }
 
     const item = await ItemRepo.create({
@@ -65,6 +75,33 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
       dueTime: dueTime || null,
     });
     res.status(201).json({ item });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
+  try {
+    const { title, description, category, dueDate, dueTime } = req.body || {};
+
+    const fieldError = validateItemFields({ title, category, dueDate, dueTime });
+    if (fieldError) {
+      return res.status(400).json({ error: fieldError });
+    }
+
+    const item = await ItemRepo.update({
+      itemId: req.params.id,
+      userId: req.user.id,
+      title: title.trim(),
+      description: description || null,
+      category: category || null,
+      dueDate: dueDate || null,
+      dueTime: dueTime || null,
+    });
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found.' });
+    }
+    res.json({ item });
   } catch (err) {
     next(err);
   }
