@@ -10,6 +10,7 @@ describe('ItemRepo', () => {
   let owner;
   let intruder;
   const createdIds = [];
+  const createdSpaceIds = [];
 
   beforeAll(async () => {
     owner = await UserRepo.create({
@@ -27,6 +28,9 @@ describe('ItemRepo', () => {
   afterAll(async () => {
     if (createdIds.length) {
       await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+    }
+    if (createdSpaceIds.length) {
+      await getPool().query('DELETE FROM spaces WHERE id IN (?)', [createdSpaceIds]);
     }
     await getPool().query('DELETE FROM users WHERE id IN (?, ?)', [owner.id, intruder.id]);
   });
@@ -127,6 +131,36 @@ describe('ItemRepo', () => {
 
       const reverted = await ItemRepo.setStatus({ itemId: item.id, userId: owner.id, status: 'pending' });
       expect(reverted.status).toBe('pending');
+    });
+
+    test('an event item is never toggleable, even by its own assignee', async () => {
+      // Event items only exist inside a Space, which isn't built yet — inserted
+      // directly here (bypassing ItemRepo.create, which the chk_personal_kind
+      // constraint already blocks from ever making a personal event) so this
+      // guard stays correct once Spaces and real event items exist.
+      const [spaceResult] = await getPool().query(
+        'INSERT INTO spaces (name, join_code, creator_user_id) VALUES (?, ?, ?)',
+        ['Guard test space', 'GT' + String(Date.now()).slice(-4), owner.id]
+      );
+      const spaceId = spaceResult.insertId;
+      createdSpaceIds.push(spaceId);
+
+      const [itemResult] = await getPool().query(
+        "INSERT INTO items (space_id, kind, title, created_by) VALUES (?, 'event', 'Guard test event', ?)",
+        [spaceId, owner.id]
+      );
+      const eventItemId = itemResult.insertId;
+      createdIds.push(eventItemId);
+      await getPool().query(
+        "INSERT INTO item_assignments (item_id, user_id, status) VALUES (?, ?, 'pending')",
+        [eventItemId, owner.id]
+      );
+
+      const result = await ItemRepo.setStatus({ itemId: eventItemId, userId: owner.id, status: 'completed' });
+      expect(result).toBeNull();
+
+      const [rows] = await getPool().query('SELECT status FROM item_assignments WHERE item_id = ?', [eventItemId]);
+      expect(rows[0].status).toBe('pending');
     });
   });
 
