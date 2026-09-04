@@ -1616,7 +1616,7 @@ a.btn-secondary:hover {
   flex-shrink: 0;
 }
 .page-app .cal-item-title {
-  min-width: 0;
+  min-width: 24px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
