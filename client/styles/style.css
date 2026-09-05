@@ -1608,14 +1608,6 @@ a.btn-secondary:hover {
   border: 1px solid;
   flex-shrink: 0;
 }
-.page-app .cal-item-tag {
-  font-family: var(--font-mono);
-  font-size: 8px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--color-text-faintest);
-  flex-shrink: 0;
-}
 .page-app .cal-item-title {
   min-width: 24px;
   overflow: hidden;
@@ -1684,7 +1676,6 @@ a.btn-secondary:hover {
 
 @media (max-width: 900px) {
   .page-app .calendar-days { grid-auto-rows: minmax(84px, 1fr); }
-  .page-app .cal-item-tag { display: none; }
 }
 
 /* Day view (client/js/calendar.js renderDayView). Items reuse .cal-item —
@@ -2071,13 +2062,14 @@ a.btn-secondary:hover {
 }
 .page-app .day-panel-edit-btn,
 .page-app .day-panel-delete-btn {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
   background: transparent;
   border: 0;
-  padding: 4px 2px;
+  padding: 0;
   cursor: pointer;
   box-shadow: none;
   color: var(--color-text-faint);

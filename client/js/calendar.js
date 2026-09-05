@@ -46,13 +46,6 @@
     dot.className = 'cal-item-dot';
     el.appendChild(dot);
 
-    if (item.tag) {
-      const tag = document.createElement('span');
-      tag.className = 'cal-item-tag';
-      tag.textContent = item.tag;
-      el.appendChild(tag);
-    }
-
     const title = document.createElement('span');
     title.className = 'cal-item-title';
     title.textContent = item.title;

@@ -199,7 +199,6 @@
       id: apiItem.id,
       title: apiItem.title,
       type: 'personal',
-      tag: apiItem.kind === 'note' ? 'NOTE' : (apiItem.category || undefined),
       done: apiItem.status === 'completed',
       dueTime: apiItem.due_time,
     };
@@ -325,32 +324,6 @@
         body: JSON.stringify({ status: 'completed' }),
       });
       await Promise.all([loadUrgent(), refreshCalendarView()]);
-    });
-
-    async function toggleItemStatus(pill) {
-      if (!pill || !pill.dataset.id || pill.dataset.pending) return;
-      pill.dataset.pending = 'true';
-      const nextStatus = pill.classList.contains('is-done') ? 'pending' : 'completed';
-      try {
-        await fetch(`/api/items/${pill.dataset.id}/status`, {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ status: nextStatus }),
-        });
-        await Promise.all([refreshCalendarView(), loadUrgent()]);
-      } finally {
-        delete pill.dataset.pending;
-      }
-    }
-    catRoot.addEventListener('click', (e) => {
-      toggleItemStatus(e.target.closest('.cal-item'));
-    });
-    catRoot.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      const pill = e.target.closest('.cal-item');
-      if (!pill) return;
-      e.preventDefault();
-      toggleItemStatus(pill);
     });
 
     document.getElementById('cal-prev').addEventListener('click', async () => {
@@ -543,12 +516,14 @@
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
         editBtn.className = 'day-panel-edit-btn';
-        editBtn.textContent = 'Edit';
+        editBtn.setAttribute('aria-label', 'Edit');
+        editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.3 2.3a1.5 1.5 0 0 1 2.1 2.1L5.5 12.3l-2.8.7.7-2.8 7.9-7.9Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
         actions.appendChild(editBtn);
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
         deleteBtn.className = 'day-panel-delete-btn';
-        deleteBtn.textContent = 'Delete';
+        deleteBtn.setAttribute('aria-label', 'Delete');
+        deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5v8a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7v4M9.5 7v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
         actions.appendChild(deleteBtn);
         row.appendChild(actions);
 
@@ -596,16 +571,24 @@
       if (e.key === 'Escape' && !dayPanel.hidden) closeDayPanel();
     });
 
-    catRoot.addEventListener('click', async (e) => {
-      if (e.target.closest('.cal-item')) return;
-      const dayCell = e.target.closest('.calendar-day');
+    async function openDayPanelFromTarget(target) {
+      const dayCell = target.closest('.calendar-day');
       if (dayCell) {
         await openDayPanel(dayCell.dataset.date);
         return;
       }
-      if (e.target.closest('.day-view')) {
+      if (target.closest('.day-view')) {
         await openDayPanel(isoDate(dayDate));
       }
+    }
+    catRoot.addEventListener('click', async (e) => {
+      await openDayPanelFromTarget(e.target);
+    });
+    catRoot.addEventListener('keydown', async (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (!e.target.closest('.cal-item')) return;
+      e.preventDefault();
+      await openDayPanelFromTarget(e.target);
     });
 
     await refreshCalendarView();

@@ -32,7 +32,7 @@ test.describe('creating a task through the New Task modal', () => {
     }
   });
 
-  test('a note (not a task) created via the modal also appears on the calendar, tagged NOTE', async ({ page }) => {
+  test('a note (not a task) created via the modal also appears on the calendar, with just its title on the pill', async ({ page }) => {
     const email = `e2e-newnote-${Date.now()}@example.com`;
     try {
       await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
@@ -54,7 +54,8 @@ test.describe('creating a task through the New Task modal', () => {
       await expect(page.locator('#task-modal')).toBeHidden();
       const pill = page.locator('.cal-item', { has: page.locator('.cal-item-title', { hasText: 'E2E created note' }) });
       await expect(pill).toBeVisible();
-      await expect(pill.locator('.cal-item-tag')).toHaveText('NOTE');
+      await expect(pill.locator('.cal-item-tag')).toHaveCount(0);
+      await expect(pill).toHaveText('E2E created note');
     } finally {
       await getPool().query('DELETE FROM items WHERE title = ?', ['E2E created note']);
       await getPool().query('DELETE FROM users WHERE email = ?', [email]);
@@ -63,7 +64,7 @@ test.describe('creating a task through the New Task modal', () => {
 });
 
 test.describe('toggling item status from the calendar', () => {
-  test('clicking a pill marks it done, and clicking it again undoes an accidental completion', async ({ page }) => {
+  test('clicking a pill opens the day panel, and marking done there undoes an accidental completion', async ({ page }) => {
     const email = `e2e-toggle-${Date.now()}@example.com`;
     let itemId;
     try {
@@ -93,10 +94,19 @@ test.describe('toggling item status from the calendar', () => {
       await expect(pill).not.toHaveClass(/is-done/);
 
       await pill.click();
+      await expect(page.locator('#day-panel')).toBeVisible();
+      await expect(pill).not.toHaveClass(/is-done/);
+
+      const row = page.locator('.day-panel-row', { has: page.locator('.day-panel-row-title', { hasText: 'E2E toggle task' }) });
+      const check = row.locator('.day-panel-row-check');
+
+      await check.click();
+      await expect(row.locator('.day-panel-row-title')).toHaveClass(/is-done/);
       await expect(pill).toHaveClass(/is-done/);
       await expect(page.locator('.urgent-item-title', { hasText: 'E2E toggle task' })).toHaveCount(0);
 
-      await pill.click();
+      await check.click();
+      await expect(row.locator('.day-panel-row-title')).not.toHaveClass(/is-done/);
       await expect(pill).not.toHaveClass(/is-done/);
       await expect(page.locator('.urgent-item-title', { hasText: 'E2E toggle task' })).toBeVisible();
     } finally {
