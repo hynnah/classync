@@ -168,6 +168,7 @@
       </div>
       <p id="task-form-error" class="form-error" role="alert" hidden></p>
       <div class="modal-actions">
+        <span id="task-save-status" class="save-status" role="status" hidden></span>
         <button type="button" id="task-modal-cancel" class="modal-cancel">Cancel</button>
         <button type="submit" class="modal-submit">Create</button>
       </div>
@@ -386,8 +387,27 @@
     const form = document.getElementById('task-form');
     const errorEl = document.getElementById('task-form-error');
     const submitBtn = form.querySelector('.modal-submit');
+    const cancelBtn = document.getElementById('task-modal-cancel');
+    const saveStatusEl = document.getElementById('task-save-status');
     const classificationFields = document.getElementById('task-classification-fields');
     let editingItemId = null;
+    let autoSaveTimer = null;
+    const AUTOSAVE_DEBOUNCE_MS = 600;
+
+    // Notes auto-save (no Create/Save button, just Close) — tasks keep the explicit
+    // submit flow. Reflects whichever kind radio is currently selected, not just
+    // whether editingItemId is set, since a brand-new note switches into this mode
+    // the moment "Note" is picked, before it has ever been saved once.
+    function isNoteMode() {
+      const checked = form.querySelector('input[name="kind"]:checked');
+      return checked && checked.value === 'note';
+    }
+    function updateModeUI() {
+      const noteMode = isNoteMode();
+      submitBtn.hidden = noteMode;
+      cancelBtn.textContent = noteMode ? 'Close' : 'Cancel';
+      saveStatusEl.hidden = !noteMode || !saveStatusEl.textContent;
+    }
 
     // A note is just a title and a description — no category, no due date/time.
     // Hiding the fields isn't enough on its own: their values survive in the DOM
@@ -402,17 +422,65 @@
         document.getElementById('task-due-time').value = '';
       }
       classificationFields.hidden = selected === 'note';
+      updateModeUI();
     }
     form.querySelectorAll('input[name="kind"]').forEach((r) => r.addEventListener('change', onKindChange));
+
+    async function performAutoSave() {
+      if (!isNoteMode()) return;
+      const title = document.getElementById('task-title').value.trim();
+      if (!title) return; // nothing worth saving yet, and the server would reject a blank title anyway
+
+      saveStatusEl.textContent = 'Saving…';
+      saveStatusEl.hidden = false;
+      const payload = { title, description: document.getElementById('task-description').value || (editingItemId ? null : undefined) };
+      if (!editingItemId) payload.kind = 'note';
+
+      try {
+        const url = editingItemId ? `/api/items/${editingItemId}` : '/api/items';
+        const method = editingItemId ? 'PATCH' : 'POST';
+        const res = await fetch(url, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+        if (!res.ok) {
+          saveStatusEl.textContent = "Couldn't save — will retry";
+          return;
+        }
+        const body = await res.json();
+        if (!editingItemId) {
+          editingItemId = body.item.id;
+          // The note now exists with kind='note' committed — kind is not editable
+          // once an item is persisted, whether that happened via this auto-save or
+          // an explicit task Create, so lock the radios the same way editing does.
+          form.querySelectorAll('input[name="kind"]').forEach((r) => { r.disabled = true; });
+        }
+        saveStatusEl.textContent = 'Saved';
+        await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel()]);
+      } catch (err) {
+        saveStatusEl.textContent = "Couldn't save — will retry";
+      }
+    }
+    function scheduleAutoSave() {
+      if (!isNoteMode()) return;
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(performAutoSave, AUTOSAVE_DEBOUNCE_MS);
+    }
+    async function flushAutoSave() {
+      if (!isNoteMode()) return;
+      clearTimeout(autoSaveTimer);
+      await performAutoSave();
+    }
+    document.getElementById('task-title').addEventListener('input', scheduleAutoSave);
+    document.getElementById('task-description').addEventListener('input', scheduleAutoSave);
 
     function openModal(item) {
       errorEl.hidden = true;
       form.reset();
       editingItemId = item ? item.id : null;
+      clearTimeout(autoSaveTimer);
+      saveStatusEl.textContent = '';
       const kindRadios = form.querySelectorAll('input[name="kind"]');
 
       if (item) {
-        modalTitle.textContent = 'Edit task';
+        modalTitle.textContent = item.kind === 'note' ? 'Note' : 'Edit task';
         submitBtn.textContent = 'Save';
         kindRadios.forEach((r) => {
           r.checked = r.value === item.kind;
@@ -434,12 +502,15 @@
         classificationFields.hidden = false;
       }
 
+      updateModeUI();
       modal.hidden = false;
       document.getElementById('task-title').focus();
     }
-    function closeModal() {
+    async function closeModal() {
+      await flushAutoSave();
       modal.hidden = true;
       editingItemId = null;
+      clearTimeout(autoSaveTimer);
     }
 
     document.getElementById('new-task-btn').addEventListener('click', () => openModal());
@@ -454,6 +525,13 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (isNoteMode()) {
+        // No submit button is shown in note mode, but an Enter keypress in a text
+        // field can still trigger the form's submit event in some browsers — treat
+        // it the same as closing: flush whatever's pending, don't run the task path.
+        await closeModal();
+        return;
+      }
       errorEl.hidden = true;
       const data = new FormData(form);
       // Editing sends explicit null for a blanked field — the backend's partial-update
@@ -485,7 +563,8 @@
           errorEl.hidden = false;
           return;
         }
-        closeModal();
+        modal.hidden = true;
+        editingItemId = null;
         await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel()]);
       } finally {
         submitBtn.disabled = false;

@@ -43,7 +43,9 @@ test.describe('creating a task through the New Task modal', () => {
       await page.locator('#new-task-btn').click();
       await page.locator('label.field-radio', { hasText: 'Note' }).locator('input').check();
       await page.locator('#task-title').fill('E2E created note');
-      await page.locator('.modal-submit').click();
+      // notes auto-save (no submit button) — wait for the debounced save to land
+      await expect(page.locator('#task-save-status')).toHaveText('Saved', { timeout: 3000 });
+      await page.locator('#task-modal-close').click();
 
       await expect(page.locator('#task-modal')).toBeHidden();
       // notes can't have a due date (the field is hidden for them), so a fresh note
@@ -184,12 +186,84 @@ test.describe('notes are simpler than tasks', () => {
       await expect(page.locator('#task-category')).toHaveValue('');
       await expect(page.locator('#task-due-date')).toHaveValue('');
 
+      await expect(page.locator('.modal-submit')).toBeHidden();
       await page.locator('#task-title').fill('E2E note fields test');
-      await page.locator('.modal-submit').click();
-      await expect(page.locator('#task-modal')).toBeHidden();
+      // notes auto-save (no submit button) — wait for the debounced save to land
+      await expect(page.locator('#task-save-status')).toHaveText('Saved', { timeout: 3000 });
       await expect(page.locator('#task-form-error')).toBeHidden();
+      await page.locator('#task-modal-close').click();
+      await expect(page.locator('#task-modal')).toBeHidden();
     } finally {
       await getPool().query('DELETE FROM items WHERE title = ?', ['E2E note fields test']);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
+  test('a note auto-saves as one row (not a new one per edit), and closing right after typing does not lose the last edit', async ({ page }) => {
+    const email = `e2e-noteautosave-${Date.now()}@example.com`;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      await page.locator('#new-task-btn').click();
+      await page.locator('label.field-radio', { hasText: 'Note' }).locator('input').check();
+      await page.locator('#task-title').fill('E2E autosave note');
+      await expect(page.locator('#task-save-status')).toHaveText('Saved', { timeout: 3000 });
+      // kind is locked in the moment an item is actually persisted, whether that
+      // happened via an explicit task Create or a note's first auto-save
+      await expect(page.locator('input[name="kind"][value="task"]')).toBeDisabled();
+
+      const [afterFirstSave] = await getPool().query('SELECT * FROM items WHERE title = ?', ['E2E autosave note']);
+      expect(afterFirstSave).toHaveLength(1);
+
+      // a second edit should PATCH the same row, not create a second one. Poll the
+      // DB directly rather than wait for the save-status text to say "Saved" again —
+      // it already says "Saved" from the first save, so that assertion could match
+      // trivially before this second save has even started.
+      await page.locator('#task-description').fill('added detail');
+      await expect.poll(async () => {
+        const [rows] = await getPool().query('SELECT description FROM items WHERE id = ?', [afterFirstSave[0].id]);
+        return rows[0].description;
+      }, { timeout: 3000 }).toBe('added detail');
+      const [afterSecondSave] = await getPool().query('SELECT * FROM items WHERE title = ?', ['E2E autosave note']);
+      expect(afterSecondSave).toHaveLength(1);
+
+      // closing immediately after typing (before the debounce would naturally fire)
+      // must still flush-save the last edit, not drop it
+      await page.locator('#task-title').fill('E2E autosave note EDITED');
+      await page.locator('#task-modal-close').click();
+      await expect(page.locator('#task-modal')).toBeHidden();
+      const [afterFlush] = await getPool().query('SELECT title FROM items WHERE id = ?', [afterFirstSave[0].id]);
+      expect(afterFlush[0].title).toBe('E2E autosave note EDITED');
+    } finally {
+      await getPool().query('DELETE FROM items WHERE title IN (?, ?)', ['E2E autosave note', 'E2E autosave note EDITED']);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
+  test('opening Note mode and closing without typing anything creates nothing', async ({ page }) => {
+    const email = `e2e-noteempty-${Date.now()}@example.com`;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+      const userId = await page.evaluate(async () => (await (await fetch('/api/me')).json()).id);
+
+      await page.locator('#new-task-btn').click();
+      await page.locator('label.field-radio', { hasText: 'Note' }).locator('input').check();
+      await page.waitForTimeout(1000); // long enough for the debounce to have fired if it were going to
+      await page.locator('#task-modal-close').click();
+      await expect(page.locator('#task-modal')).toBeHidden();
+
+      // scoped to this test's own user — items is a shared table across parallel
+      // e2e workers, so a global COUNT(*) would be flaky against other tests'
+      // concurrent create/cleanup activity
+      const [after] = await getPool().query('SELECT COUNT(*) as c FROM items WHERE created_by = ?', [userId]);
+      expect(after[0].c).toBe(0);
+    } finally {
       await getPool().query('DELETE FROM users WHERE email = ?', [email]);
     }
   });

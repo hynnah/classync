@@ -2,6 +2,15 @@
   box-sizing: border-box;
 }
 
+/* An author rule setting `display` — even a low-specificity element selector
+   like the button reset below — always beats the browser's built-in
+   `[hidden] { display: none }` default, because origin outranks specificity
+   in the cascade. Hit this three separate times (.modal-backdrop, .field-grid,
+   .modal-submit) before making it a standing rule instead of a per-element fix. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   font-family: var(--font-body);
@@ -1831,9 +1840,6 @@ a.btn-secondary:hover {
   justify-content: center;
   padding: 24px;
 }
-.page-app .modal-backdrop[hidden] {
-  display: none;
-}
 .page-app .modal {
   width: 480px;
   max-width: 100%;
@@ -1932,9 +1938,6 @@ a.btn-secondary:hover {
   grid-template-columns: 1fr 1fr 1fr;
   gap: 14px;
 }
-.page-app .field-grid[hidden] {
-  display: none;
-}
 .page-app .form-error {
   font-size: 12px;
   color: var(--color-danger-text);
@@ -1942,9 +1945,18 @@ a.btn-secondary:hover {
 }
 .page-app .modal-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 4px;
+}
+.page-app .save-status {
+  margin-right: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
 }
 .page-app .modal-cancel {
   font-family: var(--font-mono);
