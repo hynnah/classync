@@ -1660,22 +1660,30 @@ a.btn-secondary:hover {
 /* Task color picker — overrides the plain personal tint/border above when a task
    has a chosen color. Same specificity as .cal-item--personal (one class each),
    so source order is what makes these win when both classes are present. */
-.page-app .cal-item--color-amber { border-left-color: var(--color-item-amber-border); background: var(--color-item-amber-tint); }
-.page-app .cal-item--color-amber .cal-item-dot { background: transparent; border-color: var(--color-item-amber-border); }
-.page-app .cal-item--color-clay { border-left-color: var(--color-item-clay-border); background: var(--color-item-clay-tint); }
-.page-app .cal-item--color-clay .cal-item-dot { background: transparent; border-color: var(--color-item-clay-border); }
-.page-app .cal-item--color-sage { border-left-color: var(--color-item-sage-border); background: var(--color-item-sage-tint); }
-.page-app .cal-item--color-sage .cal-item-dot { background: transparent; border-color: var(--color-item-sage-border); }
-.page-app .cal-item--color-dusty-blue { border-left-color: var(--color-item-dusty-blue-border); background: var(--color-item-dusty-blue-tint); }
-.page-app .cal-item--color-dusty-blue .cal-item-dot { background: transparent; border-color: var(--color-item-dusty-blue-border); }
-.page-app .cal-item--color-plum { border-left-color: var(--color-item-plum-border); background: var(--color-item-plum-tint); }
-.page-app .cal-item--color-plum .cal-item-dot { background: transparent; border-color: var(--color-item-plum-border); }
+.page-app .cal-item--color-salmon { border-left-color: var(--color-item-salmon-border); background: var(--color-item-salmon-tint); }
+.page-app .cal-item--color-salmon .cal-item-dot { background: transparent; border-color: var(--color-item-salmon-border); }
+.page-app .cal-item--color-peach { border-left-color: var(--color-item-peach-border); background: var(--color-item-peach-tint); }
+.page-app .cal-item--color-peach .cal-item-dot { background: transparent; border-color: var(--color-item-peach-border); }
+.page-app .cal-item--color-butter { border-left-color: var(--color-item-butter-border); background: var(--color-item-butter-tint); }
+.page-app .cal-item--color-butter .cal-item-dot { background: transparent; border-color: var(--color-item-butter-border); }
+.page-app .cal-item--color-lime { border-left-color: var(--color-item-lime-border); background: var(--color-item-lime-tint); }
+.page-app .cal-item--color-lime .cal-item-dot { background: transparent; border-color: var(--color-item-lime-border); }
+.page-app .cal-item--color-mint { border-left-color: var(--color-item-mint-border); background: var(--color-item-mint-tint); }
+.page-app .cal-item--color-mint .cal-item-dot { background: transparent; border-color: var(--color-item-mint-border); }
+.page-app .cal-item--color-seafoam { border-left-color: var(--color-item-seafoam-border); background: var(--color-item-seafoam-tint); }
+.page-app .cal-item--color-seafoam .cal-item-dot { background: transparent; border-color: var(--color-item-seafoam-border); }
+.page-app .cal-item--color-cyan { border-left-color: var(--color-item-cyan-border); background: var(--color-item-cyan-tint); }
+.page-app .cal-item--color-cyan .cal-item-dot { background: transparent; border-color: var(--color-item-cyan-border); }
+.page-app .cal-item--color-sky { border-left-color: var(--color-item-sky-border); background: var(--color-item-sky-tint); }
+.page-app .cal-item--color-sky .cal-item-dot { background: transparent; border-color: var(--color-item-sky-border); }
+.page-app .cal-item--color-periwinkle { border-left-color: var(--color-item-periwinkle-border); background: var(--color-item-periwinkle-tint); }
+.page-app .cal-item--color-periwinkle .cal-item-dot { background: transparent; border-color: var(--color-item-periwinkle-border); }
+.page-app .cal-item--color-lavender { border-left-color: var(--color-item-lavender-border); background: var(--color-item-lavender-tint); }
+.page-app .cal-item--color-lavender .cal-item-dot { background: transparent; border-color: var(--color-item-lavender-border); }
+.page-app .cal-item--color-orchid { border-left-color: var(--color-item-orchid-border); background: var(--color-item-orchid-tint); }
+.page-app .cal-item--color-orchid .cal-item-dot { background: transparent; border-color: var(--color-item-orchid-border); }
 .page-app .cal-item--color-rose { border-left-color: var(--color-item-rose-border); background: var(--color-item-rose-tint); }
 .page-app .cal-item--color-rose .cal-item-dot { background: transparent; border-color: var(--color-item-rose-border); }
-.page-app .cal-item--color-slate { border-left-color: var(--color-item-slate-border); background: var(--color-item-slate-tint); }
-.page-app .cal-item--color-slate .cal-item-dot { background: transparent; border-color: var(--color-item-slate-border); }
-.page-app .cal-item--color-ochre { border-left-color: var(--color-item-ochre-border); background: var(--color-item-ochre-tint); }
-.page-app .cal-item--color-ochre .cal-item-dot { background: transparent; border-color: var(--color-item-ochre-border); }
 
 .page-app .calendar-legend {
   border-top: 1px solid var(--color-divider);
@@ -1958,14 +1966,18 @@ a.btn-secondary:hover {
 .page-app .color-swatch.is-selected {
   border-color: var(--color-text);
 }
-.page-app .color-swatch[data-color="amber"] { background-color: var(--color-item-amber); }
-.page-app .color-swatch[data-color="clay"] { background-color: var(--color-item-clay); }
-.page-app .color-swatch[data-color="sage"] { background-color: var(--color-item-sage); }
-.page-app .color-swatch[data-color="dusty-blue"] { background-color: var(--color-item-dusty-blue); }
-.page-app .color-swatch[data-color="plum"] { background-color: var(--color-item-plum); }
+.page-app .color-swatch[data-color="salmon"] { background-color: var(--color-item-salmon); }
+.page-app .color-swatch[data-color="peach"] { background-color: var(--color-item-peach); }
+.page-app .color-swatch[data-color="butter"] { background-color: var(--color-item-butter); }
+.page-app .color-swatch[data-color="lime"] { background-color: var(--color-item-lime); }
+.page-app .color-swatch[data-color="mint"] { background-color: var(--color-item-mint); }
+.page-app .color-swatch[data-color="seafoam"] { background-color: var(--color-item-seafoam); }
+.page-app .color-swatch[data-color="cyan"] { background-color: var(--color-item-cyan); }
+.page-app .color-swatch[data-color="sky"] { background-color: var(--color-item-sky); }
+.page-app .color-swatch[data-color="periwinkle"] { background-color: var(--color-item-periwinkle); }
+.page-app .color-swatch[data-color="lavender"] { background-color: var(--color-item-lavender); }
+.page-app .color-swatch[data-color="orchid"] { background-color: var(--color-item-orchid); }
 .page-app .color-swatch[data-color="rose"] { background-color: var(--color-item-rose); }
-.page-app .color-swatch[data-color="slate"] { background-color: var(--color-item-slate); }
-.page-app .color-swatch[data-color="ochre"] { background-color: var(--color-item-ochre); }
 .page-app .field input[type="text"],
 .page-app .field input[type="date"],
 .page-app .field input[type="time"],
@@ -2242,14 +2254,18 @@ a.btn-secondary:hover {
 .page-app .day-panel-row:last-child {
   border-bottom: 0;
 }
-.page-app .day-panel-row--color-amber { border-left-color: var(--color-item-amber-border); }
-.page-app .day-panel-row--color-clay { border-left-color: var(--color-item-clay-border); }
-.page-app .day-panel-row--color-sage { border-left-color: var(--color-item-sage-border); }
-.page-app .day-panel-row--color-dusty-blue { border-left-color: var(--color-item-dusty-blue-border); }
-.page-app .day-panel-row--color-plum { border-left-color: var(--color-item-plum-border); }
+.page-app .day-panel-row--color-salmon { border-left-color: var(--color-item-salmon-border); }
+.page-app .day-panel-row--color-peach { border-left-color: var(--color-item-peach-border); }
+.page-app .day-panel-row--color-butter { border-left-color: var(--color-item-butter-border); }
+.page-app .day-panel-row--color-lime { border-left-color: var(--color-item-lime-border); }
+.page-app .day-panel-row--color-mint { border-left-color: var(--color-item-mint-border); }
+.page-app .day-panel-row--color-seafoam { border-left-color: var(--color-item-seafoam-border); }
+.page-app .day-panel-row--color-cyan { border-left-color: var(--color-item-cyan-border); }
+.page-app .day-panel-row--color-sky { border-left-color: var(--color-item-sky-border); }
+.page-app .day-panel-row--color-periwinkle { border-left-color: var(--color-item-periwinkle-border); }
+.page-app .day-panel-row--color-lavender { border-left-color: var(--color-item-lavender-border); }
+.page-app .day-panel-row--color-orchid { border-left-color: var(--color-item-orchid-border); }
 .page-app .day-panel-row--color-rose { border-left-color: var(--color-item-rose-border); }
-.page-app .day-panel-row--color-slate { border-left-color: var(--color-item-slate-border); }
-.page-app .day-panel-row--color-ochre { border-left-color: var(--color-item-ochre-border); }
 .page-app .day-panel-row-check {
   width: 16px;
   height: 16px;

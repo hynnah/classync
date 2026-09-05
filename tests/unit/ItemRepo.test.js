@@ -71,14 +71,14 @@ describe('ItemRepo', () => {
     });
 
     test('persists a color on a task', async () => {
-      const item = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Color test', color: 'ochre' });
+      const item = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Color test', color: 'orchid' });
       createdIds.push(item.id);
-      expect(item.color).toBe('ochre');
+      expect(item.color).toBe('orchid');
     });
 
     test('the DB rejects a color on a note (chk_color_task_only), independent of route validation', async () => {
       await expect(
-        ItemRepo.create({ createdBy: owner.id, kind: 'note', title: 'Should be rejected', color: 'amber' })
+        ItemRepo.create({ createdBy: owner.id, kind: 'note', title: 'Should be rejected', color: 'salmon' })
       ).rejects.toThrow();
     });
   });

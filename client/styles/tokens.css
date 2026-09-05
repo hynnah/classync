@@ -48,39 +48,55 @@
   --color-personal-border: #6d8a3c;
   --color-personal-tint: #f0f6e2;
 
-  /* task color picker — a small curated palette (not the vivid Android-calendar-style
-     set the reference screenshots showed), matching this site's muted/warm paper tones */
-  --color-item-amber: #b68235;
-  --color-item-amber-border: #96692a;
-  --color-item-amber-tint: #fbf0da;
+  /* task color picker — 12 pastels evenly spaced around the hue wheel at
+     fixed lightness/saturation, so no swatch reads louder than another */
+  --color-item-salmon: #e8a5a5;
+  --color-item-salmon-border: #b58181;
+  --color-item-salmon-tint: #f9e6e6;
 
-  --color-item-clay: #c1693f;
-  --color-item-clay-border: #9c4f2c;
-  --color-item-clay-tint: #f8e3d6;
+  --color-item-peach: #e9c7a5;
+  --color-item-peach-border: #b69b81;
+  --color-item-peach-tint: #f9efe6;
 
-  --color-item-sage: #7c9a5e;
-  --color-item-sage-border: #5f7a45;
-  --color-item-sage-tint: #e8f0e0;
+  --color-item-butter: #e9e9a5;
+  --color-item-butter-border: #b6b681;
+  --color-item-butter-tint: #f9f9e6;
 
-  --color-item-dusty-blue: #6f97ab;
-  --color-item-dusty-blue-border: #547588;
-  --color-item-dusty-blue-tint: #e2ecf0;
+  --color-item-lime: #c7e9a5;
+  --color-item-lime-border: #9bb681;
+  --color-item-lime-tint: #eff9e6;
 
-  --color-item-plum: #9b6f97;
-  --color-item-plum-border: #7a5277;
-  --color-item-plum-tint: #efe3ee;
+  --color-item-mint: #a5e9a5;
+  --color-item-mint-border: #81b681;
+  --color-item-mint-tint: #e6f9e6;
 
-  --color-item-rose: #c17a85;
-  --color-item-rose-border: #9c5964;
-  --color-item-rose-tint: #f8e4e6;
+  --color-item-seafoam: #a5e9c7;
+  --color-item-seafoam-border: #81b69b;
+  --color-item-seafoam-tint: #e6f9ef;
 
-  --color-item-slate: #7c8894;
-  --color-item-slate-border: #5f6a75;
-  --color-item-slate-tint: #e6e9ec;
+  --color-item-cyan: #a5e9e9;
+  --color-item-cyan-border: #81b6b6;
+  --color-item-cyan-tint: #e6f9f9;
 
-  --color-item-ochre: #b99433;
-  --color-item-ochre-border: #937225;
-  --color-item-ochre-tint: #f7edd3;
+  --color-item-sky: #a5c7e9;
+  --color-item-sky-border: #819bb6;
+  --color-item-sky-tint: #e6eff9;
+
+  --color-item-periwinkle: #a5a5e9;
+  --color-item-periwinkle-border: #8181b6;
+  --color-item-periwinkle-tint: #e6e6f9;
+
+  --color-item-lavender: #c7a5e9;
+  --color-item-lavender-border: #9b81b6;
+  --color-item-lavender-tint: #efe6f9;
+
+  --color-item-orchid: #e9a5e9;
+  --color-item-orchid-border: #b681b6;
+  --color-item-orchid-tint: #f9e6f9;
+
+  --color-item-rose: #e9a5c7;
+  --color-item-rose-border: #b6819b;
+  --color-item-rose-tint: #f9e6ef;
 
   /* destructive (sign out) */
   --color-danger-border: rgba(176, 48, 40, 0.5);

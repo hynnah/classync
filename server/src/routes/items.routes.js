@@ -7,7 +7,7 @@ const router = express.Router();
 const PERSONAL_KINDS = ['task', 'note'];
 const CATEGORIES = ['Assignment', 'Activity', 'Quiz', 'Project', 'Presentation', 'Exam', 'Others'];
 const STATUSES = ['pending', 'completed'];
-const COLORS = ['amber', 'clay', 'sage', 'dusty-blue', 'plum', 'rose', 'slate', 'ochre'];
+const COLORS = ['salmon', 'peach', 'butter', 'lime', 'mint', 'seafoam', 'cyan', 'sky', 'periwinkle', 'lavender', 'orchid', 'rose'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
 

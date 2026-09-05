@@ -290,27 +290,27 @@ test.describe('task color picker', () => {
       await page.locator('#new-task-btn').click();
       await page.locator('#task-title').fill('E2E colored task');
       await pickTodayInDatePicker(page);
-      await page.locator('.color-swatch[data-color="dusty-blue"]').click();
+      await page.locator('.color-swatch[data-color="periwinkle"]').click();
       await page.locator('.modal-submit').click();
       await expect(page.locator('#task-modal')).toBeHidden();
 
       const pill = page.locator('.cal-item', { has: page.locator('.cal-item-title', { hasText: 'E2E colored task' }) });
-      await expect(pill).toHaveClass(/cal-item--color-dusty-blue/);
+      await expect(pill).toHaveClass(/cal-item--color-periwinkle/);
 
       const dayCell = page.locator(`.calendar-day[data-date="${todayIso}"]`);
       await dayCell.click({ position: { x: 5, y: 5 } });
       await expect(page.locator('#day-panel')).toBeVisible();
       const row = page.locator('.day-panel-row', { has: page.locator('.day-panel-row-title', { hasText: 'E2E colored task' }) });
-      await expect(row).toHaveClass(/day-panel-row--color-dusty-blue/);
+      await expect(row).toHaveClass(/day-panel-row--color-periwinkle/);
 
       // edit: switch the color, confirm the pill picks up the new one
       await row.locator('.day-panel-edit-btn').click();
-      await expect(page.locator('.color-swatch[data-color="dusty-blue"]')).toHaveClass(/is-selected/);
-      await page.locator('.color-swatch[data-color="ochre"]').click();
+      await expect(page.locator('.color-swatch[data-color="periwinkle"]')).toHaveClass(/is-selected/);
+      await page.locator('.color-swatch[data-color="orchid"]').click();
       await page.locator('.modal-submit').click();
       await expect(page.locator('#task-modal')).toBeHidden();
-      await expect(pill).toHaveClass(/cal-item--color-ochre/);
-      await expect(pill).not.toHaveClass(/cal-item--color-dusty-blue/);
+      await expect(pill).toHaveClass(/cal-item--color-orchid/);
+      await expect(pill).not.toHaveClass(/cal-item--color-periwinkle/);
 
       const idRes = await page.evaluate(async (title) => {
         const r = await fetch('/api/items?from=2026-01-01&to=2026-12-31');

@@ -111,7 +111,7 @@ describe('note vs. task validation on /api/items', () => {
 
   test('POST rejects a note with a color', async () => {
     const agent = await loggedInAgent();
-    const res = await agent.post('/api/items').send({ kind: 'note', title: 'n', color: 'amber' });
+    const res = await agent.post('/api/items').send({ kind: 'note', title: 'n', color: 'salmon' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/color/i);
   });
@@ -125,10 +125,10 @@ describe('note vs. task validation on /api/items', () => {
 
   test('POST accepts a valid color on a task', async () => {
     const agent = await loggedInAgent();
-    const res = await agent.post('/api/items').send({ kind: 'task', title: 'colored task', color: 'sage' });
+    const res = await agent.post('/api/items').send({ kind: 'task', title: 'colored task', color: 'mint' });
     expect(res.status).toBe(201);
     createdIds.push(res.body.item.id);
-    expect(res.body.item.color).toBe('sage');
+    expect(res.body.item.color).toBe('mint');
   });
 
   test('PATCH rejects setting a color on an existing note', async () => {
@@ -136,19 +136,19 @@ describe('note vs. task validation on /api/items', () => {
     const created = await agent.post('/api/items').send({ kind: 'note', title: 'note to color' });
     createdIds.push(created.body.item.id);
 
-    const res = await agent.patch(`/api/items/${created.body.item.id}`).send({ title: 'note to color', color: 'clay' });
+    const res = await agent.patch(`/api/items/${created.body.item.id}`).send({ title: 'note to color', color: 'peach' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/color/i);
   });
 
   test('PATCH can change and clear a task\'s color', async () => {
     const agent = await loggedInAgent();
-    const created = await agent.post('/api/items').send({ kind: 'task', title: 'task color edit', color: 'amber' });
+    const created = await agent.post('/api/items').send({ kind: 'task', title: 'task color edit', color: 'salmon' });
     createdIds.push(created.body.item.id);
 
-    const changed = await agent.patch(`/api/items/${created.body.item.id}`).send({ title: 'task color edit', color: 'plum' });
+    const changed = await agent.patch(`/api/items/${created.body.item.id}`).send({ title: 'task color edit', color: 'lavender' });
     expect(changed.status).toBe(200);
-    expect(changed.body.item.color).toBe('plum');
+    expect(changed.body.item.color).toBe('lavender');
 
     const cleared = await agent.patch(`/api/items/${created.body.item.id}`).send({ title: 'task color edit', color: null });
     expect(cleared.status).toBe(200);
