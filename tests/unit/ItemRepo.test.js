@@ -69,6 +69,18 @@ describe('ItemRepo', () => {
       const [after] = await getPool().query('SELECT COUNT(*) as c FROM items');
       expect(after[0].c).toBe(before[0].c);
     });
+
+    test('persists a color on a task', async () => {
+      const item = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Color test', color: 'ochre' });
+      createdIds.push(item.id);
+      expect(item.color).toBe('ochre');
+    });
+
+    test('the DB rejects a color on a note (chk_color_task_only), independent of route validation', async () => {
+      await expect(
+        ItemRepo.create({ createdBy: owner.id, kind: 'note', title: 'Should be rejected', color: 'amber' })
+      ).rejects.toThrow();
+    });
   });
 
   describe('listForUser', () => {
@@ -183,6 +195,17 @@ describe('ItemRepo', () => {
       expect(updated.due_date).toBe('2026-09-15');
       expect(updated.due_time).toBe('14:30:00');
       expect(updated.kind).toBe('task');
+    });
+
+    test('a color left out of the call keeps its current value; explicit null clears it', async () => {
+      const item = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Color update test', color: 'rose' });
+      createdIds.push(item.id);
+
+      const untouched = await ItemRepo.update({ itemId: item.id, userId: owner.id, title: 'Color update test renamed' });
+      expect(untouched.color).toBe('rose');
+
+      const cleared = await ItemRepo.update({ itemId: item.id, userId: owner.id, title: 'Color update test renamed', color: null });
+      expect(cleared.color).toBeNull();
     });
 
     test('a field left out of the call keeps its current value — an omitted field is not the same as clearing it', async () => {

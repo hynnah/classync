@@ -108,4 +108,50 @@ describe('note vs. task validation on /api/items', () => {
     expect(res.body.item.category).toBe('Exam');
     expect(res.body.item.due_date).toBe('2026-09-12');
   });
+
+  test('POST rejects a note with a color', async () => {
+    const agent = await loggedInAgent();
+    const res = await agent.post('/api/items').send({ kind: 'note', title: 'n', color: 'amber' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/color/i);
+  });
+
+  test('POST rejects an invalid color value on a task', async () => {
+    const agent = await loggedInAgent();
+    const res = await agent.post('/api/items').send({ kind: 'task', title: 'bad color', color: 'not-a-real-color' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/color/i);
+  });
+
+  test('POST accepts a valid color on a task', async () => {
+    const agent = await loggedInAgent();
+    const res = await agent.post('/api/items').send({ kind: 'task', title: 'colored task', color: 'sage' });
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.item.id);
+    expect(res.body.item.color).toBe('sage');
+  });
+
+  test('PATCH rejects setting a color on an existing note', async () => {
+    const agent = await loggedInAgent();
+    const created = await agent.post('/api/items').send({ kind: 'note', title: 'note to color' });
+    createdIds.push(created.body.item.id);
+
+    const res = await agent.patch(`/api/items/${created.body.item.id}`).send({ title: 'note to color', color: 'clay' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/color/i);
+  });
+
+  test('PATCH can change and clear a task\'s color', async () => {
+    const agent = await loggedInAgent();
+    const created = await agent.post('/api/items').send({ kind: 'task', title: 'task color edit', color: 'amber' });
+    createdIds.push(created.body.item.id);
+
+    const changed = await agent.patch(`/api/items/${created.body.item.id}`).send({ title: 'task color edit', color: 'plum' });
+    expect(changed.status).toBe(200);
+    expect(changed.body.item.color).toBe('plum');
+
+    const cleared = await agent.patch(`/api/items/${created.body.item.id}`).send({ title: 'task color edit', color: null });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.item.color).toBeNull();
+  });
 });

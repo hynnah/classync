@@ -1657,6 +1657,26 @@ a.btn-secondary:hover {
   border-color: var(--color-personal-border);
 }
 
+/* Task color picker — overrides the plain personal tint/border above when a task
+   has a chosen color. Same specificity as .cal-item--personal (one class each),
+   so source order is what makes these win when both classes are present. */
+.page-app .cal-item--color-amber { border-left-color: var(--color-item-amber-border); background: var(--color-item-amber-tint); }
+.page-app .cal-item--color-amber .cal-item-dot { background: transparent; border-color: var(--color-item-amber-border); }
+.page-app .cal-item--color-clay { border-left-color: var(--color-item-clay-border); background: var(--color-item-clay-tint); }
+.page-app .cal-item--color-clay .cal-item-dot { background: transparent; border-color: var(--color-item-clay-border); }
+.page-app .cal-item--color-sage { border-left-color: var(--color-item-sage-border); background: var(--color-item-sage-tint); }
+.page-app .cal-item--color-sage .cal-item-dot { background: transparent; border-color: var(--color-item-sage-border); }
+.page-app .cal-item--color-dusty-blue { border-left-color: var(--color-item-dusty-blue-border); background: var(--color-item-dusty-blue-tint); }
+.page-app .cal-item--color-dusty-blue .cal-item-dot { background: transparent; border-color: var(--color-item-dusty-blue-border); }
+.page-app .cal-item--color-plum { border-left-color: var(--color-item-plum-border); background: var(--color-item-plum-tint); }
+.page-app .cal-item--color-plum .cal-item-dot { background: transparent; border-color: var(--color-item-plum-border); }
+.page-app .cal-item--color-rose { border-left-color: var(--color-item-rose-border); background: var(--color-item-rose-tint); }
+.page-app .cal-item--color-rose .cal-item-dot { background: transparent; border-color: var(--color-item-rose-border); }
+.page-app .cal-item--color-slate { border-left-color: var(--color-item-slate-border); background: var(--color-item-slate-tint); }
+.page-app .cal-item--color-slate .cal-item-dot { background: transparent; border-color: var(--color-item-slate-border); }
+.page-app .cal-item--color-ochre { border-left-color: var(--color-item-ochre-border); background: var(--color-item-ochre-tint); }
+.page-app .cal-item--color-ochre .cal-item-dot { background: transparent; border-color: var(--color-item-ochre-border); }
+
 .page-app .calendar-legend {
   border-top: 1px solid var(--color-divider);
   padding: 12px 18px;
@@ -1916,6 +1936,36 @@ a.btn-secondary:hover {
   line-height: 1.5;
   color: var(--color-text-faintest);
 }
+.page-app .color-swatches {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.page-app .color-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: none;
+  background-clip: content-box;
+}
+.page-app .color-swatch:hover {
+  box-shadow: none;
+  transform: none;
+}
+.page-app .color-swatch.is-selected {
+  border-color: var(--color-text);
+}
+.page-app .color-swatch[data-color="amber"] { background-color: var(--color-item-amber); }
+.page-app .color-swatch[data-color="clay"] { background-color: var(--color-item-clay); }
+.page-app .color-swatch[data-color="sage"] { background-color: var(--color-item-sage); }
+.page-app .color-swatch[data-color="dusty-blue"] { background-color: var(--color-item-dusty-blue); }
+.page-app .color-swatch[data-color="plum"] { background-color: var(--color-item-plum); }
+.page-app .color-swatch[data-color="rose"] { background-color: var(--color-item-rose); }
+.page-app .color-swatch[data-color="slate"] { background-color: var(--color-item-slate); }
+.page-app .color-swatch[data-color="ochre"] { background-color: var(--color-item-ochre); }
 .page-app .field input[type="text"],
 .page-app .field input[type="date"],
 .page-app .field input[type="time"],
@@ -2025,12 +2075,21 @@ a.btn-secondary:hover {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 14px 0;
+  padding: 14px 0 14px 10px;
+  border-left: 3px solid transparent;
   border-bottom: 1px solid var(--color-divider-soft);
 }
 .page-app .day-panel-row:last-child {
   border-bottom: 0;
 }
+.page-app .day-panel-row--color-amber { border-left-color: var(--color-item-amber-border); }
+.page-app .day-panel-row--color-clay { border-left-color: var(--color-item-clay-border); }
+.page-app .day-panel-row--color-sage { border-left-color: var(--color-item-sage-border); }
+.page-app .day-panel-row--color-dusty-blue { border-left-color: var(--color-item-dusty-blue-border); }
+.page-app .day-panel-row--color-plum { border-left-color: var(--color-item-plum-border); }
+.page-app .day-panel-row--color-rose { border-left-color: var(--color-item-rose-border); }
+.page-app .day-panel-row--color-slate { border-left-color: var(--color-item-slate-border); }
+.page-app .day-panel-row--color-ochre { border-left-color: var(--color-item-ochre-border); }
 .page-app .day-panel-row-check {
   width: 16px;
   height: 16px;

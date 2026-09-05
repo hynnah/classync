@@ -38,7 +38,8 @@
 
   function itemPill(item) {
     const el = document.createElement('span');
-    el.className = `cal-item cal-item--${item.type}${item.done ? ' is-done' : ''}`;
+    const colorClass = item.color ? ` cal-item--color-${item.color}` : '';
+    el.className = `cal-item cal-item--${item.type}${colorClass}${item.done ? ' is-done' : ''}`;
     el.tabIndex = 0;
     if (item.id !== undefined) el.dataset.id = item.id;
 

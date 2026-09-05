@@ -7,16 +7,18 @@ const router = express.Router();
 const PERSONAL_KINDS = ['task', 'note'];
 const CATEGORIES = ['Assignment', 'Activity', 'Quiz', 'Project', 'Presentation', 'Exam', 'Others'];
 const STATUSES = ['pending', 'completed'];
+const COLORS = ['amber', 'clay', 'sage', 'dusty-blue', 'plum', 'rose', 'slate', 'ochre'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
 
 // Shared by POST (create) and PATCH (edit) — everything but kind itself, which is
 // only meaningful at creation (see ItemRepo.update's note on why it's not editable).
 // A note is just a title and a description — no category, no due date/time, no
-// mark-done state (that last part is enforced in the UI, not here). kind is passed
-// in explicitly by the caller: POST has it straight from the request body, PATCH
-// has to look up the item's existing kind first since it isn't part of the payload.
-function validateItemFields({ title, category, dueDate, dueTime, kind }) {
+// color, no mark-done state (that last part is enforced in the UI, not here). kind
+// is passed in explicitly by the caller: POST has it straight from the request
+// body, PATCH has to look up the item's existing kind first since it isn't part
+// of the payload.
+function validateItemFields({ title, category, dueDate, dueTime, color, kind }) {
   if (typeof title !== 'string' || !title.trim()) {
     return 'title is required.';
   }
@@ -33,6 +35,9 @@ function validateItemFields({ title, category, dueDate, dueTime, kind }) {
     if (dueTime !== undefined && dueTime !== null && dueTime !== '') {
       return 'notes don\'t have a due time.';
     }
+    if (color !== undefined && color !== null && color !== '') {
+      return 'notes don\'t have a color.';
+    }
     return null;
   }
   if (category !== undefined && category !== null && !CATEGORIES.includes(category)) {
@@ -43,6 +48,9 @@ function validateItemFields({ title, category, dueDate, dueTime, kind }) {
   }
   if (dueTime !== undefined && dueTime !== null && !TIME_RE.test(dueTime)) {
     return 'dueTime must be in HH:MM or HH:MM:SS format.';
+  }
+  if (color !== undefined && color !== null && color !== '' && !COLORS.includes(color)) {
+    return `color must be one of: ${COLORS.join(', ')}`;
   }
   return null;
 }
@@ -71,12 +79,12 @@ router.get('/api/items/urgent', requireLogin, async (req, res, next) => {
 
 router.post('/api/items', requireLogin, async (req, res, next) => {
   try {
-    const { kind, title, description, category, dueDate, dueTime } = req.body || {};
+    const { kind, title, description, category, dueDate, dueTime, color } = req.body || {};
 
     if (!PERSONAL_KINDS.includes(kind)) {
       return res.status(400).json({ error: `kind must be one of: ${PERSONAL_KINDS.join(', ')}` });
     }
-    const fieldError = validateItemFields({ title, category, dueDate, dueTime, kind });
+    const fieldError = validateItemFields({ title, category, dueDate, dueTime, color, kind });
     if (fieldError) {
       return res.status(400).json({ error: fieldError });
     }
@@ -89,6 +97,7 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
       category: category || null,
       dueDate: dueDate || null,
       dueTime: dueTime || null,
+      color: color || null,
     });
     res.status(201).json({ item });
   } catch (err) {
@@ -98,13 +107,13 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
 
 router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
   try {
-    const { title, description, category, dueDate, dueTime } = req.body || {};
+    const { title, description, category, dueDate, dueTime, color } = req.body || {};
 
     const existing = await ItemRepo.findForUser(req.params.id, req.user.id);
     if (!existing) {
       return res.status(404).json({ error: 'Item not found.' });
     }
-    const fieldError = validateItemFields({ title, category, dueDate, dueTime, kind: existing.kind });
+    const fieldError = validateItemFields({ title, category, dueDate, dueTime, color, kind: existing.kind });
     if (fieldError) {
       return res.status(400).json({ error: fieldError });
     }
@@ -117,6 +126,7 @@ router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
       category,
       dueDate,
       dueTime,
+      color,
     });
     if (!item) {
       return res.status(404).json({ error: 'Item not found.' });

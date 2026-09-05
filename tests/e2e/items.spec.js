@@ -268,3 +268,56 @@ test.describe('notes are simpler than tasks', () => {
     }
   });
 });
+
+test.describe('task color picker', () => {
+  test('picking a color shows it on the pill and the day panel row, and it survives an edit round trip', async ({ page }) => {
+    const email = `e2e-colorpicker-${Date.now()}@example.com`;
+    let itemId;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      const todayIso = await page.evaluate(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+
+      await page.locator('#new-task-btn').click();
+      await page.locator('#task-title').fill('E2E colored task');
+      await page.locator('#task-due-date').fill(todayIso);
+      await page.locator('.color-swatch[data-color="dusty-blue"]').click();
+      await page.locator('.modal-submit').click();
+      await expect(page.locator('#task-modal')).toBeHidden();
+
+      const pill = page.locator('.cal-item', { has: page.locator('.cal-item-title', { hasText: 'E2E colored task' }) });
+      await expect(pill).toHaveClass(/cal-item--color-dusty-blue/);
+
+      const dayCell = page.locator(`.calendar-day[data-date="${todayIso}"]`);
+      await dayCell.click({ position: { x: 5, y: 5 } });
+      await expect(page.locator('#day-panel')).toBeVisible();
+      const row = page.locator('.day-panel-row', { has: page.locator('.day-panel-row-title', { hasText: 'E2E colored task' }) });
+      await expect(row).toHaveClass(/day-panel-row--color-dusty-blue/);
+
+      // edit: switch the color, confirm the pill picks up the new one
+      await row.locator('.day-panel-edit-btn').click();
+      await expect(page.locator('.color-swatch[data-color="dusty-blue"]')).toHaveClass(/is-selected/);
+      await page.locator('.color-swatch[data-color="ochre"]').click();
+      await page.locator('.modal-submit').click();
+      await expect(page.locator('#task-modal')).toBeHidden();
+      await expect(pill).toHaveClass(/cal-item--color-ochre/);
+      await expect(pill).not.toHaveClass(/cal-item--color-dusty-blue/);
+
+      const idRes = await page.evaluate(async (title) => {
+        const r = await fetch('/api/items?from=2026-01-01&to=2026-12-31');
+        const body = await r.json();
+        return body.items.find((i) => i.title === title).id;
+      }, 'E2E colored task');
+      itemId = idRes;
+    } finally {
+      if (itemId) await getPool().query('DELETE FROM items WHERE id = ?', [itemId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+});

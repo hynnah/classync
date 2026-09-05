@@ -142,28 +142,43 @@
         <div class="field-label">Description <span class="field-optional">optional</span></div>
         <textarea id="task-description" name="description" rows="3" placeholder="Any extra detail"></textarea>
       </div>
-      <div id="task-classification-fields" class="field-grid">
-        <div class="field">
-          <div class="field-label">Category <span class="field-optional">optional</span></div>
-          <select id="task-category" name="category">
-            <option value="">—</option>
-            <option>Assignment</option>
-            <option>Activity</option>
-            <option>Quiz</option>
-            <option>Project</option>
-            <option>Presentation</option>
-            <option>Exam</option>
-            <option>Others</option>
-          </select>
+      <div id="task-classification-fields">
+        <div class="field-grid">
+          <div class="field">
+            <div class="field-label">Category <span class="field-optional">optional</span></div>
+            <select id="task-category" name="category">
+              <option value="">—</option>
+              <option>Assignment</option>
+              <option>Activity</option>
+              <option>Quiz</option>
+              <option>Project</option>
+              <option>Presentation</option>
+              <option>Exam</option>
+              <option>Others</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="field-label">Due date <span class="field-optional">optional</span></div>
+            <input id="task-due-date" name="dueDate" type="date">
+            <span class="field-hint">Leave blank to save it without a due date — it won't appear on the calendar until My Planner arrives.</span>
+          </div>
+          <div class="field">
+            <div class="field-label">Due time <span class="field-optional">optional</span></div>
+            <input id="task-due-time" name="dueTime" type="time">
+          </div>
         </div>
         <div class="field">
-          <div class="field-label">Due date <span class="field-optional">optional</span></div>
-          <input id="task-due-date" name="dueDate" type="date">
-          <span class="field-hint">Leave blank to save it without a due date — it won't appear on the calendar until My Planner arrives.</span>
-        </div>
-        <div class="field">
-          <div class="field-label">Due time <span class="field-optional">optional</span></div>
-          <input id="task-due-time" name="dueTime" type="time">
+          <div class="field-label">Color <span class="field-optional">optional</span></div>
+          <div id="task-color-swatches" class="color-swatches" role="radiogroup" aria-label="Color">
+            <button type="button" class="color-swatch" data-color="amber" aria-label="Amber"></button>
+            <button type="button" class="color-swatch" data-color="clay" aria-label="Clay"></button>
+            <button type="button" class="color-swatch" data-color="sage" aria-label="Sage"></button>
+            <button type="button" class="color-swatch" data-color="dusty-blue" aria-label="Dusty blue"></button>
+            <button type="button" class="color-swatch" data-color="plum" aria-label="Plum"></button>
+            <button type="button" class="color-swatch" data-color="rose" aria-label="Rose"></button>
+            <button type="button" class="color-swatch" data-color="slate" aria-label="Slate"></button>
+            <button type="button" class="color-swatch" data-color="ochre" aria-label="Ochre"></button>
+          </div>
         </div>
       </div>
       <p id="task-form-error" class="form-error" role="alert" hidden></p>
@@ -203,6 +218,7 @@
       id: apiItem.id,
       title: apiItem.title,
       type: 'personal',
+      color: apiItem.color,
       done: apiItem.status === 'completed',
       dueTime: apiItem.due_time,
     };
@@ -390,9 +406,24 @@
     const cancelBtn = document.getElementById('task-modal-cancel');
     const saveStatusEl = document.getElementById('task-save-status');
     const classificationFields = document.getElementById('task-classification-fields');
+    const colorSwatches = document.getElementById('task-color-swatches');
     let editingItemId = null;
+    let selectedColor = null;
     let autoSaveTimer = null;
     const AUTOSAVE_DEBOUNCE_MS = 600;
+
+    function setSelectedColor(color) {
+      selectedColor = color;
+      colorSwatches.querySelectorAll('.color-swatch').forEach((sw) => {
+        sw.classList.toggle('is-selected', sw.dataset.color === color);
+      });
+    }
+    colorSwatches.addEventListener('click', (e) => {
+      const swatch = e.target.closest('.color-swatch');
+      if (!swatch) return;
+      // clicking the already-selected swatch clears it — color is optional
+      setSelectedColor(selectedColor === swatch.dataset.color ? null : swatch.dataset.color);
+    });
 
     // Notes auto-save (no Create/Save button, just Close) — tasks keep the explicit
     // submit flow. Reflects whichever kind radio is currently selected, not just
@@ -420,6 +451,7 @@
         document.getElementById('task-category').value = '';
         document.getElementById('task-due-date').value = '';
         document.getElementById('task-due-time').value = '';
+        setSelectedColor(null);
       }
       classificationFields.hidden = selected === 'note';
       updateModeUI();
@@ -491,6 +523,7 @@
         document.getElementById('task-category').value = item.category || '';
         document.getElementById('task-due-date').value = item.due_date || '';
         document.getElementById('task-due-time').value = item.due_time ? item.due_time.slice(0, 5) : '';
+        setSelectedColor(item.color || null);
         classificationFields.hidden = item.kind === 'note';
       } else {
         modalTitle.textContent = 'New task';
@@ -499,6 +532,7 @@
         if (viewMode === 'day') {
           document.getElementById('task-due-date').value = isoDate(dayDate);
         }
+        setSelectedColor(null);
         classificationFields.hidden = false;
       }
 
@@ -545,6 +579,7 @@
         category: data.get('category') || emptyMeans,
         dueDate: data.get('dueDate') || emptyMeans,
         dueTime: data.get('dueTime') || emptyMeans,
+        color: selectedColor || emptyMeans,
       };
       if (!editingItemId) payload.kind = data.get('kind');
 
@@ -593,7 +628,7 @@
       }
       items.forEach((raw) => {
         const row = document.createElement('div');
-        row.className = 'day-panel-row';
+        row.className = 'day-panel-row' + (raw.color ? ` day-panel-row--color-${raw.color}` : '');
 
         // Notes don't have a meaningful done state — a plain spacer keeps the row's
         // title aligned with task rows above/below it without implying it's clickable.

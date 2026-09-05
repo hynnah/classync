@@ -19,14 +19,14 @@ async function findForUser(itemId, userId) {
   return rows[0] || null;
 }
 
-async function create({ createdBy, kind, title, description, category, dueDate, dueTime }) {
+async function create({ createdBy, kind, title, description, category, dueDate, dueTime, color }) {
   const conn = await getPool().getConnection();
   try {
     await conn.beginTransaction();
     const [result] = await conn.query(
-      `INSERT INTO items (space_id, kind, title, description, category, due_date, due_time, created_by)
-       VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)`,
-      [kind, title, description || null, category || null, dueDate || null, dueTime || null, createdBy]
+      `INSERT INTO items (space_id, kind, title, description, category, due_date, due_time, color, created_by)
+       VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [kind, title, description || null, category || null, dueDate || null, dueTime || null, color || null, createdBy]
     );
     await conn.query(
       "INSERT INTO item_assignments (item_id, user_id, status) VALUES (?, ?, 'pending')",
@@ -100,7 +100,7 @@ async function setStatus({ itemId, userId, status }) {
 // distinction the whole way through — coercing either one with `|| null` early
 // collapses "omitted" and "explicitly cleared" into the same thing, silently
 // wiping every field a caller didn't mean to touch.
-async function update({ itemId, userId, title, description, category, dueDate, dueTime }) {
+async function update({ itemId, userId, title, description, category, dueDate, dueTime, color }) {
   const current = await findForUser(itemId, userId);
   if (!current || current.kind === 'event') return null;
   const next = {
@@ -109,12 +109,13 @@ async function update({ itemId, userId, title, description, category, dueDate, d
     category: category !== undefined ? category : current.category,
     dueDate: dueDate !== undefined ? dueDate : current.due_date,
     dueTime: dueTime !== undefined ? dueTime : current.due_time,
+    color: color !== undefined ? color : current.color,
   };
   await getPool().query(
     `UPDATE items
-     SET title = ?, description = ?, category = ?, due_date = ?, due_time = ?
+     SET title = ?, description = ?, category = ?, due_date = ?, due_time = ?, color = ?
      WHERE id = ? AND created_by = ?`,
-    [next.title, next.description, next.category, next.dueDate, next.dueTime, itemId, userId]
+    [next.title, next.description, next.category, next.dueDate, next.dueTime, next.color, itemId, userId]
   );
   return findForUser(itemId, userId);
 }

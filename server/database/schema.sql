@@ -43,6 +43,7 @@ CREATE TABLE items (
   category        ENUM('Assignment','Activity','Quiz','Project','Presentation','Exam','Others') NULL,
   due_date        DATE NULL,
   due_time        TIME NULL,
+  color           ENUM('amber','clay','sage','dusty-blue','plum','rose','slate','ochre') NULL,
   is_open_to_all  BOOLEAN NOT NULL DEFAULT FALSE,
   admin_status    ENUM('open','closed') NOT NULL DEFAULT 'open',
   created_by      BIGINT UNSIGNED NOT NULL,
@@ -52,7 +53,8 @@ CREATE TABLE items (
   FOREIGN KEY (created_by) REFERENCES users(id),
   CONSTRAINT chk_personal_kind CHECK (
     (space_id IS NULL AND kind IN ('task','note')) OR (space_id IS NOT NULL)
-  )
+  ),
+  CONSTRAINT chk_color_task_only CHECK (color IS NULL OR kind = 'task')
 ) ENGINE=InnoDB;
 
 CREATE TABLE item_assignments (

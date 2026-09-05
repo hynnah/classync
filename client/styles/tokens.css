@@ -48,6 +48,40 @@
   --color-personal-border: #6d8a3c;
   --color-personal-tint: #f0f6e2;
 
+  /* task color picker — a small curated palette (not the vivid Android-calendar-style
+     set the reference screenshots showed), matching this site's muted/warm paper tones */
+  --color-item-amber: #b68235;
+  --color-item-amber-border: #96692a;
+  --color-item-amber-tint: #fbf0da;
+
+  --color-item-clay: #c1693f;
+  --color-item-clay-border: #9c4f2c;
+  --color-item-clay-tint: #f8e3d6;
+
+  --color-item-sage: #7c9a5e;
+  --color-item-sage-border: #5f7a45;
+  --color-item-sage-tint: #e8f0e0;
+
+  --color-item-dusty-blue: #6f97ab;
+  --color-item-dusty-blue-border: #547588;
+  --color-item-dusty-blue-tint: #e2ecf0;
+
+  --color-item-plum: #9b6f97;
+  --color-item-plum-border: #7a5277;
+  --color-item-plum-tint: #efe3ee;
+
+  --color-item-rose: #c17a85;
+  --color-item-rose-border: #9c5964;
+  --color-item-rose-tint: #f8e4e6;
+
+  --color-item-slate: #7c8894;
+  --color-item-slate-border: #5f6a75;
+  --color-item-slate-tint: #e6e9ec;
+
+  --color-item-ochre: #b99433;
+  --color-item-ochre-border: #937225;
+  --color-item-ochre-tint: #f7edd3;
+
   /* destructive (sign out) */
   --color-danger-border: rgba(176, 48, 40, 0.5);
   --color-danger-text: #a5382f;
