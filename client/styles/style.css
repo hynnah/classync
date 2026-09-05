@@ -1607,7 +1607,8 @@ a.btn-secondary:hover {
   padding: 18px 22px 22px;
   flex: 1;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: stretch;
 }
 .page-app .urgent-empty {
   font-size: 13.5px;
@@ -1950,6 +1951,7 @@ a.btn-secondary:hover {
 .page-app .urgent-item {
   display: flex;
   align-items: flex-start;
+  justify-content: flex-start;
   gap: 10px;
   text-align: left;
   background: transparent;
@@ -1983,9 +1985,11 @@ a.btn-secondary:hover {
   min-width: 0;
 }
 .page-app .urgent-item-title {
-  font-family: var(--font-heading);
-  font-size: 18px;
-  line-height: 1.2;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.35;
+  text-transform: none;
+  letter-spacing: 0;
   color: var(--color-text);
 }
 .page-app .urgent-item-meta {
@@ -2276,9 +2280,9 @@ a.btn-secondary:hover {
   text-align: left;
   border: 0;
   background: transparent;
-  padding: 8px 12px;
+  padding: 7px 12px;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: 0;
   text-transform: none;
   color: var(--color-text);
@@ -2488,7 +2492,42 @@ a.btn-secondary:hover {
 }
 .page-app .day-panel-row-check.is-done {
   background: var(--color-personal-border);
+  border-color: var(--color-personal-border);
 }
+.page-app .day-panel-row-check-icon {
+  color: #fff;
+  opacity: 0;
+}
+.page-app .day-panel-row-check.is-done .day-panel-row-check-icon {
+  opacity: 1;
+}
+/* A colored task's checkbox matches its own color instead of the fixed
+   personal green — same border-color token the row's own left border and
+   pill already use, so checking it off doesn't clash with its own accent. */
+.page-app .day-panel-row--color-salmon .day-panel-row-check { border-color: var(--color-item-salmon-border); }
+.page-app .day-panel-row--color-salmon .day-panel-row-check.is-done { background: var(--color-item-salmon-border); border-color: var(--color-item-salmon-border); }
+.page-app .day-panel-row--color-peach .day-panel-row-check { border-color: var(--color-item-peach-border); }
+.page-app .day-panel-row--color-peach .day-panel-row-check.is-done { background: var(--color-item-peach-border); border-color: var(--color-item-peach-border); }
+.page-app .day-panel-row--color-butter .day-panel-row-check { border-color: var(--color-item-butter-border); }
+.page-app .day-panel-row--color-butter .day-panel-row-check.is-done { background: var(--color-item-butter-border); border-color: var(--color-item-butter-border); }
+.page-app .day-panel-row--color-lime .day-panel-row-check { border-color: var(--color-item-lime-border); }
+.page-app .day-panel-row--color-lime .day-panel-row-check.is-done { background: var(--color-item-lime-border); border-color: var(--color-item-lime-border); }
+.page-app .day-panel-row--color-mint .day-panel-row-check { border-color: var(--color-item-mint-border); }
+.page-app .day-panel-row--color-mint .day-panel-row-check.is-done { background: var(--color-item-mint-border); border-color: var(--color-item-mint-border); }
+.page-app .day-panel-row--color-seafoam .day-panel-row-check { border-color: var(--color-item-seafoam-border); }
+.page-app .day-panel-row--color-seafoam .day-panel-row-check.is-done { background: var(--color-item-seafoam-border); border-color: var(--color-item-seafoam-border); }
+.page-app .day-panel-row--color-cyan .day-panel-row-check { border-color: var(--color-item-cyan-border); }
+.page-app .day-panel-row--color-cyan .day-panel-row-check.is-done { background: var(--color-item-cyan-border); border-color: var(--color-item-cyan-border); }
+.page-app .day-panel-row--color-sky .day-panel-row-check { border-color: var(--color-item-sky-border); }
+.page-app .day-panel-row--color-sky .day-panel-row-check.is-done { background: var(--color-item-sky-border); border-color: var(--color-item-sky-border); }
+.page-app .day-panel-row--color-periwinkle .day-panel-row-check { border-color: var(--color-item-periwinkle-border); }
+.page-app .day-panel-row--color-periwinkle .day-panel-row-check.is-done { background: var(--color-item-periwinkle-border); border-color: var(--color-item-periwinkle-border); }
+.page-app .day-panel-row--color-lavender .day-panel-row-check { border-color: var(--color-item-lavender-border); }
+.page-app .day-panel-row--color-lavender .day-panel-row-check.is-done { background: var(--color-item-lavender-border); border-color: var(--color-item-lavender-border); }
+.page-app .day-panel-row--color-orchid .day-panel-row-check { border-color: var(--color-item-orchid-border); }
+.page-app .day-panel-row--color-orchid .day-panel-row-check.is-done { background: var(--color-item-orchid-border); border-color: var(--color-item-orchid-border); }
+.page-app .day-panel-row--color-rose .day-panel-row-check { border-color: var(--color-item-rose-border); }
+.page-app .day-panel-row--color-rose .day-panel-row-check.is-done { background: var(--color-item-rose-border); border-color: var(--color-item-rose-border); }
 .page-app .day-panel-row-body {
   flex: 1;
   min-width: 0;

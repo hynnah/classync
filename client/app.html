@@ -617,10 +617,7 @@
     function renderTimePopover() {
       dueTimePopover.innerHTML = '';
       const selected = dueTimeHidden.value;
-      for (let mins = 0; mins < 24 * 60; mins += 30) {
-        const h = String(Math.floor(mins / 60)).padStart(2, '0');
-        const m = String(mins % 60).padStart(2, '0');
-        const value = `${h}:${m}`;
+      const addOption = (value) => {
         const opt = document.createElement('button');
         opt.type = 'button';
         opt.className = 'time-popover-option' + (value === selected ? ' is-selected' : '');
@@ -631,7 +628,15 @@
           closeTimePopover();
         });
         dueTimePopover.appendChild(opt);
+      };
+      for (let mins = 0; mins < 24 * 60; mins += 30) {
+        const h = String(Math.floor(mins / 60)).padStart(2, '0');
+        const m = String(mins % 60).padStart(2, '0');
+        addOption(`${h}:${m}`);
       }
+      // 11:59 PM is the common "end of day" due time — it doesn't fall on the
+      // half-hour grid above, so it's appended once as its own option.
+      addOption('23:59');
     }
     function openTimePopover() {
       closeDatePopover();
@@ -876,7 +881,10 @@
         const check = document.createElement(isNote ? 'span' : 'button');
         if (!isNote) check.type = 'button';
         check.className = (isNote ? 'day-panel-row-check-spacer' : 'day-panel-row-check') + (raw.status === 'completed' ? ' is-done' : '');
-        if (!isNote) check.setAttribute('aria-label', raw.status === 'completed' ? 'Mark as not done' : 'Mark as done');
+        if (!isNote) {
+          check.setAttribute('aria-label', raw.status === 'completed' ? 'Mark as not done' : 'Mark as done');
+          check.innerHTML = '<svg class="day-panel-row-check-icon" width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.3l3.3 3.3L13 4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        }
         row.appendChild(check);
 
         const body = document.createElement('div');

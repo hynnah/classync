@@ -323,6 +323,57 @@ test.describe('task color picker', () => {
       await getPool().query('DELETE FROM users WHERE email = ?', [email]);
     }
   });
+
+  test('a colored task\'s day-panel checkbox matches its own color and shows a checkmark once done', async ({ page }) => {
+    const email = `e2e-checkboxcolor-${Date.now()}@example.com`;
+    let itemId;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      const todayIso = await page.evaluate(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+      const created = await page.evaluate(async (dueDate) => {
+        const res = await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ kind: 'task', title: 'E2E checkbox color test', dueDate, color: 'mint' }),
+        });
+        return (await res.json()).item;
+      }, todayIso);
+      itemId = created.id;
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      const dayCell = page.locator(`.calendar-day[data-date="${todayIso}"]`);
+      await dayCell.click({ position: { x: 5, y: 5 } });
+      await page.waitForSelector('#day-panel:not([hidden])');
+      const row = page.locator('.day-panel-row', { has: page.locator('.day-panel-row-title', { hasText: 'E2E checkbox color test' }) });
+      const checkBtn = row.locator('.day-panel-row-check');
+
+      await expect(row.locator('.day-panel-row-check-icon')).toHaveCSS('opacity', '0');
+
+      await checkBtn.click();
+      await expect(checkBtn).toHaveClass(/is-done/);
+      await expect(row.locator('.day-panel-row-check-icon')).toHaveCSS('opacity', '1');
+
+      const mintBorder = await page.evaluate(() =>
+        getComputedStyle(document.documentElement).getPropertyValue('--color-item-mint-border').trim()
+      );
+      const toRgb = (hex) => {
+        const h = hex.replace('#', '');
+        return `rgb(${parseInt(h.slice(0, 2), 16)}, ${parseInt(h.slice(2, 4), 16)}, ${parseInt(h.slice(4, 6), 16)})`;
+      };
+      await expect(checkBtn).toHaveCSS('background-color', toRgb(mintBorder));
+    } finally {
+      if (itemId) await getPool().query('DELETE FROM items WHERE id = ?', [itemId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
 });
 
 test.describe('custom date/time pickers', () => {
@@ -380,6 +431,43 @@ test.describe('custom date/time pickers', () => {
       await expect(page.locator('#task-due-time-display')).toHaveText('9:30 AM');
       await page.locator('#task-due-date-btn').click();
       await expect(page.locator(`.date-popover-day.is-selected`)).toHaveText(todayNum);
+    } finally {
+      if (itemId) await getPool().query('DELETE FROM items WHERE id = ?', [itemId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
+  test('11:59 PM is offered as its own option outside the half-hour grid', async ({ page }) => {
+    const email = `e2e-time1159-${Date.now()}@example.com`;
+    let itemId;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      await page.locator('#new-task-btn').click();
+      await page.locator('#task-title').fill('E2E 11:59 PM test');
+      await page.locator('#task-due-date-btn').click();
+      await page.locator('.date-popover-day.is-today').click();
+      await page.locator('#task-due-time-btn').click();
+
+      const lastOption = page.locator('.time-popover-option').last();
+      await expect(lastOption).toHaveText('11:59 PM');
+      await lastOption.click();
+      await expect(page.locator('#task-due-time')).toHaveValue('23:59');
+      await expect(page.locator('#task-due-time-display')).toHaveText('11:59 PM');
+
+      await page.locator('.modal-submit').click();
+      await expect(page.locator('#task-modal')).toBeHidden();
+
+      const created = await page.evaluate(async (title) => {
+        const r = await fetch('/api/items?from=2026-01-01&to=2026-12-31');
+        const body = await r.json();
+        return body.items.find((i) => i.title === title);
+      }, 'E2E 11:59 PM test');
+      expect(created.due_time).toBe('23:59:00');
+      itemId = created.id;
     } finally {
       if (itemId) await getPool().query('DELETE FROM items WHERE id = ?', [itemId]);
       await getPool().query('DELETE FROM users WHERE email = ?', [email]);
