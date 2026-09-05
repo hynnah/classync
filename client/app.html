@@ -434,12 +434,17 @@
       e.preventDefault();
       errorEl.hidden = true;
       const data = new FormData(form);
+      // Editing sends explicit null for a blanked field — the backend's partial-update
+      // semantics treat undefined as "leave unchanged" and only null as "clear it", so
+      // an edit has to be able to say which one it means. Creating has nothing to leave
+      // unchanged, so undefined (ItemRepo.create normalizes it to null either way) is fine.
+      const emptyMeans = editingItemId ? null : undefined;
       const payload = {
         title: data.get('title'),
-        description: data.get('description') || undefined,
-        category: data.get('category') || undefined,
-        dueDate: data.get('dueDate') || undefined,
-        dueTime: data.get('dueTime') || undefined,
+        description: data.get('description') || emptyMeans,
+        category: data.get('category') || emptyMeans,
+        dueDate: data.get('dueDate') || emptyMeans,
+        dueTime: data.get('dueTime') || emptyMeans,
       };
       if (!editingItemId) payload.kind = data.get('kind');
 

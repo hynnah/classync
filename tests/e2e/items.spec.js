@@ -115,3 +115,57 @@ test.describe('toggling item status from the calendar', () => {
     }
   });
 });
+
+test.describe('editing an item from the day panel', () => {
+  test('clearing an optional field in the edit form actually clears it, not leaves it unchanged', async ({ page }) => {
+    const email = `e2e-editclear-${Date.now()}@example.com`;
+    let itemId;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      const todayIso = await page.evaluate(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+
+      const created = await page.evaluate(async (dueDate) => {
+        const res = await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ kind: 'task', title: 'E2E edit-clear task', description: 'Should be cleared', category: 'Assignment', dueDate }),
+        });
+        return (await res.json()).item;
+      }, todayIso);
+      itemId = created.id;
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      const dayCell = page.locator(`.calendar-day[data-date="${todayIso}"]`);
+      await dayCell.click({ position: { x: 5, y: 5 } });
+      await page.waitForSelector('#day-panel:not([hidden])');
+      const row = page.locator('.day-panel-row', { has: page.locator('.day-panel-row-title', { hasText: 'E2E edit-clear task' }) });
+      await row.locator('.day-panel-edit-btn').click();
+      await page.waitForSelector('#task-modal:not([hidden])');
+
+      await expect(page.locator('#task-description')).toHaveValue('Should be cleared');
+      await page.locator('#task-description').fill('');
+      await page.locator('.modal-submit').click();
+      await page.waitForFunction(() => document.getElementById('task-modal').hidden === true, { timeout: 5000 });
+
+      // reopen the edit form fresh and confirm the field actually came back empty,
+      // not just that the panel/calendar happened to still show the old value
+      // (the day panel stays open behind the task modal after a save, so it's
+      // still right there — no need to reopen it)
+      await expect(page.locator('#day-panel')).toBeVisible();
+      await row.locator('.day-panel-edit-btn').click();
+      await page.waitForSelector('#task-modal:not([hidden])');
+      await expect(page.locator('#task-description')).toHaveValue('');
+    } finally {
+      if (itemId) await getPool().query('DELETE FROM items WHERE id = ?', [itemId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+});
