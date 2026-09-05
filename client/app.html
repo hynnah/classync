@@ -213,9 +213,24 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="day-panel-title">
     <div class="modal-head">
       <h2 id="day-panel-title">Items</h2>
-      <button id="day-panel-close" class="modal-close" type="button" aria-label="Close">&times;</button>
+      <div class="day-panel-head-actions">
+        <button id="day-panel-add" class="day-panel-add-btn" type="button" aria-label="New task on this day">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <button id="day-panel-close" class="modal-close" type="button" aria-label="Close">&times;</button>
+      </div>
     </div>
     <div id="day-panel-body" class="day-panel-body"></div>
+  </div>
+</div>
+
+<div id="confirm-dialog" class="modal-backdrop" hidden>
+  <div class="modal confirm-modal" role="alertdialog" aria-modal="true" aria-describedby="confirm-dialog-message">
+    <p id="confirm-dialog-message" class="confirm-dialog-message"></p>
+    <div class="confirm-dialog-actions">
+      <button type="button" id="confirm-dialog-cancel" class="modal-cancel">Cancel</button>
+      <button type="button" id="confirm-dialog-ok" class="confirm-dialog-danger">Delete</button>
+    </div>
   </div>
 </div>
 
@@ -681,7 +696,7 @@
     document.getElementById('task-title').addEventListener('input', scheduleAutoSave);
     document.getElementById('task-description').addEventListener('input', scheduleAutoSave);
 
-    function openModal(item) {
+    function openModal(item, prefillDate) {
       errorEl.hidden = true;
       form.reset();
       editingItemId = item ? item.id : null;
@@ -709,6 +724,8 @@
         kindRadios.forEach((r) => { r.disabled = false; });
         if (viewMode === 'day') {
           document.getElementById('task-due-date').value = isoDate(dayDate);
+        } else if (prefillDate) {
+          document.getElementById('task-due-date').value = prefillDate;
         }
         setSelectedColor(null);
         classificationFields.hidden = false;
@@ -872,7 +889,7 @@
         editBtn.addEventListener('click', () => openModal(raw));
 
         deleteBtn.addEventListener('click', async () => {
-          if (!window.confirm(`Delete "${raw.title}"? This can't be undone.`)) return;
+          if (!(await confirmDialog(`Delete "${raw.title}"? This can't be undone.`))) return;
           deleteBtn.disabled = true;
           await fetch(`/api/items/${raw.id}`, { method: 'DELETE' });
           await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel()]);
@@ -895,11 +912,44 @@
     }
 
     document.getElementById('day-panel-close').addEventListener('click', closeDayPanel);
+    document.getElementById('day-panel-add').addEventListener('click', () => {
+      openModal(null, dayPanelDate);
+    });
     dayPanel.addEventListener('click', (e) => {
       if (e.target === dayPanel) closeDayPanel();
     });
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !dayPanel.hidden) closeDayPanel();
+      if (e.key === 'Escape' && !dayPanel.hidden && confirmDialogEl.hidden) closeDayPanel();
+    });
+
+    // Custom confirm dialog, replacing window.confirm — matches the site's own
+    // modal styling instead of the browser chrome, and doesn't block the tab.
+    const confirmDialogEl = document.getElementById('confirm-dialog');
+    const confirmMessageEl = document.getElementById('confirm-dialog-message');
+    const confirmOkBtn = document.getElementById('confirm-dialog-ok');
+    const confirmCancelBtn = document.getElementById('confirm-dialog-cancel');
+    let confirmResolve = null;
+
+    function confirmDialog(message) {
+      confirmMessageEl.textContent = message;
+      confirmDialogEl.hidden = false;
+      confirmCancelBtn.focus();
+      return new Promise((resolve) => { confirmResolve = resolve; });
+    }
+    function closeConfirmDialog(result) {
+      confirmDialogEl.hidden = true;
+      if (confirmResolve) {
+        confirmResolve(result);
+        confirmResolve = null;
+      }
+    }
+    confirmOkBtn.addEventListener('click', () => closeConfirmDialog(true));
+    confirmCancelBtn.addEventListener('click', () => closeConfirmDialog(false));
+    confirmDialogEl.addEventListener('click', (e) => {
+      if (e.target === confirmDialogEl) closeConfirmDialog(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !confirmDialogEl.hidden) closeConfirmDialog(false);
     });
 
     async function openDayPanelFromTarget(target) {

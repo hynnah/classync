@@ -2224,11 +2224,69 @@ a.btn-secondary:hover {
   }
 }
 
+/* Confirm dialog — replaces window.confirm so destructive prompts (delete)
+   match the site's own styling instead of native browser chrome. Stacks
+   above both #task-modal (50) and #day-panel (45), since delete can be
+   triggered from a day-panel row while the panel itself stays open behind it. */
+.page-app #confirm-dialog.modal-backdrop {
+  z-index: 60;
+}
+.page-app .confirm-modal {
+  width: 360px;
+  padding: 24px;
+}
+.page-app .confirm-dialog-message {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+.page-app .confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.page-app .confirm-dialog-danger {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger-text);
+  padding: 12px 20px;
+  cursor: pointer;
+}
+.page-app .confirm-dialog-danger:hover {
+  background: rgba(176, 48, 40, 0.08);
+}
+
 /* Day detail panel — click a date (or day-view empty space) to see everything due
    that day. Sits behind #task-modal (z-index 50) so editing a row from here stacks
    the familiar New Task modal on top rather than replacing this panel's content. */
 .page-app #day-panel.modal-backdrop {
   z-index: 45;
+}
+.page-app .day-panel-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.page-app .day-panel-add-btn {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--color-text-faint);
+  padding: 4px 6px;
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.page-app .day-panel-add-btn:hover {
+  color: var(--color-accent);
+  box-shadow: none;
+  transform: none;
 }
 .page-app .day-panel-body {
   padding: 10px 24px 22px;

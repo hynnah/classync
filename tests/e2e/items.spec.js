@@ -386,3 +386,72 @@ test.describe('custom date/time pickers', () => {
     }
   });
 });
+
+test.describe('day panel header actions', () => {
+  test('the + button opens New Task prefilled with the panel\'s date, and delete uses a custom confirm dialog', async ({ page }) => {
+    const email = `e2e-daypanelhead-${Date.now()}@example.com`;
+    let itemId;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      const todayIso = await page.evaluate(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+
+      const created = await page.evaluate(async (dueDate) => {
+        const res = await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ kind: 'task', title: 'E2E day panel head test', dueDate }),
+        });
+        return (await res.json()).item;
+      }, todayIso);
+      itemId = created.id;
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      const dayCell = page.locator(`.calendar-day[data-date="${todayIso}"]`);
+      await dayCell.click({ position: { x: 5, y: 5 } });
+      await page.waitForSelector('#day-panel:not([hidden])');
+
+      // + prefills the New Task modal with this day's date, panel stays open behind it
+      await page.locator('#day-panel-add').click();
+      await expect(page.locator('#task-modal')).toBeVisible();
+      await expect(page.locator('#task-modal-title')).toHaveText('New task');
+      await expect(page.locator('#task-due-date')).toHaveValue(todayIso);
+      await expect(page.locator('#task-due-date-display')).not.toHaveText('mm/dd/yyyy');
+      await page.locator('#task-modal-cancel').click();
+      await expect(page.locator('#task-modal')).toBeHidden();
+      await expect(page.locator('#day-panel')).toBeVisible();
+
+      // delete opens a custom in-page dialog, not a native confirm()
+      let nativeDialogFired = false;
+      page.once('dialog', async (d) => { nativeDialogFired = true; await d.dismiss(); });
+      const row = page.locator('.day-panel-row', { has: page.locator('.day-panel-row-title', { hasText: 'E2E day panel head test' }) });
+      await row.locator('.day-panel-delete-btn').click();
+      await expect(page.locator('#confirm-dialog')).toBeVisible();
+      await expect(page.locator('#confirm-dialog-message')).toContainText('E2E day panel head test');
+      expect(nativeDialogFired).toBe(false);
+
+      // cancel leaves the item intact
+      await page.locator('#confirm-dialog-cancel').click();
+      await expect(page.locator('#confirm-dialog')).toBeHidden();
+      await expect(row).toBeVisible();
+
+      // confirming actually deletes it
+      await row.locator('.day-panel-delete-btn').click();
+      await expect(page.locator('#confirm-dialog')).toBeVisible();
+      await page.locator('#confirm-dialog-ok').click();
+      await expect(page.locator('#confirm-dialog')).toBeHidden();
+      await expect(row).toHaveCount(0);
+      itemId = null;
+    } finally {
+      if (itemId) await getPool().query('DELETE FROM items WHERE id = ?', [itemId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+});
