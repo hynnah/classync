@@ -29,29 +29,29 @@
     <p class="lede">You can change your mind at any time — create more Spaces, join others, and keep your own planner alongside all of them.</p>
 
     <div class="start-grid">
-      <div class="start-card">
+      <form id="create-space-form" class="start-card">
         <span class="card-title">Create a Space</span>
         <p>Name it and you get a six-character join code to share. You become its Organizer.</p>
         <div class="field">
           <div class="field-label">Space name</div>
-          <input placeholder="e.g. Physics 11 — Ampere" disabled>
+          <input id="create-space-name" name="name" placeholder="e.g. Physics 11 — Ampere" maxlength="255" required>
         </div>
+        <p id="create-space-error" class="form-error" hidden></p>
         <span class="card-spacer"></span>
-        <button type="button" class="card-btn card-btn--primary" disabled>Create Space</button>
-        <p class="soon">Arrives in a later build day</p>
-      </div>
+        <button type="submit" class="card-btn card-btn--primary">Create Space</button>
+      </form>
 
-      <div class="start-card">
+      <form id="join-space-form" class="start-card">
         <span class="card-title">Join a Space</span>
         <p>Enter the code the Organizer gave you. You see only what that Space shares.</p>
         <div class="field">
           <div class="field-label">Space code</div>
-          <input class="field-mono" placeholder="XXXXXX" disabled>
+          <input id="join-space-code" name="joinCode" class="field-mono" placeholder="XXXXXX" maxlength="6" required>
         </div>
+        <p id="join-space-error" class="form-error" hidden></p>
         <span class="card-spacer"></span>
-        <button type="button" class="card-btn card-btn--secondary" disabled>Join Space</button>
-        <p class="soon">Arrives in a later build day</p>
-      </div>
+        <button type="submit" class="card-btn card-btn--secondary">Join Space</button>
+      </form>
 
       <div class="start-card start-card--solo">
         <img class="card-swan" src="/assets/swan.png" alt="">
@@ -79,6 +79,61 @@
     document.getElementById('user-initials').textContent = initials;
     document.getElementById('welcome-line').innerHTML = `Welcome, ${name}`;
   }
+
+  function setCardBusy(form, busy) {
+    form.querySelector('button[type="submit"]').disabled = busy;
+    form.querySelector('input').disabled = busy;
+  }
+
+  const createForm = document.getElementById('create-space-form');
+  const createError = document.getElementById('create-space-error');
+  createForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    createError.hidden = true;
+    setCardBusy(createForm, true);
+    try {
+      const name = document.getElementById('create-space-name').value.trim();
+      const r = await fetch('/api/spaces', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        createError.textContent = body.error || 'Could not create that Space — please try again.';
+        createError.hidden = false;
+        return;
+      }
+      window.location.href = '/app';
+    } finally {
+      setCardBusy(createForm, false);
+    }
+  });
+
+  const joinForm = document.getElementById('join-space-form');
+  const joinError = document.getElementById('join-space-error');
+  joinForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    joinError.hidden = true;
+    setCardBusy(joinForm, true);
+    try {
+      const joinCode = document.getElementById('join-space-code').value.trim();
+      const r = await fetch('/api/spaces/join', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ joinCode }),
+      });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        joinError.textContent = body.error || 'Could not join that Space — please try again.';
+        joinError.hidden = false;
+        return;
+      }
+      window.location.href = '/app';
+    } finally {
+      setCardBusy(joinForm, false);
+    }
+  });
 </script>
 </body>
 </html>
