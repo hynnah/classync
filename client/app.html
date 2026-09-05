@@ -47,6 +47,10 @@
           </span>
         </button>
         <div id="scope-switcher-spaces"></div>
+        <button id="scope-switcher-add" class="scope-switcher-add" type="button">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span>Create or join a Space</span>
+        </button>
       </div>
     </div>
 
@@ -66,12 +70,12 @@
         <span class="rail-item-label">Notes</span>
         <span class="rail-item-soon">Soon</span>
       </button>
-      <p class="rail-hint">Spaces arrive in a later build day. For now this is your personal calendar.</p>
+      <p class="rail-hint">Create or join a Space above to share a calendar with a class or group — your Personal to-dos stay private either way.</p>
     </div>
 
     <div id="rail-nav-space" class="rail-section rail-nav" hidden>
       <div id="rail-nav-space-heading" class="rail-heading">Space · view</div>
-      <button class="rail-item is-active" type="button" disabled>
+      <button id="space-nav-calendar" class="rail-item is-active" type="button">
         <svg class="rail-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
         <span class="rail-item-label">Calendar</span>
       </button>
@@ -80,12 +84,11 @@
         <span class="rail-item-label">Tasks</span>
         <span class="rail-item-soon">Soon</span>
       </button>
-      <button class="rail-item" type="button" disabled>
+      <button id="space-nav-members" class="rail-item" type="button">
         <svg class="rail-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="6" cy="5.5" r="2.3" stroke="currentColor" stroke-width="1.2"/><path d="M1.8 13.5c.5-2.6 2.2-4 4.2-4s3.7 1.4 4.2 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="11.5" cy="5" r="1.8" stroke="currentColor" stroke-width="1.1"/><path d="M10.3 8.1c1.6.2 2.8 1.4 3.2 3.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
         <span class="rail-item-label">Members</span>
-        <span class="rail-item-soon">Soon</span>
       </button>
-      <p class="rail-hint">This Space's calendar, tasks, and roster arrive in a later build day. You're a member — the plumbing to get here is what's new today.</p>
+      <p class="rail-hint">This Space's calendar and tasks arrive in a later build day. Members has the roster, and rename/promote/remove/leave if you're an Organizer.</p>
     </div>
 
     <span class="rail-fill"></span>
@@ -157,12 +160,41 @@
       <div class="space-placeholder-inner">
         <h1 id="space-placeholder-title">Space</h1>
         <p id="space-placeholder-role" class="space-placeholder-role"></p>
-        <p>Its calendar, tasks, and roster arrive in a later build day. Today's build added creating and joining a Space, and switching into one here — the calendar itself still shows you only your Personal items for now.</p>
-        <div class="space-placeholder-code">
+        <p>Its calendar and tasks arrive in a later build day — the calendar here still shows only your Personal items. Check Members in the sidebar for the roster.</p>
+      </div>
+    </div>
+
+    <div id="space-members-view" class="space-members" hidden>
+      <p id="space-members-kicker" class="cal-kicker">SPACE</p>
+      <h1 class="space-members-title">Members</h1>
+
+      <div id="space-organizer-tools" class="space-organizer-tools" hidden>
+        <form id="space-rename-form" class="space-rename-form">
+          <div class="field">
+            <div class="field-label">Space name</div>
+            <input id="space-rename-input" type="text" maxlength="255" required>
+          </div>
+          <button type="submit" class="modal-cancel">Save</button>
+        </form>
+        <p id="space-rename-error" class="form-error" hidden></p>
+
+        <div class="space-joincode-field">
           <span class="field-label">Join code</span>
-          <span id="space-placeholder-joincode" class="space-placeholder-joincode"></span>
+          <div class="space-joincode-row">
+            <span id="space-members-joincode" class="space-placeholder-joincode"></span>
+            <button id="space-joincode-copy" type="button" class="modal-cancel">Copy</button>
+          </div>
         </div>
       </div>
+
+      <div class="space-roster-head">
+        <span class="field-label">Roster</span>
+        <span id="space-roster-count" class="space-roster-count"></span>
+      </div>
+      <div id="space-roster-list" class="space-roster-list"></div>
+
+      <button id="space-leave-btn" type="button" class="space-leave-btn">Leave Space</button>
+      <p id="space-leave-error" class="form-error" hidden></p>
     </div>
   </main>
 </div>
@@ -268,6 +300,36 @@
   </div>
 </div>
 
+<div id="add-space-modal" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="add-space-title">
+    <div class="modal-head">
+      <h2 id="add-space-title">Create or join a Space</h2>
+      <button id="add-space-close" class="modal-close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="add-space-body">
+      <form id="add-space-create-form" class="add-space-form">
+        <div class="field">
+          <div class="field-label">Space name</div>
+          <input id="add-space-create-name" type="text" maxlength="255" placeholder="e.g. Physics 11 — Ampere" required>
+        </div>
+        <p id="add-space-create-error" class="form-error" hidden></p>
+        <button type="submit" class="add-space-submit">Create Space</button>
+      </form>
+
+      <div class="add-space-divider"><span>or</span></div>
+
+      <form id="add-space-join-form" class="add-space-form">
+        <div class="field">
+          <div class="field-label">Space code</div>
+          <input id="add-space-join-code" type="text" class="field-mono" maxlength="6" placeholder="XXXXXX" required>
+        </div>
+        <p id="add-space-join-error" class="form-error" hidden></p>
+        <button type="submit" class="modal-cancel">Join Space</button>
+      </form>
+    </div>
+  </div>
+</div>
+
 <div id="confirm-dialog" class="modal-backdrop" hidden>
   <div class="modal confirm-modal" role="alertdialog" aria-modal="true" aria-describedby="confirm-dialog-message">
     <p id="confirm-dialog-message" class="confirm-dialog-message"></p>
@@ -300,6 +362,36 @@
       dueTime: apiItem.due_time,
     };
   }
+
+  // Custom confirm dialog, replacing window.confirm — matches the site's own
+  // modal styling instead of the browser chrome, and doesn't block the tab.
+  // Top-level (not inside initApp) so both the calendar/day-panel flows and
+  // the Space switcher's leave/remove-member flows share the one dialog and
+  // controller, instead of each registering its own listeners on it.
+  const confirmDialogEl = document.getElementById('confirm-dialog');
+  const confirmMessageEl = document.getElementById('confirm-dialog-message');
+  const confirmOkBtn = document.getElementById('confirm-dialog-ok');
+  const confirmCancelBtn = document.getElementById('confirm-dialog-cancel');
+  let confirmResolve = null;
+
+  function confirmDialog(message) {
+    confirmMessageEl.textContent = message;
+    confirmDialogEl.hidden = false;
+    confirmCancelBtn.focus();
+    return new Promise((resolve) => { confirmResolve = resolve; });
+  }
+  function closeConfirmDialog(result) {
+    confirmDialogEl.hidden = true;
+    if (confirmResolve) {
+      confirmResolve(result);
+      confirmResolve = null;
+    }
+  }
+  confirmOkBtn.addEventListener('click', () => closeConfirmDialog(true));
+  confirmCancelBtn.addEventListener('click', () => closeConfirmDialog(false));
+  confirmDialogEl.addEventListener('click', (e) => {
+    if (e.target === confirmDialogEl) closeConfirmDialog(false);
+  });
 
   async function initApp() {
     const catRoot = document.getElementById('cal-root');
@@ -965,33 +1057,6 @@
       if (e.target === dayPanel) closeDayPanel();
     });
 
-    // Custom confirm dialog, replacing window.confirm — matches the site's own
-    // modal styling instead of the browser chrome, and doesn't block the tab.
-    const confirmDialogEl = document.getElementById('confirm-dialog');
-    const confirmMessageEl = document.getElementById('confirm-dialog-message');
-    const confirmOkBtn = document.getElementById('confirm-dialog-ok');
-    const confirmCancelBtn = document.getElementById('confirm-dialog-cancel');
-    let confirmResolve = null;
-
-    function confirmDialog(message) {
-      confirmMessageEl.textContent = message;
-      confirmDialogEl.hidden = false;
-      confirmCancelBtn.focus();
-      return new Promise((resolve) => { confirmResolve = resolve; });
-    }
-    function closeConfirmDialog(result) {
-      confirmDialogEl.hidden = true;
-      if (confirmResolve) {
-        confirmResolve(result);
-        confirmResolve = null;
-      }
-    }
-    confirmOkBtn.addEventListener('click', () => closeConfirmDialog(true));
-    confirmCancelBtn.addEventListener('click', () => closeConfirmDialog(false));
-    confirmDialogEl.addEventListener('click', (e) => {
-      if (e.target === confirmDialogEl) closeConfirmDialog(false);
-    });
-
     // Escape key across all four stacked layers (date/time popovers, task
     // modal, day panel, confirm dialog), handled by one listener instead of
     // one per layer. This used to be four independent `document.addEventListener`
@@ -1045,7 +1110,7 @@
   // context today only swaps which sidebar nav + main content area shows;
   // Space calendars/tasks/roster aren't built yet, so a Space context shows
   // a placeholder rather than real (or fake) content.
-  async function initSpaceSwitcher() {
+  async function initSpaceSwitcher(currentUserId) {
     const switcherBtn = document.getElementById('scope-switcher-btn');
     const switcherPanel = document.getElementById('scope-switcher');
     const spacesContainer = document.getElementById('scope-switcher-spaces');
@@ -1060,42 +1125,80 @@
     const railNavSpaceHeading = document.getElementById('rail-nav-space-heading');
     const spacePlaceholderTitle = document.getElementById('space-placeholder-title');
     const spacePlaceholderRole = document.getElementById('space-placeholder-role');
-    const spacePlaceholderJoinCode = document.getElementById('space-placeholder-joincode');
 
-    const spacesRes = await fetch('/api/spaces');
-    const { spaces } = spacesRes.ok ? await spacesRes.json() : { spaces: [] };
+    const spaceNavCalendar = document.getElementById('space-nav-calendar');
+    const spaceNavMembers = document.getElementById('space-nav-members');
+    const spaceMembersView = document.getElementById('space-members-view');
+    const spaceMembersKicker = document.getElementById('space-members-kicker');
+    const spaceOrganizerTools = document.getElementById('space-organizer-tools');
+    const spaceRenameForm = document.getElementById('space-rename-form');
+    const spaceRenameInput = document.getElementById('space-rename-input');
+    const spaceRenameError = document.getElementById('space-rename-error');
+    const spaceJoincodeEl = document.getElementById('space-members-joincode');
+    const spaceJoincodeCopyBtn = document.getElementById('space-joincode-copy');
+    const spaceRosterCount = document.getElementById('space-roster-count');
+    const spaceRosterList = document.getElementById('space-roster-list');
+    const spaceLeaveBtn = document.getElementById('space-leave-btn');
+    const spaceLeaveError = document.getElementById('space-leave-error');
 
-    spacesContainer.innerHTML = '';
-    spaces.forEach((space) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'scope-switcher-item';
-      btn.dataset.spaceId = space.id;
-      const dot = document.createElement('span');
-      dot.className = 'scope-dot';
-      const text = document.createElement('span');
-      text.className = 'scope-switcher-item-text';
-      const nameEl = document.createElement('span');
-      nameEl.className = 'scope-switcher-item-name';
-      nameEl.textContent = space.name;
-      const roleEl = document.createElement('span');
-      roleEl.className = 'scope-switcher-item-role';
-      roleEl.textContent = space.role === 'organizer' ? 'Organizer' : 'Member';
-      text.append(nameEl, roleEl);
-      btn.append(dot, text);
-      spacesContainer.appendChild(btn);
-    });
+    const switcherAddBtn = document.getElementById('scope-switcher-add');
+    const addSpaceModal = document.getElementById('add-space-modal');
+    const addSpaceClose = document.getElementById('add-space-close');
+    const addSpaceCreateForm = document.getElementById('add-space-create-form');
+    const addSpaceCreateName = document.getElementById('add-space-create-name');
+    const addSpaceCreateError = document.getElementById('add-space-create-error');
+    const addSpaceJoinForm = document.getElementById('add-space-join-form');
+    const addSpaceJoinCode = document.getElementById('add-space-join-code');
+    const addSpaceJoinError = document.getElementById('add-space-join-error');
+
+    let spaces = [];
+    let currentSpace = null;
+
+    async function loadSpaces() {
+      const spacesRes = await fetch('/api/spaces');
+      spaces = spacesRes.ok ? (await spacesRes.json()).spaces : [];
+
+      spacesContainer.innerHTML = '';
+      spaces.forEach((space) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'scope-switcher-item';
+        btn.dataset.spaceId = space.id;
+        const dot = document.createElement('span');
+        dot.className = 'scope-dot';
+        const text = document.createElement('span');
+        text.className = 'scope-switcher-item-text';
+        const nameEl = document.createElement('span');
+        nameEl.className = 'scope-switcher-item-name';
+        nameEl.textContent = space.name;
+        const roleEl = document.createElement('span');
+        roleEl.className = 'scope-switcher-item-role';
+        roleEl.textContent = space.role === 'organizer' ? 'Organizer' : 'Member';
+        text.append(nameEl, roleEl);
+        btn.append(dot, text);
+        spacesContainer.appendChild(btn);
+      });
+    }
+    await loadSpaces();
 
     function clearActive() {
       switcherPanel.querySelectorAll('.scope-switcher-item').forEach((el) => el.classList.remove('is-active'));
+    }
+    function showSpaceCalendar() {
+      spaceNavCalendar.classList.add('is-active');
+      spaceNavMembers.classList.remove('is-active');
+      spaceView.hidden = false;
+      spaceMembersView.hidden = true;
     }
     function selectPersonal() {
       clearActive();
       personalItem.classList.add('is-active');
       scopeLabel.textContent = 'Personal · private';
       scopeSub.textContent = 'Solo';
+      currentSpace = null;
       personalView.hidden = false;
       spaceView.hidden = true;
+      spaceMembersView.hidden = true;
       railNavPersonal.hidden = false;
       railNavSpace.hidden = true;
       closeSwitcher();
@@ -1104,16 +1207,16 @@
       clearActive();
       const btn = spacesContainer.querySelector(`[data-space-id="${space.id}"]`);
       if (btn) btn.classList.add('is-active');
+      currentSpace = space;
       scopeLabel.textContent = space.name;
       scopeSub.textContent = space.role === 'organizer' ? 'Organizer' : 'Member';
       personalView.hidden = true;
-      spaceView.hidden = false;
       railNavPersonal.hidden = true;
       railNavSpace.hidden = false;
       railNavSpaceHeading.textContent = `${space.name} · view`;
       spacePlaceholderTitle.textContent = space.name;
       spacePlaceholderRole.textContent = space.role === 'organizer' ? 'Organizer' : 'Member';
-      spacePlaceholderJoinCode.textContent = space.joinCode || '';
+      showSpaceCalendar();
       closeSwitcher();
     }
 
@@ -1144,6 +1247,206 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !switcherPanel.hidden) closeSwitcher();
     });
+
+    // --- Create/join a Space from within the app (not just first-run) — the
+    // only way a "Continue solo" user, or anyone wanting a second Space, could
+    // reach these forms otherwise was a direct link to firstrun.html, which
+    // redirects away the moment onboarded_at is set. Same two endpoints
+    // firstrun.html itself uses.
+    function openAddSpaceModal() {
+      closeSwitcher();
+      addSpaceCreateForm.reset();
+      addSpaceJoinForm.reset();
+      addSpaceCreateError.hidden = true;
+      addSpaceJoinError.hidden = true;
+      addSpaceModal.hidden = false;
+      addSpaceCreateName.focus();
+    }
+    function closeAddSpaceModal() {
+      addSpaceModal.hidden = true;
+    }
+    switcherAddBtn.addEventListener('click', openAddSpaceModal);
+    addSpaceClose.addEventListener('click', closeAddSpaceModal);
+    addSpaceModal.addEventListener('click', (e) => {
+      if (e.target === addSpaceModal) closeAddSpaceModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !addSpaceModal.hidden) closeAddSpaceModal();
+    });
+
+    addSpaceCreateForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      addSpaceCreateError.hidden = true;
+      const name = addSpaceCreateName.value.trim();
+      const res = await fetch('/api/spaces', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        addSpaceCreateError.textContent = body.error || 'Could not create that Space — please try again.';
+        addSpaceCreateError.hidden = false;
+        return;
+      }
+      closeAddSpaceModal();
+      await loadSpaces();
+      selectSpace(body.space);
+    });
+
+    addSpaceJoinForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      addSpaceJoinError.hidden = true;
+      const joinCode = addSpaceJoinCode.value.trim();
+      const res = await fetch('/api/spaces/join', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ joinCode }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        addSpaceJoinError.textContent = body.error || 'Could not join that Space — please try again.';
+        addSpaceJoinError.hidden = false;
+        return;
+      }
+      closeAddSpaceModal();
+      await loadSpaces();
+      selectSpace(body.space);
+    });
+
+    // --- Members view: roster for everyone in the Space, plus rename/promote/
+    // remove/leave for Organizers. Shares #confirm-dialog with the calendar's
+    // day-panel delete flow (top-level confirmDialog(), not a second copy).
+    async function refreshRoster() {
+      const res = await fetch(`/api/spaces/${currentSpace.id}/members`);
+      const { members } = await res.json();
+      const isOrganizer = currentSpace.role === 'organizer';
+
+      spaceRosterCount.textContent = members.length;
+      spaceRosterList.innerHTML = '';
+      members.forEach((member) => {
+        const row = document.createElement('div');
+        row.className = 'space-roster-row';
+
+        const identity = document.createElement('div');
+        identity.className = 'space-roster-identity';
+        const nameEl = document.createElement('span');
+        nameEl.className = 'space-roster-name';
+        nameEl.textContent = `${member.firstName} ${member.lastName}`.trim() || member.email;
+        const emailEl = document.createElement('span');
+        emailEl.className = 'space-roster-email';
+        emailEl.textContent = member.email;
+        identity.append(nameEl, emailEl);
+        row.appendChild(identity);
+
+        const roleEl = document.createElement('span');
+        roleEl.className = 'space-roster-role' + (member.role === 'organizer' ? ' is-organizer' : '');
+        roleEl.textContent = member.role === 'organizer' ? 'Organizer' : 'Member';
+        row.appendChild(roleEl);
+
+        if (isOrganizer && member.id !== currentUserId) {
+          const actions = document.createElement('div');
+          actions.className = 'space-roster-actions';
+
+          if (member.role !== 'organizer') {
+            const promoteBtn = document.createElement('button');
+            promoteBtn.type = 'button';
+            promoteBtn.className = 'space-roster-action-btn';
+            promoteBtn.setAttribute('aria-label', 'Promote to Organizer');
+            promoteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2l1.8 3.7 4.1.6-3 2.9.7 4.1L8 11.3l-3.6 1.9.7-4.1-3-2.9 4.1-.6L8 2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+            promoteBtn.addEventListener('click', async () => {
+              promoteBtn.disabled = true;
+              await fetch(`/api/spaces/${currentSpace.id}/members/${member.id}/promote`, { method: 'POST' });
+              await refreshRoster();
+            });
+            actions.appendChild(promoteBtn);
+          }
+
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'space-roster-action-btn is-danger';
+          removeBtn.setAttribute('aria-label', 'Remove from Space');
+          removeBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5v8a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7v4M9.5 7v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+          removeBtn.addEventListener('click', async () => {
+            if (!(await confirmDialog(`Remove ${nameEl.textContent} from "${currentSpace.name}"?`))) return;
+            removeBtn.disabled = true;
+            await fetch(`/api/spaces/${currentSpace.id}/members/${member.id}`, { method: 'DELETE' });
+            await refreshRoster();
+          });
+          actions.appendChild(removeBtn);
+
+          row.appendChild(actions);
+        }
+
+        spaceRosterList.appendChild(row);
+      });
+    }
+
+    function showMembersView() {
+      spaceNavMembers.classList.add('is-active');
+      spaceNavCalendar.classList.remove('is-active');
+      spaceView.hidden = true;
+      spaceMembersView.hidden = false;
+
+      const isOrganizer = currentSpace.role === 'organizer';
+      spaceMembersKicker.textContent = `${currentSpace.name} · Members`;
+      spaceOrganizerTools.hidden = !isOrganizer;
+      spaceRenameError.hidden = true;
+      spaceLeaveError.hidden = true;
+      if (isOrganizer) {
+        spaceRenameInput.value = currentSpace.name;
+        spaceJoincodeEl.textContent = currentSpace.joinCode;
+        spaceJoincodeCopyBtn.textContent = 'Copy';
+      }
+      refreshRoster();
+    }
+
+    spaceNavCalendar.addEventListener('click', showSpaceCalendar);
+    spaceNavMembers.addEventListener('click', showMembersView);
+
+    spaceRenameForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      spaceRenameError.hidden = true;
+      const name = spaceRenameInput.value.trim();
+      const res = await fetch(`/api/spaces/${currentSpace.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        spaceRenameError.textContent = body.error || 'Could not rename the Space — please try again.';
+        spaceRenameError.hidden = false;
+        return;
+      }
+      currentSpace.name = name;
+      scopeLabel.textContent = name;
+      railNavSpaceHeading.textContent = `${name} · view`;
+      spacePlaceholderTitle.textContent = name;
+      spaceMembersKicker.textContent = `${name} · Members`;
+      const switcherItem = spacesContainer.querySelector(`[data-space-id="${currentSpace.id}"] .scope-switcher-item-name`);
+      if (switcherItem) switcherItem.textContent = name;
+    });
+
+    spaceJoincodeCopyBtn.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(currentSpace.joinCode);
+      spaceJoincodeCopyBtn.textContent = 'Copied';
+      setTimeout(() => { spaceJoincodeCopyBtn.textContent = 'Copy'; }, 1500);
+    });
+
+    spaceLeaveBtn.addEventListener('click', async () => {
+      if (!(await confirmDialog(`Leave "${currentSpace.name}"? You can rejoin later with its join code.`))) return;
+      spaceLeaveError.hidden = true;
+      const res = await fetch(`/api/spaces/${currentSpace.id}/leave`, { method: 'POST' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        spaceLeaveError.textContent = body.error || 'Could not leave that Space — please try again.';
+        spaceLeaveError.hidden = false;
+        return;
+      }
+      await loadSpaces();
+      selectPersonal();
+    });
   }
 
   const res = await fetch('/api/me');
@@ -1157,7 +1460,7 @@
     document.getElementById('user-initials').textContent = initials;
     document.getElementById('user-initials-2').textContent = initials;
     await initApp();
-    await initSpaceSwitcher();
+    await initSpaceSwitcher(me.id);
   }
 
   document.getElementById('sign-out').addEventListener('click', async () => {

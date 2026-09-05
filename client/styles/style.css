@@ -1212,6 +1212,29 @@ a.btn-secondary:hover {
   text-transform: uppercase;
   color: var(--color-text-faintest);
 }
+.page-app .scope-switcher-add {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-accent-link);
+}
+.page-app .scope-switcher-add:hover {
+  box-shadow: none;
+  transform: none;
+  background: rgba(182, 130, 53, 0.06);
+}
 .page-app .scope-dot {
   width: 12px;
   height: 2px;
@@ -1557,13 +1580,6 @@ a.btn-secondary:hover {
   color: var(--color-text-muted);
   margin: 0;
 }
-.page-app .space-placeholder-code {
-  margin-top: 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-}
 .page-app .space-placeholder-joincode {
   font-family: var(--font-mono);
   font-size: 15px;
@@ -1572,6 +1588,146 @@ a.btn-secondary:hover {
   border: 1px solid var(--color-divider);
   background: var(--color-bg-card);
   padding: 7px 12px;
+}
+
+/* Space Members view — roster (everyone) plus rename/join-code/promote/remove
+   (Organizer only). Same left-aligned kicker+heading treatment as the Space
+   calendar placeholder, not a centered hero block. */
+.page-app .space-members {
+  flex: 1;
+  padding: 40px;
+  max-width: 560px;
+  overflow-y: auto;
+}
+.page-app .space-members-title {
+  font-family: var(--font-heading);
+  font-weight: 300;
+  font-size: 22px;
+  margin: 0 0 20px;
+}
+.page-app .space-organizer-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 22px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--color-divider);
+}
+.page-app .space-rename-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.page-app .space-rename-form .field {
+  flex: 1;
+  margin: 0;
+}
+.page-app .space-joincode-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.page-app .space-joincode-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.page-app .space-roster-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.page-app .space-roster-count {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--color-text-faintest);
+}
+.page-app .space-roster-list {
+  border: 1px solid var(--color-divider);
+  background: var(--color-bg-card);
+  margin-bottom: 24px;
+}
+.page-app .space-roster-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-divider-soft);
+}
+.page-app .space-roster-row:last-child {
+  border-bottom: 0;
+}
+.page-app .space-roster-identity {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.page-app .space-roster-name {
+  font-size: 13.5px;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.page-app .space-roster-email {
+  font-size: 11.5px;
+  color: var(--color-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.page-app .space-roster-role {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-faintest);
+  flex-shrink: 0;
+}
+.page-app .space-roster-role.is-organizer {
+  color: var(--color-accent);
+}
+.page-app .space-roster-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.page-app .space-roster-action-btn {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--color-text-faint);
+  padding: 4px 6px;
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.page-app .space-roster-action-btn:hover {
+  color: var(--color-accent);
+  box-shadow: none;
+  transform: none;
+}
+.page-app .space-roster-action-btn.is-danger:hover {
+  color: var(--color-danger-text);
+}
+.page-app .space-leave-btn {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger-text);
+  padding: 10px 18px;
+  cursor: pointer;
+}
+.page-app .space-leave-btn:hover {
+  background: rgba(176, 48, 40, 0.08);
 }
 
 .page-app .urgent-panel {
@@ -2048,6 +2204,38 @@ a.btn-secondary:hover {
   box-shadow: none;
   transform: none;
 }
+.page-app .add-space-body {
+  padding: 22px 24px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.page-app .add-space-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.page-app .add-space-form .modal-submit,
+.page-app .add-space-form .modal-cancel {
+  align-self: flex-start;
+}
+.page-app .add-space-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-faintest);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.page-app .add-space-divider::before,
+.page-app .add-space-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-divider);
+}
 .page-app .modal-body {
   padding: 22px 24px;
   display: flex;
@@ -2137,6 +2325,11 @@ a.btn-secondary:hover {
 }
 .page-app .field textarea {
   resize: vertical;
+}
+.page-app .field input.field-mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
 }
 .page-app .picker-field {
   position: relative;
@@ -2334,7 +2527,8 @@ a.btn-secondary:hover {
   padding: 12px 20px;
   cursor: pointer;
 }
-.page-app .modal-submit {
+.page-app .modal-submit,
+.page-app .add-space-submit {
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.16em;
@@ -2345,10 +2539,12 @@ a.btn-secondary:hover {
   padding: 12px 22px;
   cursor: pointer;
 }
-.page-app .modal-submit:hover {
+.page-app .modal-submit:hover,
+.page-app .add-space-submit:hover {
   background: var(--color-accent-hover-bg);
 }
-.page-app .modal-submit:disabled {
+.page-app .modal-submit:disabled,
+.page-app .add-space-submit:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
