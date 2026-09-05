@@ -752,12 +752,6 @@
     modal.addEventListener('click', (e) => {
       if (e.target === modal) closeModal();
     });
-    document.addEventListener('keydown', (e) => {
-      if (e.key !== 'Escape') return;
-      if (!dueDatePopover.hidden) { closeDatePopover(); return; }
-      if (!dueTimePopover.hidden) { closeTimePopover(); return; }
-      if (!modal.hidden) closeModal();
-    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -918,9 +912,6 @@
     dayPanel.addEventListener('click', (e) => {
       if (e.target === dayPanel) closeDayPanel();
     });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !dayPanel.hidden && confirmDialogEl.hidden) closeDayPanel();
-    });
 
     // Custom confirm dialog, replacing window.confirm — matches the site's own
     // modal styling instead of the browser chrome, and doesn't block the tab.
@@ -948,8 +939,29 @@
     confirmDialogEl.addEventListener('click', (e) => {
       if (e.target === confirmDialogEl) closeConfirmDialog(false);
     });
+
+    // Escape key across all four stacked layers (date/time popovers, task
+    // modal, day panel, confirm dialog), handled by one listener instead of
+    // one per layer. This used to be four independent `document.addEventListener`
+    // Escape handlers, each guarding on the others' current `.hidden` state —
+    // but closeModal() is async (it awaits flushAutoSave()), and per spec a
+    // microtask checkpoint runs after *each* listener returns, not after the
+    // whole dispatch finishes. So the fire-and-forget closeModal() call in the
+    // old modal handler would already finish and set modal.hidden = true
+    // before the next sibling listener (day panel's) ever read it — making a
+    // state-snapshot guard like `&& modal.hidden` unreliable by construction,
+    // not just an oversight. One handler making one top-down decision per
+    // keypress sidesteps the race entirely.
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !confirmDialogEl.hidden) closeConfirmDialog(false);
+      if (e.key !== 'Escape') return;
+      if (!confirmDialogEl.hidden) { closeConfirmDialog(false); return; }
+      if (!modal.hidden) {
+        if (!dueDatePopover.hidden) { closeDatePopover(); return; }
+        if (!dueTimePopover.hidden) { closeTimePopover(); return; }
+        closeModal();
+        return;
+      }
+      if (!dayPanel.hidden) { closeDayPanel(); return; }
     });
 
     async function openDayPanelFromTarget(target) {

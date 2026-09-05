@@ -455,3 +455,71 @@ test.describe('day panel header actions', () => {
     }
   });
 });
+
+test.describe('Escape key across stacked layers', () => {
+  test('Escape closes one layer at a time, topmost first, when the task modal is opened from the day panel', async ({ page }) => {
+    const email = `e2e-escapelayers-${Date.now()}@example.com`;
+    let itemId;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      const todayIso = await page.evaluate(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+      const created = await page.evaluate(async (dueDate) => {
+        const res = await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ kind: 'task', title: 'E2E escape layers test', dueDate }),
+        });
+        return (await res.json()).item;
+      }, todayIso);
+      itemId = created.id;
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      const dayCell = page.locator(`.calendar-day[data-date="${todayIso}"]`);
+      const row = page.locator('.day-panel-row', { has: page.locator('.day-panel-row-title', { hasText: 'E2E escape layers test' }) });
+
+      // Regression: closeModal() is async (awaits flushAutoSave()), so a
+      // fire-and-forget call to it can finish via a microtask checkpoint that
+      // runs *between* sibling keydown listeners, not after the whole
+      // dispatch — a naive per-listener `.hidden` guard reads stale state.
+      // One Escape from an edit opened out of the day panel must close only
+      // the modal, leaving the panel underneath open.
+      await dayCell.click({ position: { x: 5, y: 5 } });
+      await expect(page.locator('#day-panel')).toBeVisible();
+      await row.locator('.day-panel-edit-btn').click();
+      await expect(page.locator('#task-modal')).toBeVisible();
+
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#task-modal')).toBeHidden();
+      await expect(page.locator('#day-panel')).toBeVisible();
+
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#day-panel')).toBeHidden();
+
+      // Escape closes a date/time popover before the modal underneath it.
+      await dayCell.click({ position: { x: 5, y: 5 } });
+      await expect(page.locator('#day-panel')).toBeVisible();
+      await page.locator('#day-panel-add').click();
+      await expect(page.locator('#task-modal')).toBeVisible();
+      await page.locator('#task-due-date-btn').click();
+      await expect(page.locator('#task-due-date-popover')).toBeVisible();
+
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#task-due-date-popover')).toBeHidden();
+      await expect(page.locator('#task-modal')).toBeVisible();
+
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#task-modal')).toBeHidden();
+    } finally {
+      if (itemId) await getPool().query('DELETE FROM items WHERE id = ?', [itemId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+});
