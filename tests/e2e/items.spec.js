@@ -32,7 +32,7 @@ test.describe('creating a task through the New Task modal', () => {
     }
   });
 
-  test('a note (not a task) created via the modal also appears on the calendar, with just its title on the pill', async ({ page }) => {
+  test('a note created via the modal has no due date, so it does not appear on the calendar', async ({ page }) => {
     const email = `e2e-newnote-${Date.now()}@example.com`;
     try {
       await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
@@ -40,22 +40,16 @@ test.describe('creating a task through the New Task modal', () => {
       await page.goto('/app');
       await page.waitForSelector('#cal-root .calendar-days');
 
-      const todayIso = await page.evaluate(() => {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      });
-
       await page.locator('#new-task-btn').click();
       await page.locator('label.field-radio', { hasText: 'Note' }).locator('input').check();
       await page.locator('#task-title').fill('E2E created note');
-      await page.locator('#task-due-date').fill(todayIso);
       await page.locator('.modal-submit').click();
 
       await expect(page.locator('#task-modal')).toBeHidden();
-      const pill = page.locator('.cal-item', { has: page.locator('.cal-item-title', { hasText: 'E2E created note' }) });
-      await expect(pill).toBeVisible();
-      await expect(pill.locator('.cal-item-tag')).toHaveCount(0);
-      await expect(pill).toHaveText('E2E created note');
+      // notes can't have a due date (the field is hidden for them), so a fresh note
+      // is never date-scoped and never shows up on the calendar — same as any other
+      // dateless item, confirmed here rather than assumed
+      await expect(page.locator('.cal-item-title', { hasText: 'E2E created note' })).toHaveCount(0);
     } finally {
       await getPool().query('DELETE FROM items WHERE title = ?', ['E2E created note']);
       await getPool().query('DELETE FROM users WHERE email = ?', [email]);
@@ -165,6 +159,37 @@ test.describe('editing an item from the day panel', () => {
       await expect(page.locator('#task-description')).toHaveValue('');
     } finally {
       if (itemId) await getPool().query('DELETE FROM items WHERE id = ?', [itemId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+});
+
+test.describe('notes are simpler than tasks', () => {
+  test('the New Task modal hides category/due date/time for a note, and clears stale values from switching kind', async ({ page }) => {
+    const email = `e2e-notefields-${Date.now()}@example.com`;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      await page.locator('#new-task-btn').click();
+      await expect(page.locator('#task-classification-fields')).toBeVisible();
+
+      await page.locator('#task-category').selectOption('Assignment');
+      await page.locator('#task-due-date').fill('2026-09-20');
+      await page.locator('label.field-radio', { hasText: 'Note' }).locator('input').check();
+
+      await expect(page.locator('#task-classification-fields')).toBeHidden();
+      await expect(page.locator('#task-category')).toHaveValue('');
+      await expect(page.locator('#task-due-date')).toHaveValue('');
+
+      await page.locator('#task-title').fill('E2E note fields test');
+      await page.locator('.modal-submit').click();
+      await expect(page.locator('#task-modal')).toBeHidden();
+      await expect(page.locator('#task-form-error')).toBeHidden();
+    } finally {
+      await getPool().query('DELETE FROM items WHERE title = ?', ['E2E note fields test']);
       await getPool().query('DELETE FROM users WHERE email = ?', [email]);
     }
   });

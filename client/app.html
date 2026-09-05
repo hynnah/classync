@@ -139,7 +139,7 @@
         <div class="field-label">Description <span class="field-optional">optional</span></div>
         <textarea id="task-description" name="description" rows="3" placeholder="Any extra detail"></textarea>
       </div>
-      <div class="field-grid">
+      <div id="task-classification-fields" class="field-grid">
         <div class="field">
           <div class="field-label">Category <span class="field-optional">optional</span></div>
           <select id="task-category" name="category">
@@ -383,7 +383,24 @@
     const form = document.getElementById('task-form');
     const errorEl = document.getElementById('task-form-error');
     const submitBtn = form.querySelector('.modal-submit');
+    const classificationFields = document.getElementById('task-classification-fields');
     let editingItemId = null;
+
+    // A note is just a title and a description — no category, no due date/time.
+    // Hiding the fields isn't enough on its own: their values survive in the DOM
+    // even while hidden, so switching Task -> fill in a category -> Note would
+    // otherwise submit a category the user can no longer see, and the server
+    // would reject it with a 400 that points at a field that's not on screen.
+    function onKindChange() {
+      const selected = form.querySelector('input[name="kind"]:checked').value;
+      if (selected === 'note') {
+        document.getElementById('task-category').value = '';
+        document.getElementById('task-due-date').value = '';
+        document.getElementById('task-due-time').value = '';
+      }
+      classificationFields.hidden = selected === 'note';
+    }
+    form.querySelectorAll('input[name="kind"]').forEach((r) => r.addEventListener('change', onKindChange));
 
     function openModal(item) {
       errorEl.hidden = true;
@@ -403,6 +420,7 @@
         document.getElementById('task-category').value = item.category || '';
         document.getElementById('task-due-date').value = item.due_date || '';
         document.getElementById('task-due-time').value = item.due_time ? item.due_time.slice(0, 5) : '';
+        classificationFields.hidden = item.kind === 'note';
       } else {
         modalTitle.textContent = 'New task';
         submitBtn.textContent = 'Create';
@@ -410,6 +428,7 @@
         if (viewMode === 'day') {
           document.getElementById('task-due-date').value = isoDate(dayDate);
         }
+        classificationFields.hidden = false;
       }
 
       modal.hidden = false;
@@ -494,10 +513,13 @@
         const row = document.createElement('div');
         row.className = 'day-panel-row';
 
-        const check = document.createElement('button');
-        check.type = 'button';
-        check.className = 'day-panel-row-check' + (raw.status === 'completed' ? ' is-done' : '');
-        check.setAttribute('aria-label', raw.status === 'completed' ? 'Mark as not done' : 'Mark as done');
+        // Notes don't have a meaningful done state — a plain spacer keeps the row's
+        // title aligned with task rows above/below it without implying it's clickable.
+        const isNote = raw.kind === 'note';
+        const check = document.createElement(isNote ? 'span' : 'button');
+        if (!isNote) check.type = 'button';
+        check.className = (isNote ? 'day-panel-row-check-spacer' : 'day-panel-row-check') + (raw.status === 'completed' ? ' is-done' : '');
+        if (!isNote) check.setAttribute('aria-label', raw.status === 'completed' ? 'Mark as not done' : 'Mark as done');
         row.appendChild(check);
 
         const body = document.createElement('div');
@@ -532,16 +554,18 @@
         actions.appendChild(deleteBtn);
         row.appendChild(actions);
 
-        check.addEventListener('click', async () => {
-          check.disabled = true;
-          const nextStatus = raw.status === 'completed' ? 'pending' : 'completed';
-          await fetch(`/api/items/${raw.id}/status`, {
-            method: 'PATCH',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ status: nextStatus }),
+        if (!isNote) {
+          check.addEventListener('click', async () => {
+            check.disabled = true;
+            const nextStatus = raw.status === 'completed' ? 'pending' : 'completed';
+            await fetch(`/api/items/${raw.id}/status`, {
+              method: 'PATCH',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ status: nextStatus }),
+            });
+            await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel()]);
           });
-          await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel()]);
-        });
+        }
 
         editBtn.addEventListener('click', () => openModal(raw));
 
