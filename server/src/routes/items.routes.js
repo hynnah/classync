@@ -93,10 +93,10 @@ router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
       itemId: req.params.id,
       userId: req.user.id,
       title: title.trim(),
-      description: description || null,
-      category: category || null,
-      dueDate: dueDate || null,
-      dueTime: dueTime || null,
+      description,
+      category,
+      dueDate,
+      dueTime,
     });
     if (!item) {
       return res.status(404).json({ error: 'Item not found.' });

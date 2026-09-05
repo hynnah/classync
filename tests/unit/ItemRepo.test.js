@@ -164,6 +164,104 @@ describe('ItemRepo', () => {
     });
   });
 
+  describe('update', () => {
+    test('updates all provided fields', async () => {
+      const item = await ItemRepo.create({
+        createdBy: owner.id, kind: 'task', title: 'Original title',
+        description: 'Original desc', category: 'Assignment', dueDate: '2026-09-10', dueTime: '09:00',
+      });
+      createdIds.push(item.id);
+
+      const updated = await ItemRepo.update({
+        itemId: item.id, userId: owner.id, title: 'Updated title',
+        description: 'Updated desc', category: 'Quiz', dueDate: '2026-09-15', dueTime: '14:30',
+      });
+
+      expect(updated.title).toBe('Updated title');
+      expect(updated.description).toBe('Updated desc');
+      expect(updated.category).toBe('Quiz');
+      expect(updated.due_date).toBe('2026-09-15');
+      expect(updated.due_time).toBe('14:30:00');
+      expect(updated.kind).toBe('task');
+    });
+
+    test('a field left out of the call keeps its current value — an omitted field is not the same as clearing it', async () => {
+      const item = await ItemRepo.create({
+        createdBy: owner.id, kind: 'task', title: 'Partial update original',
+        description: 'Keep me', category: 'Assignment', dueDate: '2026-09-10', dueTime: '09:00',
+      });
+      createdIds.push(item.id);
+
+      const titleOnly = await ItemRepo.update({ itemId: item.id, userId: owner.id, title: 'Partial update title only' });
+
+      expect(titleOnly.title).toBe('Partial update title only');
+      expect(titleOnly.description).toBe('Keep me');
+      expect(titleOnly.category).toBe('Assignment');
+      expect(titleOnly.due_date).toBe('2026-09-10');
+      expect(titleOnly.due_time).toBe('09:00:00');
+    });
+
+    test('an explicit null clears a field, distinct from omitting it', async () => {
+      const item = await ItemRepo.create({
+        createdBy: owner.id, kind: 'task', title: 'Clear fields original',
+        description: 'Clear me', category: 'Assignment', dueDate: '2026-09-10', dueTime: '09:00',
+      });
+      createdIds.push(item.id);
+
+      const cleared = await ItemRepo.update({
+        itemId: item.id, userId: owner.id, title: 'Clear fields',
+        description: null, category: null, dueDate: null, dueTime: null,
+      });
+
+      expect(cleared.description).toBeNull();
+      expect(cleared.category).toBeNull();
+      expect(cleared.due_date).toBeNull();
+      expect(cleared.due_time).toBeNull();
+    });
+
+    test('a non-owner\'s update is a silent no-op', async () => {
+      const item = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Ownership check update' });
+      createdIds.push(item.id);
+
+      const hijack = await ItemRepo.update({ itemId: item.id, userId: intruder.id, title: 'Hijacked title' });
+      expect(hijack).toBeNull();
+
+      const stillOriginal = await ItemRepo.findForUser(item.id, owner.id);
+      expect(stillOriginal.title).toBe('Ownership check update');
+    });
+
+    test('an event item is never editable, even by its own assignee', async () => {
+      const [spaceResult] = await getPool().query(
+        'INSERT INTO spaces (name, join_code, creator_user_id) VALUES (?, ?, ?)',
+        ['Update guard test space', 'UG' + String(Date.now()).slice(-4), owner.id]
+      );
+      const spaceId = spaceResult.insertId;
+      createdSpaceIds.push(spaceId);
+
+      const [itemResult] = await getPool().query(
+        "INSERT INTO items (space_id, kind, title, created_by) VALUES (?, 'event', 'Update guard event', ?)",
+        [spaceId, owner.id]
+      );
+      const eventItemId = itemResult.insertId;
+      createdIds.push(eventItemId);
+      await getPool().query(
+        "INSERT INTO item_assignments (item_id, user_id, status) VALUES (?, ?, 'pending')",
+        [eventItemId, owner.id]
+      );
+
+      const result = await ItemRepo.update({ itemId: eventItemId, userId: owner.id, title: 'Should not apply' });
+      expect(result).toBeNull();
+
+      const [rows] = await getPool().query('SELECT title FROM items WHERE id = ?', [eventItemId]);
+      expect(rows[0].title).toBe('Update guard event');
+    });
+
+    test('updating a nonexistent item returns null', async () => {
+      const result = await ItemRepo.update({ itemId: 999999999, userId: owner.id, title: 'x' });
+      expect(result).toBeNull();
+    });
+  });
+
   describe('remove', () => {
     test('a non-owner cannot delete another user\'s item', async () => {
       const item = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Ownership check delete' });

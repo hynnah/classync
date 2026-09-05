@@ -95,14 +95,26 @@ async function setStatus({ itemId, userId, status }) {
 // Reuses the same ownership + kind !== 'event' guard as setStatus, for the same
 // reason: findForUser's re-fetch can't tell "blocked" apart from "unchanged" on
 // its own, so the check has to happen before the write, not folded into its WHERE.
+// A field left out of the call (undefined) keeps its current value; an explicit
+// null clears it. Both the route and this function have to respect that
+// distinction the whole way through — coercing either one with `|| null` early
+// collapses "omitted" and "explicitly cleared" into the same thing, silently
+// wiping every field a caller didn't mean to touch.
 async function update({ itemId, userId, title, description, category, dueDate, dueTime }) {
   const current = await findForUser(itemId, userId);
   if (!current || current.kind === 'event') return null;
+  const next = {
+    title: title !== undefined ? title : current.title,
+    description: description !== undefined ? description : current.description,
+    category: category !== undefined ? category : current.category,
+    dueDate: dueDate !== undefined ? dueDate : current.due_date,
+    dueTime: dueTime !== undefined ? dueTime : current.due_time,
+  };
   await getPool().query(
     `UPDATE items
      SET title = ?, description = ?, category = ?, due_date = ?, due_time = ?
      WHERE id = ? AND created_by = ?`,
-    [title, description || null, category || null, dueDate || null, dueTime || null, itemId, userId]
+    [next.title, next.description, next.category, next.dueDate, next.dueTime, itemId, userId]
   );
   return findForUser(itemId, userId);
 }
