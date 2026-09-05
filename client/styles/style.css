@@ -1166,6 +1166,9 @@ a.btn-secondary:hover {
   cursor: not-allowed;
   opacity: 0.6;
 }
+.page-app .rail-item-icon {
+  flex-shrink: 0;
+}
 .page-app .rail-item-label {
   flex: 1;
 }
