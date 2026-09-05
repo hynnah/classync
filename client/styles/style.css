@@ -1555,6 +1555,7 @@ a.btn-secondary:hover {
   flex-direction: column;
   gap: 5px;
   min-width: 0;
+  cursor: pointer;
 }
 .page-app .calendar-day.is-today {
   background: rgba(182, 130, 53, 0.07);
@@ -1695,6 +1696,7 @@ a.btn-secondary:hover {
   gap: 4px;
   flex: 1;
   overflow-y: auto;
+  cursor: pointer;
 }
 .page-app .day-view-allday {
   display: flex;
@@ -1989,4 +1991,103 @@ a.btn-secondary:hover {
     width: 100%;
     max-height: 85vh;
   }
+}
+
+/* Day detail panel — click a date (or day-view empty space) to see everything due
+   that day. Sits behind #task-modal (z-index 50) so editing a row from here stacks
+   the familiar New Task modal on top rather than replacing this panel's content. */
+.page-app #day-panel.modal-backdrop {
+  z-index: 45;
+}
+.page-app .day-panel-body {
+  padding: 10px 24px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.page-app .day-panel-empty {
+  font-size: 13.5px;
+  color: var(--color-text-muted);
+  margin: 12px 0;
+}
+.page-app .day-panel-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-divider-soft);
+}
+.page-app .day-panel-row:last-child {
+  border-bottom: 0;
+}
+.page-app .day-panel-row-check {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--color-personal-border);
+  background: transparent;
+  flex-shrink: 0;
+  margin-top: 2px;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: none;
+}
+.page-app .day-panel-row-check:hover {
+  box-shadow: none;
+  transform: none;
+  border-color: var(--color-accent);
+}
+.page-app .day-panel-row-check.is-done {
+  background: var(--color-personal-border);
+}
+.page-app .day-panel-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.page-app .day-panel-row-title {
+  font-size: 14.5px;
+  color: var(--color-text);
+  word-break: break-word;
+}
+.page-app .day-panel-row-title.is-done {
+  text-decoration: line-through;
+  color: var(--color-text-faint);
+}
+.page-app .day-panel-row-meta {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+.page-app .day-panel-row-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.page-app .day-panel-edit-btn,
+.page-app .day-panel-delete-btn {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+  padding: 4px 2px;
+  cursor: pointer;
+  box-shadow: none;
+  color: var(--color-text-faint);
+}
+.page-app .day-panel-edit-btn:hover,
+.page-app .day-panel-delete-btn:hover {
+  box-shadow: none;
+  transform: none;
+  color: var(--color-accent-link);
+}
+.page-app .day-panel-delete-btn:hover {
+  color: var(--color-danger-text);
 }

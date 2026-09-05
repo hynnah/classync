@@ -172,6 +172,16 @@
   </div>
 </div>
 
+<div id="day-panel" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="day-panel-title">
+    <div class="modal-head">
+      <h2 id="day-panel-title">Items</h2>
+      <button id="day-panel-close" class="modal-close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div id="day-panel-body" class="day-panel-body"></div>
+  </div>
+</div>
+
 <script src="/js/lib/escape.js" type="module"></script>
 <script src="/js/calendar.js"></script>
 <script type="module">
@@ -394,25 +404,50 @@
       await refreshCalendarView();
     });
 
-    // --- New Task modal ---
+    // --- New Task / Edit Task modal (same modal, dual-purpose) ---
     const modal = document.getElementById('task-modal');
+    const modalTitle = document.getElementById('task-modal-title');
     const form = document.getElementById('task-form');
     const errorEl = document.getElementById('task-form-error');
+    const submitBtn = form.querySelector('.modal-submit');
+    let editingItemId = null;
 
-    function openModal() {
+    function openModal(item) {
       errorEl.hidden = true;
       form.reset();
-      if (viewMode === 'day') {
-        document.getElementById('task-due-date').value = isoDate(dayDate);
+      editingItemId = item ? item.id : null;
+      const kindRadios = form.querySelectorAll('input[name="kind"]');
+
+      if (item) {
+        modalTitle.textContent = 'Edit task';
+        submitBtn.textContent = 'Save';
+        kindRadios.forEach((r) => {
+          r.checked = r.value === item.kind;
+          r.disabled = true;
+        });
+        document.getElementById('task-title').value = item.title;
+        document.getElementById('task-description').value = item.description || '';
+        document.getElementById('task-category').value = item.category || '';
+        document.getElementById('task-due-date').value = item.due_date || '';
+        document.getElementById('task-due-time').value = item.due_time ? item.due_time.slice(0, 5) : '';
+      } else {
+        modalTitle.textContent = 'New task';
+        submitBtn.textContent = 'Create';
+        kindRadios.forEach((r) => { r.disabled = false; });
+        if (viewMode === 'day') {
+          document.getElementById('task-due-date').value = isoDate(dayDate);
+        }
       }
+
       modal.hidden = false;
       document.getElementById('task-title').focus();
     }
     function closeModal() {
       modal.hidden = true;
+      editingItemId = null;
     }
 
-    document.getElementById('new-task-btn').addEventListener('click', openModal);
+    document.getElementById('new-task-btn').addEventListener('click', () => openModal());
     document.getElementById('task-modal-close').addEventListener('click', closeModal);
     document.getElementById('task-modal-cancel').addEventListener('click', closeModal);
     modal.addEventListener('click', (e) => {
@@ -427,32 +462,149 @@
       errorEl.hidden = true;
       const data = new FormData(form);
       const payload = {
-        kind: data.get('kind'),
         title: data.get('title'),
         description: data.get('description') || undefined,
         category: data.get('category') || undefined,
         dueDate: data.get('dueDate') || undefined,
         dueTime: data.get('dueTime') || undefined,
       };
+      if (!editingItemId) payload.kind = data.get('kind');
 
-      const submitBtn = form.querySelector('.modal-submit');
       submitBtn.disabled = true;
       try {
-        const res = await fetch('/api/items', {
-          method: 'POST',
+        const url = editingItemId ? `/api/items/${editingItemId}` : '/api/items';
+        const method = editingItemId ? 'PATCH' : 'POST';
+        const res = await fetch(url, {
+          method,
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(payload),
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          errorEl.textContent = body.error || 'Could not create that — please check the form and try again.';
+          errorEl.textContent = body.error || 'Could not save that — please check the form and try again.';
           errorEl.hidden = false;
           return;
         }
         closeModal();
-        await Promise.all([refreshCalendarView(), loadUrgent()]);
+        await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel()]);
       } finally {
         submitBtn.disabled = false;
+      }
+    });
+
+    // --- Day detail panel: click a date (or empty day-view space) to see everything due then ---
+    const dayPanel = document.getElementById('day-panel');
+    const dayPanelTitle = document.getElementById('day-panel-title');
+    const dayPanelBody = document.getElementById('day-panel-body');
+    let dayPanelDate = null;
+
+    function formatPanelDate(dateStr) {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      return `${WEEKDAYS[dt.getDay()]}, ${MONTHS[dt.getMonth()]} ${dt.getDate()}`;
+    }
+
+    async function refreshDayPanel() {
+      if (!dayPanelDate) return;
+      const items = await fetchItems(dayPanelDate, dayPanelDate);
+      dayPanelBody.innerHTML = '';
+      if (!items.length) {
+        dayPanelBody.innerHTML = '<p class="day-panel-empty">Nothing due this day.</p>';
+        return;
+      }
+      items.forEach((raw) => {
+        const row = document.createElement('div');
+        row.className = 'day-panel-row';
+
+        const check = document.createElement('button');
+        check.type = 'button';
+        check.className = 'day-panel-row-check' + (raw.status === 'completed' ? ' is-done' : '');
+        check.setAttribute('aria-label', raw.status === 'completed' ? 'Mark as not done' : 'Mark as done');
+        row.appendChild(check);
+
+        const body = document.createElement('div');
+        body.className = 'day-panel-row-body';
+        const titleEl = document.createElement('span');
+        titleEl.className = 'day-panel-row-title' + (raw.status === 'completed' ? ' is-done' : '');
+        titleEl.textContent = raw.title;
+        body.appendChild(titleEl);
+        const meta = [raw.kind === 'note' ? 'Note' : (raw.category || 'Task'), raw.due_time ? raw.due_time.slice(0, 5) : null]
+          .filter(Boolean).join(' · ');
+        if (meta) {
+          const metaEl = document.createElement('span');
+          metaEl.className = 'day-panel-row-meta';
+          metaEl.textContent = meta;
+          body.appendChild(metaEl);
+        }
+        row.appendChild(body);
+
+        const actions = document.createElement('div');
+        actions.className = 'day-panel-row-actions';
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'day-panel-edit-btn';
+        editBtn.textContent = 'Edit';
+        actions.appendChild(editBtn);
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'day-panel-delete-btn';
+        deleteBtn.textContent = 'Delete';
+        actions.appendChild(deleteBtn);
+        row.appendChild(actions);
+
+        check.addEventListener('click', async () => {
+          check.disabled = true;
+          const nextStatus = raw.status === 'completed' ? 'pending' : 'completed';
+          await fetch(`/api/items/${raw.id}/status`, {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ status: nextStatus }),
+          });
+          await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel()]);
+        });
+
+        editBtn.addEventListener('click', () => openModal(raw));
+
+        deleteBtn.addEventListener('click', async () => {
+          if (!window.confirm(`Delete "${raw.title}"? This can't be undone.`)) return;
+          deleteBtn.disabled = true;
+          await fetch(`/api/items/${raw.id}`, { method: 'DELETE' });
+          await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel()]);
+        });
+
+        dayPanelBody.appendChild(row);
+      });
+    }
+
+    async function openDayPanel(dateStr) {
+      dayPanelDate = dateStr;
+      dayPanelTitle.textContent = formatPanelDate(dateStr);
+      dayPanelBody.innerHTML = '<p class="day-panel-empty">Loading…</p>';
+      dayPanel.hidden = false;
+      await refreshDayPanel();
+    }
+    function closeDayPanel() {
+      dayPanel.hidden = true;
+      dayPanelDate = null;
+    }
+
+    document.getElementById('day-panel-close').addEventListener('click', closeDayPanel);
+    dayPanel.addEventListener('click', (e) => {
+      if (e.target === dayPanel) closeDayPanel();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !dayPanel.hidden) closeDayPanel();
+    });
+
+    catRoot.addEventListener('click', async (e) => {
+      if (e.target.closest('.cal-item')) return;
+      const dayCell = e.target.closest('.calendar-day');
+      if (dayCell) {
+        await openDayPanel(dayCell.dataset.date);
+        return;
+      }
+      if (e.target.closest('.day-view')) {
+        await openDayPanel(isoDate(dayDate));
       }
     });
 
