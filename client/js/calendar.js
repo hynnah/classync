@@ -208,5 +208,5 @@
     root.appendChild(view);
   }
 
-  window.ClassyncCalendar = { initMonthCalendar, renderDayView };
+  window.ClassyncCalendar = { initMonthCalendar, renderDayView, buildCells, isoDate };
 })();

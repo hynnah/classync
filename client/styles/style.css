@@ -1983,6 +1983,166 @@ a.btn-secondary:hover {
 .page-app .field textarea {
   resize: vertical;
 }
+.page-app .picker-field {
+  position: relative;
+}
+.page-app .picker-btn {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #d8cfbc;
+  background: #fff;
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text);
+  cursor: pointer;
+  box-shadow: none;
+}
+.page-app .picker-btn:hover {
+  box-shadow: none;
+  transform: none;
+  border-color: var(--color-accent);
+}
+.page-app .picker-btn-placeholder {
+  color: var(--color-text-faintest);
+}
+.page-app .picker-btn svg {
+  flex-shrink: 0;
+  color: var(--color-text-faint);
+}
+
+.page-app .date-popover,
+.page-app .time-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  background: var(--color-bg-card);
+  border: 1px solid #d8cfbc;
+  box-shadow: 0 12px 28px -10px rgba(38, 37, 33, 0.25);
+}
+.page-app .date-popover[hidden],
+.page-app .time-popover[hidden] {
+  display: none;
+}
+
+.page-app .date-popover {
+  width: 240px;
+  padding: 10px;
+}
+.page-app .date-popover-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 2px 8px;
+}
+.page-app .date-popover-nav-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d8cfbc;
+  background: transparent;
+  color: var(--color-text-soft);
+  cursor: pointer;
+  padding: 0;
+  font-size: 11px;
+  box-shadow: none;
+}
+.page-app .date-popover-nav-btn:hover {
+  box-shadow: none;
+  transform: none;
+  border-color: var(--color-accent);
+}
+.page-app .date-popover-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--color-text);
+}
+.page-app .date-popover-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.page-app .date-popover-dow {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--color-text-faintest);
+  padding: 4px 0;
+}
+.page-app .date-popover-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--color-text);
+  cursor: pointer;
+  box-shadow: none;
+  letter-spacing: 0;
+  text-transform: none;
+  border-radius: 50%;
+}
+.page-app .date-popover-day:hover {
+  box-shadow: none;
+  transform: none;
+  background: var(--color-accent-hover-bg);
+}
+.page-app .date-popover-day.is-outside {
+  color: var(--color-text-faintest);
+}
+.page-app .date-popover-day.is-today {
+  color: var(--color-accent-link);
+}
+.page-app .date-popover-day.is-selected {
+  background: var(--color-dark-bg);
+  color: var(--color-dark-text);
+}
+
+.page-app .time-popover {
+  width: 140px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.page-app .time-popover-option {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 8px 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-text);
+  cursor: pointer;
+  box-shadow: none;
+}
+.page-app .time-popover-option:hover {
+  box-shadow: none;
+  transform: none;
+  background: var(--color-accent-hover-bg);
+}
+.page-app .time-popover-option.is-selected {
+  background: var(--color-dark-bg);
+  color: var(--color-dark-text);
+}
 .page-app .field-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;

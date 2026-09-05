@@ -159,12 +159,26 @@
           </div>
           <div class="field">
             <div class="field-label">Due date <span class="field-optional">optional</span></div>
-            <input id="task-due-date" name="dueDate" type="date">
+            <div class="picker-field">
+              <button type="button" id="task-due-date-btn" class="picker-btn">
+                <span id="task-due-date-display" class="picker-btn-placeholder">mm/dd/yyyy</span>
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              </button>
+              <input type="hidden" id="task-due-date" name="dueDate">
+              <div id="task-due-date-popover" class="date-popover" hidden></div>
+            </div>
             <span class="field-hint">Leave blank to save it without a due date — it won't appear on the calendar until My Planner arrives.</span>
           </div>
           <div class="field">
             <div class="field-label">Due time <span class="field-optional">optional</span></div>
-            <input id="task-due-time" name="dueTime" type="time">
+            <div class="picker-field">
+              <button type="button" id="task-due-time-btn" class="picker-btn">
+                <span id="task-due-time-display" class="picker-btn-placeholder">--:-- --</span>
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M8 4.5V8l2.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <input type="hidden" id="task-due-time" name="dueTime">
+              <div id="task-due-time-popover" class="time-popover" hidden></div>
+            </div>
           </div>
         </div>
         <div class="field">
@@ -425,6 +439,166 @@
       setSelectedColor(selectedColor === swatch.dataset.color ? null : swatch.dataset.color);
     });
 
+    // --- Custom date/time pickers, replacing native <input type="date"/"time"> ---
+    // The native pickers' own dropdown popup is rendered by the OS/browser with no
+    // CSS hook that reaches it at all (confirmed live: even `accent-color`, which
+    // does reach checkbox/radio/range inputs, doesn't touch it) — recoloring it to
+    // match the site was never actually possible, only replacing it was.
+    const dueDateBtn = document.getElementById('task-due-date-btn');
+    const dueDateDisplay = document.getElementById('task-due-date-display');
+    const dueDateHidden = document.getElementById('task-due-date');
+    const dueDatePopover = document.getElementById('task-due-date-popover');
+    const dueTimeBtn = document.getElementById('task-due-time-btn');
+    const dueTimeDisplay = document.getElementById('task-due-time-display');
+    const dueTimeHidden = document.getElementById('task-due-time');
+    const dueTimePopover = document.getElementById('task-due-time-popover');
+    const DATE_POPOVER_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const DATE_POPOVER_DOW = ['S','M','T','W','T','F','S'];
+    let datePopoverYear, datePopoverMonth;
+
+    function formatDateDisplay(iso) {
+      const [y, m, d] = iso.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      return `${DATE_POPOVER_MONTHS[dt.getMonth()].slice(0, 3)} ${dt.getDate()}, ${dt.getFullYear()}`;
+    }
+    function formatTimeDisplay(hhmm) {
+      const [h, m] = hhmm.split(':').map(Number);
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      return `${h12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+    }
+    function syncDateDisplay() {
+      const v = dueDateHidden.value;
+      dueDateDisplay.textContent = v ? formatDateDisplay(v) : 'mm/dd/yyyy';
+      dueDateDisplay.classList.toggle('picker-btn-placeholder', !v);
+    }
+    function syncTimeDisplay() {
+      const v = dueTimeHidden.value;
+      dueTimeDisplay.textContent = v ? formatTimeDisplay(v) : '--:-- --';
+      dueTimeDisplay.classList.toggle('picker-btn-placeholder', !v);
+    }
+
+    function renderDatePopover() {
+      dueDatePopover.innerHTML = '';
+      const nav = document.createElement('div');
+      nav.className = 'date-popover-nav';
+      const prevBtn = document.createElement('button');
+      prevBtn.type = 'button';
+      prevBtn.className = 'date-popover-nav-btn';
+      prevBtn.textContent = '←';
+      prevBtn.setAttribute('aria-label', 'Previous month');
+      const label = document.createElement('span');
+      label.className = 'date-popover-label';
+      label.textContent = `${DATE_POPOVER_MONTHS[datePopoverMonth]} ${datePopoverYear}`;
+      const nextBtn = document.createElement('button');
+      nextBtn.type = 'button';
+      nextBtn.className = 'date-popover-nav-btn';
+      nextBtn.textContent = '→';
+      nextBtn.setAttribute('aria-label', 'Next month');
+      nav.append(prevBtn, label, nextBtn);
+      dueDatePopover.appendChild(nav);
+
+      prevBtn.addEventListener('click', () => {
+        datePopoverMonth = (datePopoverMonth + 11) % 12;
+        if (datePopoverMonth === 11) datePopoverYear--;
+        renderDatePopover();
+      });
+      nextBtn.addEventListener('click', () => {
+        datePopoverMonth = (datePopoverMonth + 1) % 12;
+        if (datePopoverMonth === 0) datePopoverYear++;
+        renderDatePopover();
+      });
+
+      const grid = document.createElement('div');
+      grid.className = 'date-popover-grid';
+      DATE_POPOVER_DOW.forEach((d) => {
+        const el = document.createElement('span');
+        el.className = 'date-popover-dow';
+        el.textContent = d;
+        grid.appendChild(el);
+      });
+      const todayIso = isoDate(new Date());
+      const selectedIso = dueDateHidden.value;
+      ClassyncCalendar.buildCells(datePopoverYear, datePopoverMonth).forEach((cell) => {
+        const iso = ClassyncCalendar.isoDate(cell.y, cell.m, cell.d);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'date-popover-day'
+          + (cell.outside ? ' is-outside' : '')
+          + (iso === todayIso ? ' is-today' : '')
+          + (iso === selectedIso ? ' is-selected' : '');
+        btn.textContent = String(cell.d);
+        btn.addEventListener('click', () => {
+          dueDateHidden.value = iso;
+          syncDateDisplay();
+          closeDatePopover();
+        });
+        grid.appendChild(btn);
+      });
+      dueDatePopover.appendChild(grid);
+    }
+    function openDatePopover() {
+      closeTimePopover();
+      const base = dueDateHidden.value ? (() => { const [y, m] = dueDateHidden.value.split('-').map(Number); return { y, m: m - 1 }; })() : { y: new Date().getFullYear(), m: new Date().getMonth() };
+      datePopoverYear = base.y;
+      datePopoverMonth = base.m;
+      renderDatePopover();
+      dueDatePopover.hidden = false;
+    }
+    function closeDatePopover() {
+      dueDatePopover.hidden = true;
+    }
+    dueDateBtn.addEventListener('click', () => {
+      dueDatePopover.hidden ? openDatePopover() : closeDatePopover();
+    });
+
+    function renderTimePopover() {
+      dueTimePopover.innerHTML = '';
+      const selected = dueTimeHidden.value;
+      for (let mins = 0; mins < 24 * 60; mins += 30) {
+        const h = String(Math.floor(mins / 60)).padStart(2, '0');
+        const m = String(mins % 60).padStart(2, '0');
+        const value = `${h}:${m}`;
+        const opt = document.createElement('button');
+        opt.type = 'button';
+        opt.className = 'time-popover-option' + (value === selected ? ' is-selected' : '');
+        opt.textContent = formatTimeDisplay(value);
+        opt.addEventListener('click', () => {
+          dueTimeHidden.value = value;
+          syncTimeDisplay();
+          closeTimePopover();
+        });
+        dueTimePopover.appendChild(opt);
+      }
+    }
+    function openTimePopover() {
+      closeDatePopover();
+      renderTimePopover();
+      dueTimePopover.hidden = false;
+      const selectedOpt = dueTimePopover.querySelector('.is-selected');
+      if (selectedOpt) selectedOpt.scrollIntoView({ block: 'nearest' });
+    }
+    function closeTimePopover() {
+      dueTimePopover.hidden = true;
+    }
+    dueTimeBtn.addEventListener('click', () => {
+      dueTimePopover.hidden ? openTimePopover() : closeTimePopover();
+    });
+
+    // Capture phase, not bubble: a click on something inside the popover (e.g. the
+    // month-nav buttons) can trigger a synchronous re-render that clears and rebuilds
+    // the popover's innerHTML — which detaches e.target from the tree before a
+    // bubble-phase listener would see it, making e.target.closest() wrongly report
+    // "outside" for a click that was genuinely inside. Capture runs before that
+    // mutation has a chance to happen, so the DOM is still intact when checked.
+    document.addEventListener('click', (e) => {
+      if (!dueDatePopover.hidden && !e.target.closest('#task-due-date-btn') && !e.target.closest('#task-due-date-popover')) {
+        closeDatePopover();
+      }
+      if (!dueTimePopover.hidden && !e.target.closest('#task-due-time-btn') && !e.target.closest('#task-due-time-popover')) {
+        closeTimePopover();
+      }
+    }, true);
+
     // Notes auto-save (no Create/Save button, just Close) — tasks keep the explicit
     // submit flow. Reflects whichever kind radio is currently selected, not just
     // whether editingItemId is set, since a brand-new note switches into this mode
@@ -536,6 +710,10 @@
         classificationFields.hidden = false;
       }
 
+      syncDateDisplay();
+      syncTimeDisplay();
+      closeDatePopover();
+      closeTimePopover();
       updateModeUI();
       modal.hidden = false;
       document.getElementById('task-title').focus();
@@ -554,7 +732,10 @@
       if (e.target === modal) closeModal();
     });
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !modal.hidden) closeModal();
+      if (e.key !== 'Escape') return;
+      if (!dueDatePopover.hidden) { closeDatePopover(); return; }
+      if (!dueTimePopover.hidden) { closeTimePopover(); return; }
+      if (!modal.hidden) closeModal();
     });
 
     form.addEventListener('submit', async (e) => {

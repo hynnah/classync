@@ -1,6 +1,14 @@
 const { test, expect } = require('@playwright/test');
 const { getPool } = require('../../server/src/db/pool');
 
+// The due-date field is the custom popover picker now, not a fillable native
+// input — this opens it and clicks the day marked "today", the same interaction
+// a user would make, rather than reaching into the hidden input directly.
+async function pickTodayInDatePicker(page) {
+  await page.locator('#task-due-date-btn').click();
+  await page.locator('.date-popover-day.is-today').click();
+}
+
 test.describe('creating a task through the New Task modal', () => {
   test('a task created via the modal appears on the month calendar and the Urgent rail', async ({ page }) => {
     const email = `e2e-newtask-${Date.now()}@example.com`;
@@ -10,16 +18,11 @@ test.describe('creating a task through the New Task modal', () => {
       await page.goto('/app');
       await page.waitForSelector('#cal-root .calendar-days');
 
-      const todayIso = await page.evaluate(() => {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      });
-
       await page.locator('#new-task-btn').click();
       await expect(page.locator('#task-modal')).toBeVisible();
 
       await page.locator('#task-title').fill('E2E created task');
-      await page.locator('#task-due-date').fill(todayIso);
+      await pickTodayInDatePicker(page);
       await page.locator('#task-category').selectOption('Assignment');
       await page.locator('.modal-submit').click();
 
@@ -179,7 +182,7 @@ test.describe('notes are simpler than tasks', () => {
       await expect(page.locator('#task-classification-fields')).toBeVisible();
 
       await page.locator('#task-category').selectOption('Assignment');
-      await page.locator('#task-due-date').fill('2026-09-20');
+      await pickTodayInDatePicker(page);
       await page.locator('label.field-radio', { hasText: 'Note' }).locator('input').check();
 
       await expect(page.locator('#task-classification-fields')).toBeHidden();
@@ -286,7 +289,7 @@ test.describe('task color picker', () => {
 
       await page.locator('#new-task-btn').click();
       await page.locator('#task-title').fill('E2E colored task');
-      await page.locator('#task-due-date').fill(todayIso);
+      await pickTodayInDatePicker(page);
       await page.locator('.color-swatch[data-color="dusty-blue"]').click();
       await page.locator('.modal-submit').click();
       await expect(page.locator('#task-modal')).toBeHidden();
@@ -315,6 +318,68 @@ test.describe('task color picker', () => {
         return body.items.find((i) => i.title === title).id;
       }, 'E2E colored task');
       itemId = idRes;
+    } finally {
+      if (itemId) await getPool().query('DELETE FROM items WHERE id = ?', [itemId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+});
+
+test.describe('custom date/time pickers', () => {
+  test('picking a day and a time updates the hidden inputs and display text, and the task persists correctly', async ({ page }) => {
+    const email = `e2e-datetimepicker-${Date.now()}@example.com`;
+    let itemId;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      await page.locator('#new-task-btn').click();
+      await page.locator('#task-title').fill('E2E datetime picker task');
+
+      // date popover: today should be marked, and picking a day fills the field
+      await page.locator('#task-due-date-btn').click();
+      await expect(page.locator('.date-popover-day.is-today')).toBeVisible();
+      const todayCell = page.locator('.date-popover-day.is-today');
+      const todayNum = await todayCell.textContent();
+      await todayCell.click();
+      await expect(page.locator('#task-due-date-popover')).toBeHidden();
+      await expect(page.locator('#task-due-date-display')).not.toHaveText('mm/dd/yyyy');
+
+      const todayIso = await page.evaluate(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+      await expect(page.locator('#task-due-date')).toHaveValue(todayIso);
+
+      // time popover: pick a specific half-hour slot
+      await page.locator('#task-due-time-btn').click();
+      await page.locator('.time-popover-option', { hasText: /^9:30 AM$/ }).click();
+      await expect(page.locator('#task-due-time-popover')).toBeHidden();
+      await expect(page.locator('#task-due-time')).toHaveValue('09:30');
+      await expect(page.locator('#task-due-time-display')).toHaveText('9:30 AM');
+
+      await page.locator('.modal-submit').click();
+      await expect(page.locator('#task-modal')).toBeHidden();
+
+      const created = await page.evaluate(async (title) => {
+        const r = await fetch('/api/items?from=2026-01-01&to=2026-12-31');
+        const body = await r.json();
+        return body.items.find((i) => i.title === title);
+      }, 'E2E datetime picker task');
+      expect(created.due_time).toBe('09:30:00');
+      itemId = created.id;
+
+      // reopening the edit form should show both pickers prefilled
+      const dayCell = page.locator(`.calendar-day[data-date="${todayIso}"]`);
+      await dayCell.click({ position: { x: 5, y: 5 } });
+      await expect(page.locator('#day-panel')).toBeVisible();
+      const row = page.locator('.day-panel-row', { has: page.locator('.day-panel-row-title', { hasText: 'E2E datetime picker task' }) });
+      await row.locator('.day-panel-edit-btn').click();
+      await expect(page.locator('#task-due-time-display')).toHaveText('9:30 AM');
+      await page.locator('#task-due-date-btn').click();
+      await expect(page.locator(`.date-popover-day.is-selected`)).toHaveText(todayNum);
     } finally {
       if (itemId) await getPool().query('DELETE FROM items WHERE id = ?', [itemId]);
       await getPool().query('DELETE FROM users WHERE email = ?', [email]);
