@@ -253,7 +253,7 @@ describe('ItemRepo', () => {
       expect(stillOriginal.title).toBe('Ownership check update');
     });
 
-    test('an event item is never editable, even by its own assignee', async () => {
+    test('an event IS editable by its creator — only setStatus is blocked for events, not update', async () => {
       const [spaceResult] = await getPool().query(
         'INSERT INTO spaces (name, join_code, creator_user_id) VALUES (?, ?, ?)',
         ['Update guard test space', 'UG' + String(Date.now()).slice(-4), owner.id]
@@ -272,11 +272,42 @@ describe('ItemRepo', () => {
         [eventItemId, owner.id]
       );
 
-      const result = await ItemRepo.update({ itemId: eventItemId, userId: owner.id, title: 'Should not apply' });
-      expect(result).toBeNull();
+      const result = await ItemRepo.update({ itemId: eventItemId, userId: owner.id, title: 'Rescheduled event' });
+      expect(result.title).toBe('Rescheduled event');
 
       const [rows] = await getPool().query('SELECT title FROM items WHERE id = ?', [eventItemId]);
-      expect(rows[0].title).toBe('Update guard event');
+      expect(rows[0].title).toBe('Rescheduled event');
+    });
+
+    // A Space item's assignees aren't necessarily its creator (unlike a personal
+    // item, where the creator is always the sole assignee) — this is the first
+    // scenario where findForUser (assignee-gated) can find an item that the
+    // update's own WHERE created_by = ? would then silently fail to touch.
+    test('an assignee who is not the creator cannot edit the item, even though they can see it', async () => {
+      const [spaceResult] = await getPool().query(
+        'INSERT INTO spaces (name, join_code, creator_user_id) VALUES (?, ?, ?)',
+        ['Non-creator assignee test space', 'NC' + String(Date.now()).slice(-4), owner.id]
+      );
+      const spaceId = spaceResult.insertId;
+      createdSpaceIds.push(spaceId);
+
+      const [itemResult] = await getPool().query(
+        "INSERT INTO items (space_id, kind, title, created_by) VALUES (?, 'task', 'Assigned to intruder too', ?)",
+        [spaceId, owner.id]
+      );
+      const itemId = itemResult.insertId;
+      createdIds.push(itemId);
+      // both the creator AND the intruder are assignees, unlike a personal item
+      await getPool().query(
+        "INSERT INTO item_assignments (item_id, user_id, status) VALUES (?, ?, 'pending'), (?, ?, 'pending')",
+        [itemId, owner.id, itemId, intruder.id]
+      );
+
+      const result = await ItemRepo.update({ itemId, userId: intruder.id, title: 'Hijacked' });
+      expect(result).toBeNull();
+
+      const [rows] = await getPool().query('SELECT title FROM items WHERE id = ?', [itemId]);
+      expect(rows[0].title).toBe('Assigned to intruder too');
     });
 
     test('updating a nonexistent item returns null', async () => {

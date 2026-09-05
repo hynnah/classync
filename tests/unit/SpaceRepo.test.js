@@ -213,6 +213,43 @@ describe('SpaceRepo', () => {
       expect(!!stillActive[0][0].is_active).toBe(false);
     });
 
+    // Regression: leaveSpace used to read "how many other Organizers remain"
+    // and delete as two separate, unlocked queries. Two Organizers of the
+    // same Space calling leave at close to the same moment could each read
+    // the other as the "1 remaining Organizer" before either DELETE had
+    // landed, so both checks passed and both left — zero Organizers with a
+    // Member still present, exactly what FR-O5 exists to prevent. Confirmed
+    // live against the running server before the fix (both requests
+    // returned success). The fix locks the Space's membership rows
+    // (SELECT ... FOR UPDATE) inside one transaction so the second caller's
+    // check waits for the first caller's already-committed change.
+    test('two organizers leaving at the same moment: exactly one succeeds, one stays behind', async () => {
+      const org1 = await makeUser('leave-race-org1');
+      const org2 = await makeUser('leave-race-org2');
+      const member = await makeUser('leave-race-member');
+      const space = await SpaceRepo.createSpace({ name: 'Leave race test', creatorUserId: org1.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: org2.id });
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: member.id });
+      await SpaceRepo.promoteMember({ spaceId: space.id, actingUserId: org1.id, targetUserId: org2.id });
+
+      const [result1, result2] = await Promise.all([
+        SpaceRepo.leaveSpace({ spaceId: space.id, userId: org1.id }),
+        SpaceRepo.leaveSpace({ spaceId: space.id, userId: org2.id }),
+      ]);
+      const outcomes = [result1, result2];
+      const succeeded = outcomes.filter((r) => r.ok).length;
+      const blocked = outcomes.filter((r) => r.error === 'sole_organizer').length;
+      expect(succeeded).toBe(1);
+      expect(blocked).toBe(1);
+
+      const [[{ organizerCount }]] = await getPool().query(
+        "SELECT COUNT(*) AS organizerCount FROM space_members WHERE space_id = ? AND role = 'organizer'",
+        [space.id]
+      );
+      expect(organizerCount).toBe(1);
+    });
+
     test('one of two organizers can leave freely; the Space stays active with the other', async () => {
       const owner = await makeUser('leave-coorg-owner');
       const member = await makeUser('leave-coorg-member');

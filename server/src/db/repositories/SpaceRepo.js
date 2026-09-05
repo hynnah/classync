@@ -161,36 +161,67 @@ async function removeMember({ spaceId, actingUserId, targetUserId }) {
 // to promote or remove everyone first. FR-O6: if the last Organizer leaves an
 // otherwise-empty Space (no other members at all), the Space auto-deactivates
 // instead of being left as an orphaned, ownerless row.
+//
+// The check-then-delete has to be one transaction with the space's rows
+// locked (SELECT ... FOR UPDATE), not the plain sequential queries this
+// started as: two Organizers of the same Space calling leave at close to the
+// same moment would each read "1 other Organizer remains" (each other, still
+// present in the SELECT they each ran before either DELETE happened) and
+// both pass the check, both delete, leaving zero Organizers with Members
+// still present — precisely the state FR-O5 exists to prevent. Confirmed
+// live with two concurrent requests before this fix (both returned 204).
+// The lock serializes concurrent leave/promote/remove calls on the same
+// Space's membership rows so the second caller's check sees the first
+// caller's already-committed change, matching the transactional pattern
+// ItemRepo.create() already uses for its own insert+fan-out.
 async function leaveSpace({ spaceId, userId }) {
-  const membership = await getMembership(spaceId, userId);
-  if (!membership) {
-    return { error: 'not_a_member' };
-  }
-  if (membership.role === 'organizer') {
-    const [[{ otherOrganizers }]] = await getPool().query(
-      "SELECT COUNT(*) AS otherOrganizers FROM space_members WHERE space_id = ? AND role = 'organizer' AND user_id != ?",
+  const conn = await getPool().getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query('SELECT 1 FROM space_members WHERE space_id = ? FOR UPDATE', [spaceId]);
+
+    const [membershipRows] = await conn.query(
+      'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
       [spaceId, userId]
     );
-    const [[{ otherMembers }]] = await getPool().query(
-      'SELECT COUNT(*) AS otherMembers FROM space_members WHERE space_id = ? AND user_id != ?',
-      [spaceId, userId]
-    );
-    if (otherOrganizers === 0 && otherMembers > 0) {
-      return { error: 'sole_organizer' };
+    const membership = membershipRows[0];
+    if (!membership) {
+      await conn.rollback();
+      return { error: 'not_a_member' };
     }
+    if (membership.role === 'organizer') {
+      const [[{ otherOrganizers }]] = await conn.query(
+        "SELECT COUNT(*) AS otherOrganizers FROM space_members WHERE space_id = ? AND role = 'organizer' AND user_id != ?",
+        [spaceId, userId]
+      );
+      const [[{ otherMembers }]] = await conn.query(
+        'SELECT COUNT(*) AS otherMembers FROM space_members WHERE space_id = ? AND user_id != ?',
+        [spaceId, userId]
+      );
+      if (otherOrganizers === 0 && otherMembers > 0) {
+        await conn.rollback();
+        return { error: 'sole_organizer' };
+      }
+    }
+    await conn.query(
+      'DELETE FROM space_members WHERE space_id = ? AND user_id = ?',
+      [spaceId, userId]
+    );
+    const [[{ remaining }]] = await conn.query(
+      'SELECT COUNT(*) AS remaining FROM space_members WHERE space_id = ?',
+      [spaceId]
+    );
+    if (remaining === 0) {
+      await conn.query('UPDATE spaces SET is_active = FALSE WHERE id = ?', [spaceId]);
+    }
+    await conn.commit();
+    return { ok: true };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
-  await getPool().query(
-    'DELETE FROM space_members WHERE space_id = ? AND user_id = ?',
-    [spaceId, userId]
-  );
-  const [[{ remaining }]] = await getPool().query(
-    'SELECT COUNT(*) AS remaining FROM space_members WHERE space_id = ?',
-    [spaceId]
-  );
-  if (remaining === 0) {
-    await getPool().query('UPDATE spaces SET is_active = FALSE WHERE id = ?', [spaceId]);
-  }
-  return { ok: true };
 }
 
 module.exports = {

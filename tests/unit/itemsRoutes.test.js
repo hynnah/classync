@@ -155,3 +155,129 @@ describe('note vs. task validation on /api/items', () => {
     expect(cleared.body.item.color).toBeNull();
   });
 });
+
+describe('Space-scoped items on /api/items', () => {
+  const app = createApp();
+  const createdIds = [];
+  const createdSpaceIds = [];
+
+  afterAll(async () => {
+    if (createdIds.length) {
+      await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+    }
+    if (createdSpaceIds.length) {
+      await getPool().query('DELETE FROM spaces WHERE id IN (?)', [createdSpaceIds]);
+    }
+    await getPool().query("DELETE FROM users WHERE email LIKE 'itemsspaces-%@example.com'");
+  });
+
+  async function loggedInAgent(label) {
+    const email = `itemsspaces-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+    const agent = request.agent(app);
+    const res = await agent.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+    return { agent, userId: res.body.userId };
+  }
+
+  async function makeSpaceWithMember() {
+    const { agent: orgAgent, userId: orgId } = await loggedInAgent('org');
+    const created = await orgAgent.post('/api/spaces').send({ name: 'Items test space ' + Date.now() });
+    createdSpaceIds.push(created.body.space.id);
+    const { agent: memberAgent, userId: memberId } = await loggedInAgent('member');
+    await memberAgent.post('/api/spaces/join').send({ joinCode: created.body.space.joinCode });
+    return { orgAgent, orgId, memberAgent, memberId, spaceId: created.body.space.id };
+  }
+
+  test('a plain Member gets 403 creating a Space item', async () => {
+    const { memberAgent, memberId, spaceId } = await makeSpaceWithMember();
+    const res = await memberAgent.post('/api/items').send({
+      spaceId, kind: 'task', title: 'nope', dueDate: '2026-09-20', assigneeUserIds: [memberId],
+    });
+    expect(res.status).toBe(403);
+  });
+
+  test('a non-member gets 404, not 403, creating an item in a Space they do not belong to', async () => {
+    const { spaceId } = await makeSpaceWithMember();
+    const { agent: outsiderAgent } = await loggedInAgent('outsider');
+    const res = await outsiderAgent.post('/api/items').send({ spaceId, kind: 'task', title: 'nope', dueDate: '2026-09-20' });
+    expect(res.status).toBe(404);
+  });
+
+  test('rejects kind=note for a Space item', async () => {
+    const { orgAgent, orgId, spaceId } = await makeSpaceWithMember();
+    const res = await orgAgent.post('/api/items').send({ spaceId, kind: 'note', title: 'nope', assigneeUserIds: [orgId] });
+    expect(res.status).toBe(400);
+  });
+
+  test('rejects a color on a Space task', async () => {
+    const { orgAgent, orgId, spaceId } = await makeSpaceWithMember();
+    const res = await orgAgent.post('/api/items').send({
+      spaceId, kind: 'task', title: 'nope', dueDate: '2026-09-20', color: 'mint', assigneeUserIds: [orgId],
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/color/i);
+  });
+
+  test('rejects an assignee who is not a member of the Space', async () => {
+    const { orgAgent, spaceId } = await makeSpaceWithMember();
+    const res = await orgAgent.post('/api/items').send({
+      spaceId, kind: 'task', title: 'nope', dueDate: '2026-09-20', assigneeUserIds: [999999999],
+    });
+    expect(res.status).toBe(400);
+  });
+
+  test('rejects specific-assignee creation with no assignees and isOpenToAll not set', async () => {
+    const { orgAgent, spaceId } = await makeSpaceWithMember();
+    const res = await orgAgent.post('/api/items').send({ spaceId, kind: 'task', title: 'nope', dueDate: '2026-09-20' });
+    expect(res.status).toBe(400);
+  });
+
+  test('an Organizer creates a task assigned to a specific Member, who can see it and mark it done — but not edit it', async () => {
+    const { orgAgent, memberAgent, memberId, spaceId } = await makeSpaceWithMember();
+    const created = await orgAgent.post('/api/items').send({
+      spaceId, kind: 'task', title: 'Reading response', category: 'Assignment', dueDate: '2026-09-20', assigneeUserIds: [memberId],
+    });
+    expect(created.status).toBe(201);
+    createdIds.push(created.body.item.id);
+    const itemId = created.body.item.id;
+
+    const list = await memberAgent.get(`/api/items?from=2026-01-01&to=2026-12-31&spaceId=${spaceId}`);
+    expect(list.body.items.map((i) => i.id)).toContain(itemId);
+
+    const statusRes = await memberAgent.patch(`/api/items/${itemId}/status`).send({ status: 'completed' });
+    expect(statusRes.status).toBe(200);
+    expect(statusRes.body.item.status).toBe('completed');
+
+    const editRes = await memberAgent.patch(`/api/items/${itemId}`).send({ title: 'Hijacked' });
+    expect(editRes.status).toBe(404);
+  });
+
+  test('an open-to-all event is visible to every current Member, and only the creator can edit it', async () => {
+    const { orgAgent, memberAgent, spaceId } = await makeSpaceWithMember();
+    const created = await orgAgent.post('/api/items').send({
+      spaceId, kind: 'event', title: 'Class trip', dueDate: '2026-09-21', dueTime: '09:00', isOpenToAll: true,
+    });
+    expect(created.status).toBe(201);
+    createdIds.push(created.body.item.id);
+    const itemId = created.body.item.id;
+
+    const list = await memberAgent.get(`/api/items?from=2026-01-01&to=2026-12-31&spaceId=${spaceId}`);
+    expect(list.body.items.map((i) => i.id)).toContain(itemId);
+
+    const memberStatusRes = await memberAgent.patch(`/api/items/${itemId}/status`).send({ status: 'completed' });
+    expect(memberStatusRes.status).toBe(404);
+
+    const orgEditRes = await orgAgent.patch(`/api/items/${itemId}`).send({ title: 'Class trip (rescheduled)' });
+    expect(orgEditRes.status).toBe(200);
+    expect(orgEditRes.body.item.title).toBe('Class trip (rescheduled)');
+
+    const memberEditRes = await memberAgent.patch(`/api/items/${itemId}`).send({ title: 'Hijacked' });
+    expect(memberEditRes.status).toBe(404);
+  });
+
+  test('a non-member gets 404 listing items for a Space they do not belong to', async () => {
+    const { spaceId } = await makeSpaceWithMember();
+    const { agent: outsiderAgent } = await loggedInAgent('listoutsider');
+    const res = await outsiderAgent.get(`/api/items?from=2026-01-01&to=2026-12-31&spaceId=${spaceId}`);
+    expect(res.status).toBe(404);
+  });
+});

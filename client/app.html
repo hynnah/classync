@@ -88,7 +88,7 @@
         <svg class="rail-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="6" cy="5.5" r="2.3" stroke="currentColor" stroke-width="1.2"/><path d="M1.8 13.5c.5-2.6 2.2-4 4.2-4s3.7 1.4 4.2 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="11.5" cy="5" r="1.8" stroke="currentColor" stroke-width="1.1"/><path d="M10.3 8.1c1.6.2 2.8 1.4 3.2 3.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
         <span class="rail-item-label">Members</span>
       </button>
-      <p class="rail-hint">This Space's calendar and tasks arrive in a later build day. Members has the roster, and rename/promote/remove/leave if you're an Organizer.</p>
+      <p class="rail-hint">A separate Tasks list arrives in a later build day — for now the calendar covers both. Members has the roster, and rename/promote/remove/leave if you're an Organizer.</p>
     </div>
 
     <span class="rail-fill"></span>
@@ -156,11 +156,33 @@
     </div>
     </div>
 
-    <div id="space-view" class="space-placeholder" hidden>
-      <div class="space-placeholder-inner">
-        <h1 id="space-placeholder-title">Space</h1>
-        <p id="space-placeholder-role" class="space-placeholder-role"></p>
-        <p>Its calendar and tasks arrive in a later build day — the calendar here still shows only your Personal items. Check Members in the sidebar for the roster.</p>
+    <div id="space-view" hidden>
+      <div class="cal-toolbar">
+        <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
+        <div class="cal-toolbar-left">
+          <div id="space-cal-kicker" class="cal-kicker">Space · calendar</div>
+          <div class="cal-nav">
+            <button id="space-cal-prev" class="cal-nav-btn" type="button" aria-label="Previous">←</button>
+            <div class="cal-heading"><span id="space-cal-month"></span> <span id="space-cal-year" class="cal-year"></span></div>
+            <button id="space-cal-next" class="cal-nav-btn" type="button" aria-label="Next">→</button>
+            <button id="space-cal-today" class="cal-today-btn" type="button">Today</button>
+          </div>
+        </div>
+        <div class="cal-toolbar-right">
+          <button id="space-new-item-btn" class="cal-new-task" type="button">New task or event</button>
+        </div>
+      </div>
+
+      <div class="cal-body">
+        <div class="calendar-panel">
+          <div id="space-cal-root"></div>
+          <div class="calendar-legend">
+            <span class="row"><span class="swatch swatch--task"></span>Task</span>
+            <span class="row"><span class="swatch swatch--event"></span>Event</span>
+            <span class="spacer"></span>
+            <span id="space-cal-legend-note">Live</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -297,6 +319,82 @@
       </div>
     </div>
     <div id="day-panel-body" class="day-panel-body"></div>
+  </div>
+</div>
+
+<div id="space-day-panel" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="space-day-panel-title">
+    <div class="modal-head">
+      <h2 id="space-day-panel-title">Items</h2>
+      <div class="day-panel-head-actions">
+        <button id="space-day-panel-add" class="day-panel-add-btn" type="button" aria-label="New task or event on this day">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <button id="space-day-panel-close" class="modal-close" type="button" aria-label="Close">&times;</button>
+      </div>
+    </div>
+    <div id="space-day-panel-body" class="day-panel-body"></div>
+  </div>
+</div>
+
+<div id="space-item-modal" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="space-item-modal-title">
+    <div class="modal-head">
+      <h2 id="space-item-modal-title">New item</h2>
+      <button id="space-item-modal-close" class="modal-close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <form id="space-item-form" class="modal-body">
+      <div class="field-row">
+        <label class="field-radio"><input type="radio" name="space-item-kind" value="task" checked> Task</label>
+        <label class="field-radio"><input type="radio" name="space-item-kind" value="event"> Event</label>
+      </div>
+      <div class="field">
+        <div class="field-label">Title</div>
+        <input id="space-item-title" name="title" type="text" maxlength="255" required>
+      </div>
+      <div class="field">
+        <div class="field-label">Description <span class="field-optional">optional</span></div>
+        <textarea id="space-item-description" name="description" rows="3"></textarea>
+      </div>
+      <div id="space-item-classification-fields">
+        <div class="field-grid">
+          <div class="field">
+            <div class="field-label">Category <span class="field-optional">optional</span></div>
+            <select id="space-item-category" name="category">
+              <option value="">—</option>
+              <option>Assignment</option>
+              <option>Activity</option>
+              <option>Quiz</option>
+              <option>Project</option>
+              <option>Presentation</option>
+              <option>Exam</option>
+              <option>Others</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="field-label">Due date <span class="field-optional">optional</span></div>
+            <input id="space-item-due-date" name="dueDate" type="date">
+          </div>
+          <div class="field">
+            <div class="field-label">Due time <span class="field-optional">optional</span></div>
+            <input id="space-item-due-time" name="dueTime" type="time">
+          </div>
+        </div>
+      </div>
+      <div id="space-item-audience-field" class="field">
+        <div class="field-label">Who's this for</div>
+        <div class="field-row">
+          <label class="field-radio"><input type="radio" name="space-item-audience" value="all" checked> Open to the whole Space</label>
+          <label class="field-radio"><input type="radio" name="space-item-audience" value="specific"> Specific members</label>
+        </div>
+        <div id="space-item-assignees" class="space-item-assignees" hidden></div>
+      </div>
+      <p id="space-item-form-error" class="form-error" hidden></p>
+      <div class="modal-actions">
+        <button type="button" id="space-item-cancel" class="modal-cancel">Cancel</button>
+        <button type="submit" class="add-space-submit">Create</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -1123,8 +1221,6 @@
     const railNavPersonal = document.getElementById('rail-nav-personal');
     const railNavSpace = document.getElementById('rail-nav-space');
     const railNavSpaceHeading = document.getElementById('rail-nav-space-heading');
-    const spacePlaceholderTitle = document.getElementById('space-placeholder-title');
-    const spacePlaceholderRole = document.getElementById('space-placeholder-role');
 
     const spaceNavCalendar = document.getElementById('space-nav-calendar');
     const spaceNavMembers = document.getElementById('space-nav-members');
@@ -1189,6 +1285,8 @@
       spaceNavMembers.classList.remove('is-active');
       spaceView.hidden = false;
       spaceMembersView.hidden = true;
+      spaceCalKicker.textContent = `${currentSpace.name} · calendar`;
+      refreshSpaceCalendarView();
     }
     function selectPersonal() {
       clearActive();
@@ -1214,8 +1312,6 @@
       railNavPersonal.hidden = true;
       railNavSpace.hidden = false;
       railNavSpaceHeading.textContent = `${space.name} · view`;
-      spacePlaceholderTitle.textContent = space.name;
-      spacePlaceholderRole.textContent = space.role === 'organizer' ? 'Organizer' : 'Member';
       showSpaceCalendar();
       closeSwitcher();
     }
@@ -1326,13 +1422,19 @@
       spaceRosterList.innerHTML = '';
       members.forEach((member) => {
         const row = document.createElement('div');
-        row.className = 'space-roster-row';
+        row.className = 'space-roster-row' + (member.role === 'organizer' ? ' is-organizer' : '');
+
+        const displayName = `${member.firstName} ${member.lastName}`.trim() || member.email;
+        const avatar = document.createElement('span');
+        avatar.className = 'space-roster-avatar';
+        avatar.textContent = (member.firstName?.[0] || member.email[0] || '?').toUpperCase();
+        row.appendChild(avatar);
 
         const identity = document.createElement('div');
         identity.className = 'space-roster-identity';
         const nameEl = document.createElement('span');
         nameEl.className = 'space-roster-name';
-        nameEl.textContent = `${member.firstName} ${member.lastName}`.trim() || member.email;
+        nameEl.textContent = displayName;
         const emailEl = document.createElement('span');
         emailEl.className = 'space-roster-email';
         emailEl.textContent = member.email;
@@ -1422,7 +1524,7 @@
       currentSpace.name = name;
       scopeLabel.textContent = name;
       railNavSpaceHeading.textContent = `${name} · view`;
-      spacePlaceholderTitle.textContent = name;
+      spaceCalKicker.textContent = `${name} · calendar`;
       spaceMembersKicker.textContent = `${name} · Members`;
       const switcherItem = spacesContainer.querySelector(`[data-space-id="${currentSpace.id}"] .scope-switcher-item-name`);
       if (switcherItem) switcherItem.textContent = name;
@@ -1446,6 +1548,325 @@
       }
       await loadSpaces();
       selectPersonal();
+    });
+
+    // --- Space calendar: its own month view, day panel, and item-creation
+    // modal, deliberately separate from the Personal ones rather than making
+    // the existing (heavily-featured, already-tested) Personal calendar
+    // scope-aware. Simpler than Personal's by design, not by omission: no
+    // notes/auto-save/color picker apply to a Space task or event, and
+    // .cal-item--task/.cal-item--event were already styled for this (colored
+    // by kind, not by a picker) back when the Space color tokens were added.
+    const spaceCalRoot = document.getElementById('space-cal-root');
+    const spaceCalKicker = document.getElementById('space-cal-kicker');
+    const spaceCalMonthEl = document.getElementById('space-cal-month');
+    const spaceCalYearEl = document.getElementById('space-cal-year');
+    const spaceNewItemBtn = document.getElementById('space-new-item-btn');
+
+    const spaceDayPanel = document.getElementById('space-day-panel');
+    const spaceDayPanelTitle = document.getElementById('space-day-panel-title');
+    const spaceDayPanelBody = document.getElementById('space-day-panel-body');
+    let spaceDayPanelDate = null;
+
+    const spaceItemModal = document.getElementById('space-item-modal');
+    const spaceItemModalTitle = document.getElementById('space-item-modal-title');
+    const spaceItemForm = document.getElementById('space-item-form');
+    const spaceItemTitleInput = document.getElementById('space-item-title');
+    const spaceItemDescription = document.getElementById('space-item-description');
+    const spaceItemClassificationFields = document.getElementById('space-item-classification-fields');
+    const spaceItemCategory = document.getElementById('space-item-category');
+    const spaceItemDueDate = document.getElementById('space-item-due-date');
+    const spaceItemDueTime = document.getElementById('space-item-due-time');
+    const spaceItemAudienceField = document.getElementById('space-item-audience-field');
+    const spaceItemAssignees = document.getElementById('space-item-assignees');
+    const spaceItemFormError = document.getElementById('space-item-form-error');
+    let spaceEditingItemId = null;
+
+    function toSpaceCalItem(apiItem) {
+      return {
+        id: apiItem.id,
+        title: apiItem.title,
+        type: apiItem.kind,
+        done: apiItem.status === 'completed',
+        dueTime: apiItem.due_time,
+      };
+    }
+    async function fetchSpaceItems(from, to) {
+      const res = await fetch(`/api/items?from=${from}&to=${to}&spaceId=${currentSpace.id}`);
+      if (!res.ok) return [];
+      return (await res.json()).items || [];
+    }
+
+    // Lazily created on first actual use (not eagerly at setup time like this):
+    // ClassyncCalendar.initMonthCalendar() paints a full grid into its root the
+    // moment it's constructed, so an eager instance here would render real
+    // .calendar-day[data-date] cells into the (hidden but still-in-the-DOM)
+    // #space-cal-root for every user, Space or not — duplicating the exact
+    // element/class the Personal calendar's own cells use and breaking any
+    // unscoped `.calendar-day[data-date=...]` locator on the page, including
+    // every pre-existing Personal-calendar test (none of which ever touch a
+    // Space at all).
+    let spaceCal = null;
+    function getSpaceCal() {
+      if (!spaceCal) {
+        spaceCal = ClassyncCalendar.initMonthCalendar(spaceCalRoot, {
+          onMonthChange: (state) => {
+            spaceCalMonthEl.textContent = MONTHS[state.month];
+            spaceCalYearEl.textContent = state.year;
+          },
+        });
+      }
+      return spaceCal;
+    }
+    async function refreshSpaceCalendarView() {
+      const cal = getSpaceCal();
+      const { year, month } = cal.state;
+      cal.setItems({});
+      const from = isoDate(new Date(year, month, 1));
+      const to = isoDate(new Date(year, month + 1, 0));
+      const items = await fetchSpaceItems(from, to);
+      const itemsByDate = {};
+      items.forEach((raw) => {
+        (itemsByDate[raw.due_date] ||= []).push(toSpaceCalItem(raw));
+      });
+      cal.setItems(itemsByDate);
+    }
+    document.getElementById('space-cal-prev').addEventListener('click', () => { getSpaceCal().prev(); refreshSpaceCalendarView(); });
+    document.getElementById('space-cal-next').addEventListener('click', () => { getSpaceCal().next(); refreshSpaceCalendarView(); });
+    document.getElementById('space-cal-today').addEventListener('click', () => { getSpaceCal().today(); refreshSpaceCalendarView(); });
+
+    function formatSpacePanelDate(dateStr) {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      return `${WEEKDAYS[dt.getDay()]}, ${MONTHS[dt.getMonth()]} ${dt.getDate()}`;
+    }
+
+    async function refreshSpaceDayPanel() {
+      if (!spaceDayPanelDate) return;
+      const items = await fetchSpaceItems(spaceDayPanelDate, spaceDayPanelDate);
+      spaceDayPanelBody.innerHTML = '';
+      if (!items.length) {
+        spaceDayPanelBody.innerHTML = '<p class="day-panel-empty">Nothing due this day.</p>';
+        return;
+      }
+      items.forEach((raw) => {
+        const row = document.createElement('div');
+        row.className = 'day-panel-row';
+
+        const isTask = raw.kind === 'task';
+        const check = document.createElement(isTask ? 'button' : 'span');
+        if (isTask) check.type = 'button';
+        check.className = (isTask ? 'day-panel-row-check' : 'day-panel-row-check-spacer') + (raw.status === 'completed' ? ' is-done' : '');
+        if (isTask) {
+          check.setAttribute('aria-label', raw.status === 'completed' ? 'Mark as not done' : 'Mark as done');
+          check.innerHTML = '<svg class="day-panel-row-check-icon" width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.3l3.3 3.3L13 4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        }
+        row.appendChild(check);
+
+        const body = document.createElement('div');
+        body.className = 'day-panel-row-body';
+        const titleEl = document.createElement('span');
+        titleEl.className = 'day-panel-row-title' + (raw.status === 'completed' ? ' is-done' : '');
+        titleEl.textContent = raw.title;
+        body.appendChild(titleEl);
+        const meta = [raw.kind === 'event' ? 'Event' : (raw.category || 'Task'), raw.due_time ? raw.due_time.slice(0, 5) : null]
+          .filter(Boolean).join(' · ');
+        if (meta) {
+          const metaEl = document.createElement('span');
+          metaEl.className = 'day-panel-row-meta';
+          metaEl.textContent = meta;
+          body.appendChild(metaEl);
+        }
+        row.appendChild(body);
+
+        const actions = document.createElement('div');
+        actions.className = 'day-panel-row-actions';
+        if (raw.created_by === currentUserId) {
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.className = 'day-panel-edit-btn';
+          editBtn.setAttribute('aria-label', 'Edit');
+          editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.3 2.3a1.5 1.5 0 0 1 2.1 2.1L5.5 12.3l-2.8.7.7-2.8 7.9-7.9Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+          editBtn.addEventListener('click', () => openSpaceItemModal(raw));
+          actions.appendChild(editBtn);
+
+          const deleteBtn = document.createElement('button');
+          deleteBtn.type = 'button';
+          deleteBtn.className = 'day-panel-delete-btn';
+          deleteBtn.setAttribute('aria-label', 'Delete');
+          deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5v8a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7v4M9.5 7v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+          deleteBtn.addEventListener('click', async () => {
+            if (!(await confirmDialog(`Delete "${raw.title}"? This can't be undone.`))) return;
+            deleteBtn.disabled = true;
+            await fetch(`/api/items/${raw.id}`, { method: 'DELETE' });
+            await Promise.all([refreshSpaceCalendarView(), refreshSpaceDayPanel()]);
+          });
+          actions.appendChild(deleteBtn);
+        }
+        row.appendChild(actions);
+
+        if (isTask) {
+          check.addEventListener('click', async () => {
+            check.disabled = true;
+            const nextStatus = raw.status === 'completed' ? 'pending' : 'completed';
+            await fetch(`/api/items/${raw.id}/status`, {
+              method: 'PATCH',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ status: nextStatus }),
+            });
+            await Promise.all([refreshSpaceCalendarView(), refreshSpaceDayPanel()]);
+          });
+        }
+
+        spaceDayPanelBody.appendChild(row);
+      });
+    }
+    async function openSpaceDayPanel(dateStr) {
+      spaceDayPanelDate = dateStr;
+      spaceDayPanelTitle.textContent = formatSpacePanelDate(dateStr);
+      spaceDayPanelBody.innerHTML = '<p class="day-panel-empty">Loading…</p>';
+      spaceDayPanel.hidden = false;
+      await refreshSpaceDayPanel();
+    }
+    function closeSpaceDayPanel() {
+      spaceDayPanel.hidden = true;
+      spaceDayPanelDate = null;
+    }
+    document.getElementById('space-day-panel-close').addEventListener('click', closeSpaceDayPanel);
+    document.getElementById('space-day-panel-add').addEventListener('click', () => {
+      openSpaceItemModal(null, spaceDayPanelDate);
+    });
+    spaceDayPanel.addEventListener('click', (e) => {
+      if (e.target === spaceDayPanel) closeSpaceDayPanel();
+    });
+
+    spaceCalRoot.addEventListener('click', async (e) => {
+      const dayCell = e.target.closest('.calendar-day');
+      if (dayCell) await openSpaceDayPanel(dayCell.dataset.date);
+    });
+    spaceCalRoot.addEventListener('keydown', async (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const dayCell = e.target.closest('.calendar-day');
+      if (!dayCell) return;
+      e.preventDefault();
+      await openSpaceDayPanel(dayCell.dataset.date);
+    });
+
+    async function populateSpaceAssignees(selectedIds) {
+      const res = await fetch(`/api/spaces/${currentSpace.id}/members`);
+      const { members } = await res.json();
+      spaceItemAssignees.innerHTML = '';
+      members.forEach((member) => {
+        const row = document.createElement('label');
+        row.className = 'space-item-assignee-row';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = member.id;
+        checkbox.checked = selectedIds ? selectedIds.includes(member.id) : false;
+        const text = document.createElement('span');
+        const name = document.createElement('span');
+        name.textContent = `${member.firstName} ${member.lastName}`.trim() || member.email;
+        const email = document.createElement('span');
+        email.className = 'space-item-assignee-email';
+        email.textContent = member.email;
+        text.append(name, email);
+        row.append(checkbox, text);
+        spaceItemAssignees.appendChild(row);
+      });
+    }
+    function updateSpaceAudienceUI() {
+      const specific = spaceItemForm.querySelector('input[name="space-item-audience"]:checked').value === 'specific';
+      spaceItemAssignees.hidden = !specific;
+    }
+    spaceItemForm.querySelectorAll('input[name="space-item-audience"]').forEach((r) => r.addEventListener('change', updateSpaceAudienceUI));
+
+    async function openSpaceItemModal(item, prefillDate) {
+      spaceItemFormError.hidden = true;
+      spaceItemForm.reset();
+      spaceEditingItemId = item ? item.id : null;
+      const kindRadios = spaceItemForm.querySelectorAll('input[name="space-item-kind"]');
+
+      if (item) {
+        spaceItemModalTitle.textContent = item.kind === 'event' ? 'Edit event' : 'Edit task';
+        spaceItemForm.querySelector('.add-space-submit').textContent = 'Save';
+        kindRadios.forEach((r) => { r.checked = r.value === item.kind; r.disabled = true; });
+        spaceItemTitleInput.value = item.title;
+        spaceItemDescription.value = item.description || '';
+        spaceItemCategory.value = item.category || '';
+        spaceItemDueDate.value = item.due_date || '';
+        spaceItemDueTime.value = item.due_time ? item.due_time.slice(0, 5) : '';
+        spaceItemAudienceField.hidden = true;
+      } else {
+        spaceItemModalTitle.textContent = 'New task or event';
+        spaceItemForm.querySelector('.add-space-submit').textContent = 'Create';
+        kindRadios.forEach((r) => { r.disabled = false; });
+        if (prefillDate) spaceItemDueDate.value = prefillDate;
+        spaceItemAudienceField.hidden = false;
+        await populateSpaceAssignees([]);
+        updateSpaceAudienceUI();
+      }
+      spaceItemModal.hidden = false;
+      spaceItemTitleInput.focus();
+    }
+    function closeSpaceItemModal() {
+      spaceItemModal.hidden = true;
+      spaceEditingItemId = null;
+    }
+    document.getElementById('space-item-modal-close').addEventListener('click', closeSpaceItemModal);
+    document.getElementById('space-item-cancel').addEventListener('click', closeSpaceItemModal);
+    spaceItemModal.addEventListener('click', (e) => {
+      if (e.target === spaceItemModal) closeSpaceItemModal();
+    });
+    spaceNewItemBtn.addEventListener('click', () => openSpaceItemModal(null, spaceDayPanelDate));
+
+    spaceItemForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      spaceItemFormError.hidden = true;
+      const data = new FormData(spaceItemForm);
+      const payload = {
+        title: data.get('title'),
+        description: data.get('description') || null,
+        category: data.get('category') || null,
+        dueDate: data.get('dueDate') || null,
+        dueTime: data.get('dueTime') || null,
+      };
+      if (!spaceEditingItemId) {
+        payload.spaceId = currentSpace.id;
+        payload.kind = data.get('space-item-kind');
+        const audience = data.get('space-item-audience');
+        payload.isOpenToAll = audience === 'all';
+        if (!payload.isOpenToAll) {
+          payload.assigneeUserIds = Array.from(spaceItemAssignees.querySelectorAll('input:checked')).map((el) => Number(el.value));
+        }
+      }
+
+      const submitBtn = spaceItemForm.querySelector('.add-space-submit');
+      submitBtn.disabled = true;
+      try {
+        const url = spaceEditingItemId ? `/api/items/${spaceEditingItemId}` : '/api/items';
+        const method = spaceEditingItemId ? 'PATCH' : 'POST';
+        const res = await fetch(url, {
+          method,
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          spaceItemFormError.textContent = body.error || 'Could not save that — please check the form and try again.';
+          spaceItemFormError.hidden = false;
+          return;
+        }
+        closeSpaceItemModal();
+        await Promise.all([refreshSpaceCalendarView(), refreshSpaceDayPanel()]);
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (!spaceItemModal.hidden) { closeSpaceItemModal(); return; }
+      if (!spaceDayPanel.hidden) { closeSpaceDayPanel(); return; }
     });
   }
 

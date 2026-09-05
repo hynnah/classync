@@ -1608,10 +1608,12 @@ a.btn-secondary:hover {
 .page-app .space-organizer-tools {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding-bottom: 22px;
-  margin-bottom: 22px;
-  border-bottom: 1px solid var(--color-divider);
+  gap: 16px;
+  padding: 18px 18px 20px;
+  margin-bottom: 24px;
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-divider);
+  border-radius: 4px;
 }
 .page-app .space-rename-form {
   display: flex;
@@ -1626,6 +1628,8 @@ a.btn-secondary:hover {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-divider-soft);
 }
 .page-app .space-joincode-row {
   display: flex;
@@ -1647,16 +1651,43 @@ a.btn-secondary:hover {
   border: 1px solid var(--color-divider);
   background: var(--color-bg-card);
   margin-bottom: 24px;
+  border-radius: 4px;
+  overflow: hidden;
 }
 .page-app .space-roster-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 13px;
+  padding: 13px 16px;
   border-bottom: 1px solid var(--color-divider-soft);
+  border-left: 3px solid transparent;
+  transition: background-color 150ms ease;
 }
 .page-app .space-roster-row:last-child {
   border-bottom: 0;
+}
+.page-app .space-roster-row:hover {
+  background: rgba(182, 130, 53, 0.04);
+}
+.page-app .space-roster-row.is-organizer {
+  border-left-color: var(--color-accent);
+}
+.page-app .space-roster-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--color-secondary-border);
+  color: var(--color-secondary-text);
+}
+.page-app .space-roster-row.is-organizer .space-roster-avatar {
+  background: var(--color-accent);
+  color: #fff;
 }
 .page-app .space-roster-identity {
   flex: 1;
@@ -1681,27 +1712,36 @@ a.btn-secondary:hover {
 }
 .page-app .space-roster-role {
   font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.14em;
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-text-faintest);
+  color: var(--color-secondary-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-secondary-border);
+  border-radius: 20px;
+  padding: 3px 10px;
   flex-shrink: 0;
 }
 .page-app .space-roster-role.is-organizer {
   color: var(--color-accent);
+  background: var(--color-accent-hover-bg);
+  border-color: var(--color-accent);
 }
 .page-app .space-roster-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   flex-shrink: 0;
 }
 .page-app .space-roster-action-btn {
   background: transparent;
   border: 0;
+  border-radius: 50%;
   cursor: pointer;
   color: var(--color-text-faint);
-  padding: 4px 6px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
   box-shadow: none;
   display: inline-flex;
   align-items: center;
@@ -1709,11 +1749,13 @@ a.btn-secondary:hover {
 }
 .page-app .space-roster-action-btn:hover {
   color: var(--color-accent);
+  background: var(--color-accent-hover-bg);
   box-shadow: none;
   transform: none;
 }
 .page-app .space-roster-action-btn.is-danger:hover {
   color: var(--color-danger-text);
+  background: rgba(176, 48, 40, 0.08);
 }
 .page-app .space-leave-btn {
   font-family: var(--font-mono);
@@ -2274,6 +2316,37 @@ a.btn-secondary:hover {
   font-size: 11px;
   line-height: 1.5;
   color: var(--color-text-faintest);
+}
+.page-app .space-item-assignees {
+  margin-top: 10px;
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid var(--color-divider);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+.page-app .space-item-assignee-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--color-divider-soft);
+  cursor: pointer;
+}
+.page-app .space-item-assignee-row:last-child {
+  border-bottom: 0;
+}
+.page-app .space-item-assignee-row > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.page-app .space-item-assignee-email {
+  font-size: 11px;
+  color: var(--color-text-faint);
 }
 .page-app .color-swatches {
   display: flex;
