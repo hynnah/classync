@@ -253,6 +253,10 @@ a.btn-secondary:hover {
   .page-landing .three-grid, .page-landing .planner-grid { grid-template-columns: 1fr; }
   .page-landing .three-grid > div, .page-landing .planner-grid > div { border: 0 !important; padding: 24px 0 !important; }
   .page-landing .how-row { grid-template-columns: 1fr; gap: 8px; }
+  .page-landing .sticky-note,
+  .page-landing .date-chip {
+    display: none;
+  }
 }
 
 @media (max-width: 640px) {
@@ -296,11 +300,6 @@ a.btn-secondary:hover {
   .page-landing .planner-grid h2,
   .page-landing .begin h2 {
     font-size: 28px;
-  }
-
-  .page-landing .sticky-note,
-  .page-landing .date-chip {
-    display: none;
   }
 
   .page-landing .quote {
@@ -385,6 +384,8 @@ a.btn-secondary:hover {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     padding-right: 28px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
   }
   .page-landing .calendar-head,
   .page-landing .calendar-grid {
@@ -986,6 +987,7 @@ a.btn-secondary:hover {
 
 .page-app {
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1156,6 +1158,7 @@ a.btn-secondary:hover {
   box-sizing: border-box;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 11px;
   padding: 10px 12px;
   border: 0;
@@ -1211,6 +1214,7 @@ a.btn-secondary:hover {
   box-sizing: border-box;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
   padding: 10px 12px;
   border: 0;
@@ -1324,13 +1328,29 @@ a.btn-secondary:hover {
   display: flex;
   align-items: center;
   gap: 11px;
-  color: inherit;
-  padding: 4px;
-  margin: -4px;
-  border-radius: 2px;
 }
-.page-app .rail-user:hover {
-  background: rgba(182, 130, 53, 0.06);
+.page-app .rail-settings-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--color-text-faint);
+  border: 1px solid transparent;
+  box-shadow: none;
+  cursor: pointer;
+}
+.page-app .rail-settings-btn:hover {
+  color: var(--color-accent-link);
+  border-color: var(--color-divider);
+  box-shadow: none;
+  transform: none;
+}
+.page-app .rail-settings-btn.is-active {
+  color: var(--color-accent-link);
+  border-color: var(--color-accent);
 }
 .page-app .rail-user-text {
   flex: 1;
@@ -1372,6 +1392,9 @@ a.btn-secondary:hover {
   background: var(--color-danger-hover-bg);
   border-color: var(--color-danger-hover-border);
   color: var(--color-danger-hover-text);
+}
+.page-app .rail-signout-icon {
+  display: none;
 }
 
 .page-app main {
@@ -1604,49 +1627,151 @@ a.btn-secondary:hover {
 }
 .page-app .space-members-body {
   flex: 1;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
   padding: 34px 40px;
-  max-width: 560px;
   overflow-y: auto;
+  box-sizing: border-box;
+}
+.page-app .space-members-columns {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  margin-bottom: 24px;
+}
+.page-app .space-roster-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-divider);
+  border-radius: 4px;
+  padding: 18px 18px 20px;
   box-sizing: border-box;
 }
 
-/* Settings — reachable from the account row, not buried in a Space's own
-   nav. A single column of sections under the same cal-toolbar banner every
-   other view opens with. */
-.page-app .settings-back-link {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-text-faint);
-}
-.page-app .settings-back-link:hover {
-  color: var(--color-accent-link);
-}
+/* Settings — a view inside app.html like Members/To Do/All, reached via the
+   sidebar's Settings button rather than its own page. A single column of
+   sections under the same cal-toolbar banner every other view opens with. */
 .page-app .settings-body {
   flex: 1;
+  width: 100%;
   padding: 34px 40px;
-  max-width: 560px;
+  max-width: 900px;
+  margin: 0 auto;
   overflow-y: auto;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
 }
-.page-app .settings-section {
-  padding-bottom: 28px;
+.page-app .settings-row-section {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 32px;
+  padding: 32px 0;
   border-bottom: 1px solid var(--color-divider-soft);
 }
-.page-app .settings-section:last-child {
+.page-app .settings-row-section:first-child {
+  padding-top: 0;
+}
+.page-app .settings-row-section:last-child {
   border-bottom: 0;
   padding-bottom: 0;
+}
+.page-app .settings-row-section-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  padding-top: 2px;
+}
+.page-app .settings-row-section--danger {
+  border-top: 1px solid var(--color-danger-border);
+  margin-top: 4px;
+}
+.page-app .settings-row-section--danger .settings-row-section-label {
+  color: var(--color-danger-text);
+}
+.page-app .settings-row-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+.page-app .settings-card-title {
+  font-family: var(--font-heading);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.2;
+  margin: 0;
+  color: var(--color-text);
 }
 .page-app .settings-section-desc {
   font-size: 13px;
   line-height: 1.6;
   color: var(--color-text-muted);
-  margin: 8px 0 16px;
+  margin: 0;
 }
+
+.page-app .settings-profile-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.page-app .settings-avatar-lg {
+  width: 40px;
+  height: 40px;
+  font-size: 14px;
+}
+.page-app .settings-profile-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.page-app .settings-profile-email {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
+.page-app .settings-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border: 1px solid var(--color-divider);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-soft);
+  flex-shrink: 0;
+}
+.page-app .settings-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--color-divider);
+  background: var(--color-bg-panel);
+}
+.page-app .settings-stat {
+  padding: 14px 20px;
+  border-right: 1px solid var(--color-divider);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.page-app .settings-stat:last-child {
+  border-right: 0;
+}
+.page-app .settings-stat-value {
+  font-family: var(--font-heading);
+  font-weight: 400;
+  font-size: 21px;
+  color: var(--color-text);
+}
+
 .page-app .settings-row {
   display: flex;
   align-items: center;
@@ -1656,7 +1781,7 @@ a.btn-secondary:hover {
 .page-app .settings-row-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
 }
 .page-app .settings-row-label {
@@ -1664,9 +1789,44 @@ a.btn-secondary:hover {
   color: var(--color-text);
 }
 .page-app .settings-row-hint {
-  font-size: 11.5px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--color-text-faint);
+}
+.page-app .settings-row-finehint {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--color-text-faintest);
+}
+.page-app .settings-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-faintest);
+}
+.page-app .settings-status-pill::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--color-text-faintest);
+}
+.page-app .settings-status-pill.is-connected {
+  color: var(--color-personal-border);
+}
+.page-app .settings-status-pill.is-connected::before {
+  background: var(--color-personal);
+  border-color: var(--color-personal-border);
 }
 .page-app .settings-toggle-btn {
   font-family: var(--font-mono);
@@ -1682,6 +1842,27 @@ a.btn-secondary:hover {
 }
 .page-app .settings-toggle-btn:hover {
   background: var(--color-accent-hover-bg);
+}
+
+.page-app .settings-privacy-body {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 40px;
+}
+.page-app .settings-privacy-body .settings-section-desc {
+  flex: 1.3;
+}
+.page-app .settings-quote {
+  flex: 1;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--color-text-soft);
+  border-left: 2px solid var(--color-accent);
+  padding-left: 20px;
+  margin: 0;
 }
 
 /* Shared kicker pattern — mono label, a stretching hairline, an optional
@@ -2038,6 +2219,27 @@ a.btn-secondary:hover {
   gap: 18px;
   margin-bottom: 18px;
 }
+.page-app .notes-back-btn {
+  display: none;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid #d8cfbc;
+  background: var(--color-bg-card);
+  color: var(--color-text-soft);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  box-shadow: none;
+}
+.page-app .notes-back-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+  box-shadow: none;
+  transform: none;
+}
 .page-app .notes-delete-btn {
   font-family: var(--font-mono);
   font-size: 9px;
@@ -2105,10 +2307,12 @@ a.btn-secondary:hover {
   flex-direction: column;
   gap: 16px;
   padding: 18px 18px 20px;
-  margin-bottom: 24px;
   background: var(--color-bg-panel);
   border: 1px solid var(--color-divider);
   border-radius: 4px;
+  flex: 0 0 320px;
+  width: 320px;
+  box-sizing: border-box;
 }
 .page-app .space-rename-form {
   display: flex;
@@ -2143,17 +2347,13 @@ a.btn-secondary:hover {
   color: var(--color-text-faintest);
 }
 .page-app .space-roster-list {
-  border: 1px solid var(--color-divider);
-  background: var(--color-bg-card);
-  margin-bottom: 24px;
-  border-radius: 4px;
-  overflow: hidden;
+  border-top: 1px solid var(--color-divider-soft);
 }
 .page-app .space-roster-row {
   display: flex;
   align-items: center;
   gap: 13px;
-  padding: 13px 16px;
+  padding: 13px 0 13px 13px;
   border-bottom: 1px solid var(--color-divider-soft);
   border-left: 3px solid transparent;
   transition: background-color 150ms ease;
@@ -2257,6 +2457,8 @@ a.btn-secondary:hover {
   font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
   background: transparent;
   border: 1px solid var(--color-danger-border);
   color: var(--color-danger-text);
@@ -2317,17 +2519,68 @@ a.btn-secondary:hover {
   .page-app .urgent-panel {
     width: 100%;
   }
+  .page-app .space-members-columns {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .page-app .space-organizer-tools {
+    width: 100%;
+    flex-basis: auto;
+  }
+  .page-app .settings-row-section {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .page-app .settings-row {
+    flex-wrap: wrap;
+  }
+  .page-app .settings-profile-head {
+    flex-wrap: wrap;
+  }
+  .page-app .settings-privacy-body {
+    flex-direction: column;
+    gap: 20px;
+  }
 }
 @media (max-width: 760px) {
   .page-app .rail {
     position: fixed;
     top: 62px;
     bottom: 0;
+    height: calc(100vh - 62px);
+    height: calc(100dvh - 62px);
     left: 0;
     z-index: 4;
   }
   .page-app .rail:not(.is-collapsed) {
     box-shadow: 8px 0 24px rgba(38,37,33,0.18);
+  }
+  /* Sign out folds into the profile row as an icon here, next to Settings —
+     saves the vertical space its own full-width row cost, since the rail's
+     footer is the thing most likely to run into a phone's own gesture bar. */
+  .page-app .rail-footer {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 0px) + 10px);
+  }
+  .page-app .rail-user {
+    flex: 1;
+    min-width: 0;
+  }
+  .page-app .rail-signout {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    gap: 0;
+    border-width: 1px;
+  }
+  .page-app .rail-signout-icon {
+    display: flex;
+  }
+  .page-app .rail-signout-label {
+    display: none;
   }
   .page-app .brand .tagline {
     display: none;
@@ -2347,6 +2600,46 @@ a.btn-secondary:hover {
   }
   .page-app .cal-body {
     padding: 16px 20px;
+  }
+  .page-app .settings-body,
+  .page-app .space-members-body {
+    padding: 20px;
+  }
+  .page-app .todo-main {
+    padding: 20px;
+  }
+  .page-app .todo-content .todo-switch {
+    width: 100%;
+  }
+  .page-app .todo-content .todo-switch-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 7px 6px;
+    font-size: 11px;
+    gap: 5px;
+  }
+  .page-app .notes-list-pane {
+    width: 100%;
+    border-right: 0;
+  }
+  .page-app .notes-editor-pane {
+    display: none;
+    padding: 24px 20px;
+  }
+  .page-app .notes-shell.is-editing .notes-list-pane {
+    display: none;
+  }
+  .page-app .notes-shell.is-editing .notes-editor-pane {
+    display: flex;
+  }
+  .page-app .notes-back-btn {
+    display: flex;
+  }
+  .page-app .notes-editor-head {
+    align-items: center;
+  }
+  .page-app .notes-editor-title-input {
+    font-size: 28px;
   }
 }
 
@@ -3139,6 +3432,22 @@ a.btn-secondary:hover {
   .page-app .modal {
     width: 100%;
     max-height: 85vh;
+  }
+  .page-app .settings-row-section {
+    padding: 24px 0;
+  }
+  .page-app .settings-stats {
+    grid-template-columns: 1fr;
+  }
+  .page-app .settings-stat {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-divider);
+  }
+  .page-app .settings-stat:last-child {
+    border-bottom: 0;
+  }
+  .page-app .space-rename-form {
+    flex-wrap: wrap;
   }
 }
 

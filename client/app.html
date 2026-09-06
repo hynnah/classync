@@ -47,6 +47,13 @@
           </span>
         </button>
         <div id="scope-switcher-spaces"></div>
+        <button class="scope-switcher-item" type="button" data-scope="all">
+          <span class="scope-dot"></span>
+          <span class="scope-switcher-item-text">
+            <span class="scope-switcher-item-name">All</span>
+            <span class="scope-switcher-item-role">Calendar only</span>
+          </span>
+        </button>
         <button id="scope-switcher-add" class="scope-switcher-add" type="button">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
           <span>Create or join a Space</span>
@@ -89,17 +96,50 @@
       <p class="rail-hint">A separate Tasks list arrives in a later build day — for now the calendar covers both. Members has the roster, and rename/promote/demote/remove/leave if you're an Organizer.</p>
     </div>
 
+    <div id="rail-nav-all" class="rail-section rail-nav" hidden>
+      <div class="rail-heading">All · view</div>
+      <button id="all-nav-calendar" class="rail-item is-active" type="button">
+        <svg class="rail-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span class="rail-item-label">Calendar</span>
+      </button>
+      <button id="all-nav-todo" class="rail-item" type="button">
+        <svg class="rail-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3" y="2.5" width="10" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M6 1.5h4v1.5H6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M5.5 7.5l1.2 1.2L9 6.3M5.5 11l1.2 1.2L9 9.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="rail-item-label">To Do</span>
+      </button>
+      <button id="all-nav-notes" class="rail-item" type="button">
+        <svg class="rail-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 2h6l2.5 2.5V14H4z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M10 2v2.5h2.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 8h4M6 10.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span class="rail-item-label">Notes</span>
+      </button>
+      <p class="rail-hint">An overlay of every Space plus your Personal items. Mark tasks done right here — a new task made from All is always Personal. Notes are always yours alone, the same list either way. Pick a Space to edit its own tasks or see its Members.</p>
+    </div>
+
     <span class="rail-fill"></span>
 
     <div class="rail-footer">
-      <a id="rail-user-link" class="rail-user" href="/settings">
+      <div class="rail-user">
         <span id="user-initials-2" class="user-avatar"></span>
         <span class="rail-user-text">
           <span id="user-name">Loading…</span>
           <span class="rail-user-role">Solo</span>
         </span>
-      </a>
-      <button id="sign-out" class="rail-signout" type="button">Sign out</button>
+        <button id="rail-settings-btn" class="rail-settings-btn" type="button" aria-label="Settings">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M2 4h6M11 4h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="9" cy="4" r="1.6" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M2 8h2M7 8h7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="5" cy="8" r="1.6" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M2 12h6M11 12h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="9" cy="12" r="1.6" stroke="currentColor" stroke-width="1.2"/>
+          </svg>
+        </button>
+      </div>
+      <button id="sign-out" class="rail-signout" type="button" aria-label="Sign out">
+        <svg class="rail-signout-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M6.5 2H3.5A1.5 1.5 0 0 0 2 3.5v9A1.5 1.5 0 0 0 3.5 14h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10.5 11.3 14 8l-3.5-3.3M6.3 8H14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="rail-signout-label">Sign out</span>
+      </button>
     </div>
   </aside>
 
@@ -205,6 +245,7 @@
           <p id="notes-editor-empty" class="notes-editor-empty">Select a note, or create a new one.</p>
           <div id="notes-editor" hidden>
             <div class="notes-editor-head">
+              <button id="notes-back-btn" class="notes-back-btn" type="button" aria-label="Back to notes list">←</button>
               <span id="notes-editor-meta" class="kicker"></span>
               <span class="kicker-rule"></span>
               <button id="notes-delete-btn" class="notes-delete-btn" type="button">
@@ -262,33 +303,192 @@
         </div>
       </div>
       <div class="space-members-body">
-        <div id="space-organizer-tools" class="space-organizer-tools" hidden>
-          <form id="space-rename-form" class="space-rename-form">
-            <div class="field">
-              <div class="field-label">Space name</div>
-              <input id="space-rename-input" type="text" maxlength="255" required>
+        <div class="space-members-columns">
+          <div class="space-roster-panel">
+            <div class="space-roster-head">
+              <span class="field-label">Roster</span>
+              <span id="space-roster-count" class="space-roster-count"></span>
             </div>
-            <button type="submit" class="modal-cancel">Save</button>
-          </form>
-          <p id="space-rename-error" class="form-error" hidden></p>
+            <div id="space-roster-list" class="space-roster-list"></div>
+          </div>
 
-          <div class="space-joincode-field">
-            <span class="field-label">Join code</span>
-            <div class="space-joincode-row">
-              <span id="space-members-joincode" class="space-placeholder-joincode"></span>
-              <button id="space-joincode-copy" type="button" class="modal-cancel">Copy</button>
+          <div id="space-organizer-tools" class="space-organizer-tools" hidden>
+            <form id="space-rename-form" class="space-rename-form">
+              <div class="field">
+                <div class="field-label">Space name</div>
+                <input id="space-rename-input" type="text" maxlength="255" required>
+              </div>
+              <button type="submit" class="modal-cancel">Save</button>
+            </form>
+            <p id="space-rename-error" class="form-error" hidden></p>
+
+            <div class="space-joincode-field">
+              <span class="field-label">Join code</span>
+              <div class="space-joincode-row">
+                <span id="space-members-joincode" class="space-placeholder-joincode"></span>
+                <button id="space-joincode-copy" type="button" class="modal-cancel">Copy</button>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="space-roster-head">
-          <span class="field-label">Roster</span>
-          <span id="space-roster-count" class="space-roster-count"></span>
-        </div>
-        <div id="space-roster-list" class="space-roster-list"></div>
-
         <button id="space-leave-btn" type="button" class="space-leave-btn">Leave Space</button>
         <p id="space-leave-error" class="form-error" hidden></p>
+      </div>
+    </div>
+
+    <div id="all-view" hidden>
+      <div class="cal-toolbar">
+        <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
+        <div class="cal-toolbar-left">
+          <div class="cal-kicker">All Spaces · calendar</div>
+          <div class="cal-nav">
+            <button id="all-cal-prev" class="cal-nav-btn" type="button" aria-label="Previous">←</button>
+            <div class="cal-heading"><span id="all-cal-month"></span> <span id="all-cal-year" class="cal-year"></span></div>
+            <button id="all-cal-next" class="cal-nav-btn" type="button" aria-label="Next">→</button>
+            <button id="all-cal-today" class="cal-today-btn" type="button">Today</button>
+          </div>
+        </div>
+        <div class="cal-toolbar-right">
+          <button id="all-new-task-btn" class="cal-new-task" type="button">+ New</button>
+        </div>
+      </div>
+
+      <div class="cal-body">
+        <div class="calendar-panel">
+          <div id="all-cal-root"></div>
+          <div class="calendar-legend">
+            <span class="row"><span class="swatch swatch--personal"></span>Personal</span>
+            <span class="row"><span class="swatch swatch--task"></span>Space task</span>
+            <span class="row"><span class="swatch swatch--event"></span>Space event</span>
+            <span class="spacer"></span>
+            <span id="all-cal-legend-note">Live</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="all-todo-view" class="todo-view" hidden>
+      <div class="cal-toolbar">
+        <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
+        <div class="cal-toolbar-left">
+          <div class="cal-kicker">All Spaces · to do</div>
+          <div class="toolbar-heading">To Do</div>
+        </div>
+        <div class="cal-toolbar-right">
+          <button id="all-todo-new-btn" class="cal-new-task" type="button">+ New</button>
+        </div>
+      </div>
+      <div class="todo-content">
+        <div class="todo-main">
+          <div class="todo-switch">
+            <button id="all-todo-tab-active" class="todo-switch-btn is-active" type="button">Active <span id="all-todo-count-active" class="todo-switch-count">00</span></button>
+            <button id="all-todo-tab-overdue" class="todo-switch-btn" type="button">Overdue <span id="all-todo-count-overdue" class="todo-switch-count">00</span></button>
+            <button id="all-todo-tab-done" class="todo-switch-btn" type="button">Completed <span id="all-todo-count-done" class="todo-switch-count">00</span></button>
+          </div>
+          <div id="all-todo-body" class="todo-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="settings-view" hidden>
+      <div class="cal-toolbar">
+        <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
+        <div class="cal-toolbar-left">
+          <div class="cal-kicker">Account · settings</div>
+          <div class="toolbar-heading">Settings</div>
+        </div>
+      </div>
+
+      <div class="settings-body">
+        <section class="settings-row-section">
+          <div class="settings-row-section-label">Profile</div>
+          <div class="settings-row-section-body">
+            <div class="settings-profile-head">
+              <span id="settings-avatar" class="user-avatar settings-avatar-lg"></span>
+              <div class="settings-profile-identity">
+                <h3 class="settings-card-title" id="settings-user-name"></h3>
+                <span id="settings-user-email" class="settings-profile-email"></span>
+              </div>
+              <span class="settings-badge">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5l5 2v3.8c0 3.4-2.1 5.9-5 7.2-2.9-1.3-5-3.8-5-7.2V3.5l5-2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+                Google sign-in
+              </span>
+            </div>
+            <div class="settings-stats">
+              <div class="settings-stat">
+                <span class="field-label">Spaces</span>
+                <span id="settings-stat-spaces" class="settings-stat-value">00</span>
+              </div>
+              <div class="settings-stat">
+                <span class="field-label">Member since</span>
+                <span id="settings-stat-since" class="settings-stat-value">—</span>
+              </div>
+              <div class="settings-stat">
+                <span class="field-label">Organizer of</span>
+                <span id="settings-stat-organizer" class="settings-stat-value">00</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-row-section">
+          <div class="settings-row-section-label">Calendar</div>
+          <div class="settings-row-section-body">
+            <div class="settings-row">
+              <div class="settings-row-text">
+                <span class="settings-row-label">Week starts on</span>
+                <span class="settings-row-hint">Applies to the month and week grids.</span>
+              </div>
+              <div id="week-starts-on-toggle" class="todo-switch">
+                <button class="todo-switch-btn" type="button" data-value="sunday">Sunday</button>
+                <button class="todo-switch-btn" type="button" data-value="monday">Monday</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-row-text">
+                <span class="settings-row-label">Opening view</span>
+                <span class="settings-row-hint">Where Classync lands when you sign in.</span>
+              </div>
+              <div id="opening-view-toggle" class="todo-switch">
+                <button class="todo-switch-btn" type="button" data-value="all">All</button>
+                <button class="todo-switch-btn" type="button" data-value="personal">Personal</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-row-text">
+                <span class="settings-row-label">Google Calendar <span id="calendar-status-label" class="settings-status-pill">Not connected</span></span>
+                <span class="settings-row-hint">Sync your Personal to-dos and Space items to your own Google Calendar. Opt-in, per-item, revocable any time.</span>
+                <span class="settings-row-finehint">Full sync is on its way — connecting now saves your preference for when it lands.</span>
+              </div>
+              <button id="calendar-toggle-btn" class="settings-toggle-btn" type="button">Connect</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-row-section">
+          <div class="settings-row-section-label">Privacy</div>
+          <div class="settings-row-section-body settings-privacy-body">
+            <p class="settings-section-desc">Personal to-dos and Notes are never shown to any Space, and no Organizer can read them. Signing in grants Classync your name, email, and avatar only.</p>
+            <p class="settings-quote">Your to-do list is yours. A Space only ever sees what a Space is given.</p>
+          </div>
+        </section>
+
+        <section class="settings-row-section settings-row-section--danger">
+          <div class="settings-row-section-label">Danger</div>
+          <div class="settings-row-section-body">
+            <div class="settings-row">
+              <div class="settings-row-text">
+                <span class="settings-row-label">Delete account</span>
+                <span class="settings-row-hint">Permanently deletes your account, your Personal to-dos and notes, and anything you created inside a shared Space. This can't be undone.</span>
+              </div>
+              <button id="delete-account-btn" class="space-leave-btn" type="button">Delete my account</button>
+            </div>
+            <p id="delete-account-error" class="form-error" hidden></p>
+          </div>
+        </section>
       </div>
     </div>
   </main>
@@ -410,6 +610,25 @@
   </div>
 </div>
 
+<!-- All's own day panel: mark-done only, no edit/delete (an item here could
+     be Personal or any Space's, each needing a different edit modal — pick
+     that Space to edit its own items). Its own "+" still creates a real
+     Personal task, via the exact same modal Personal/its own "+ New" use. -->
+<div id="all-day-panel" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="all-day-panel-title">
+    <div class="modal-head">
+      <h2 id="all-day-panel-title">Items</h2>
+      <div class="day-panel-head-actions">
+        <button id="all-day-panel-add" class="day-panel-add-btn" type="button" aria-label="New Personal task on this day">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <button id="all-day-panel-close" class="modal-close" type="button" aria-label="Close">&times;</button>
+      </div>
+    </div>
+    <div id="all-day-panel-body" class="day-panel-body"></div>
+  </div>
+</div>
+
 <div id="space-item-modal" class="modal-backdrop" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="space-item-modal-title">
     <div class="modal-head">
@@ -523,6 +742,18 @@
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
+  // Shared by Personal's To Do and All's To Do (different closures, same
+  // relative-date labeling) — top-level so both can call it.
+  function formatTodoDate(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    const todayIso = isoDate(new Date());
+    const tomorrowIso = isoDate(new Date(new Date().setDate(new Date().getDate() + 1)));
+    if (dateStr === todayIso) return 'Today';
+    if (dateStr === tomorrowIso) return 'Tomorrow';
+    return `${WEEKDAYS[dt.getDay()].slice(0, 3)} ${dt.getDate()} ${MONTHS[dt.getMonth()].slice(0, 3)}`;
+  }
+
   function toCalItem(apiItem) {
     return {
       id: apiItem.id,
@@ -577,7 +808,138 @@
     try { return JSON.parse(localStorage.getItem(VIEW_STATE_KEY)); } catch { return null; }
   }
 
-  async function initApp() {
+  // Settings is account-level, orthogonal to whichever scope (Personal/a
+  // Space/All) is selected — opening it doesn't touch the scope switcher or
+  // its rail-nav section at all, it just swaps what's showing in <main>.
+  // Every other view-show function calls this first so Settings never stays
+  // visible underneath whatever the user picks next.
+  function leaveSettingsView() {
+    document.getElementById('settings-view').hidden = true;
+    document.getElementById('rail-settings-btn').classList.remove('is-active');
+  }
+
+  // initApp() and initSpaceSwitcher() are separate closures, each owning
+  // views the other has no reference to — Personal/its modal live in the
+  // former, All/Space calendars in the latter. Since an item mutated from
+  // one scope (say, creating a Personal task from All's own "+ New") can
+  // affect what the other scope shows, each closure registers its own
+  // "refresh everything I own" function here so the other can call it
+  // without either needing to know the other's internals.
+  const crossViewRefresh = {};
+
+  // Settings lives outside initApp()/initSpaceSwitcher() — it's account-level,
+  // not scoped to Personal/a Space/All, so it doesn't belong inside either.
+  // Wired once at bootstrap; returns showSettings() so the bootstrap can also
+  // call it directly when a refresh's saved view state says scope: 'settings'.
+  function initSettings() {
+    const railSettingsBtn = document.getElementById('rail-settings-btn');
+    const calendarStatusLabel = document.getElementById('calendar-status-label');
+    const calendarToggleBtn = document.getElementById('calendar-toggle-btn');
+    const deleteAccountBtn = document.getElementById('delete-account-btn');
+    const deleteAccountError = document.getElementById('delete-account-error');
+    const weekStartsOnToggle = document.getElementById('week-starts-on-toggle');
+    const openingViewToggle = document.getElementById('opening-view-toggle');
+
+    let calendarConnected = false;
+    let prefs = { weekStartsOn: 'sunday', openingView: 'personal' };
+
+    function renderCalendarState() {
+      calendarStatusLabel.textContent = calendarConnected ? 'Connected' : 'Not connected';
+      calendarStatusLabel.classList.toggle('is-connected', calendarConnected);
+      calendarToggleBtn.textContent = calendarConnected ? 'Disconnect' : 'Connect';
+    }
+    function renderToggle(toggleEl, value) {
+      toggleEl.querySelectorAll('.todo-switch-btn').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.value === value);
+      });
+    }
+    function renderPrefs() {
+      renderToggle(weekStartsOnToggle, prefs.weekStartsOn);
+      renderToggle(openingViewToggle, prefs.openingView);
+    }
+    async function savePrefs(next) {
+      const merged = { ...prefs, ...next };
+      const res = await fetch('/api/account/preferences', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(merged),
+      });
+      if (!res.ok) return;
+      prefs = merged;
+      renderPrefs();
+    }
+    weekStartsOnToggle.addEventListener('click', (e) => {
+      const btn = e.target.closest('.todo-switch-btn');
+      if (btn) savePrefs({ weekStartsOn: btn.dataset.value });
+    });
+    openingViewToggle.addEventListener('click', (e) => {
+      const btn = e.target.closest('.todo-switch-btn');
+      if (btn) savePrefs({ openingView: btn.dataset.value });
+    });
+
+    calendarToggleBtn.addEventListener('click', async () => {
+      calendarToggleBtn.disabled = true;
+      const endpoint = calendarConnected ? '/api/calendar/disconnect' : '/api/calendar/connect';
+      const res = await fetch(endpoint, { method: 'POST' });
+      if (res.ok) {
+        calendarConnected = !calendarConnected;
+        renderCalendarState();
+      }
+      calendarToggleBtn.disabled = false;
+    });
+
+    deleteAccountBtn.addEventListener('click', async () => {
+      deleteAccountError.hidden = true;
+      if (!(await confirmDialog('Delete your account? This permanently removes your Personal to-dos, notes, and anything you created in a shared Space. This can\'t be undone.'))) return;
+      deleteAccountBtn.disabled = true;
+      const res = await fetch('/api/account', { method: 'DELETE' });
+      if (res.status === 204) {
+        window.location.href = '/';
+        return;
+      }
+      const body = await res.json().catch(() => ({}));
+      deleteAccountError.textContent = body.error || 'Could not delete your account — please try again.';
+      deleteAccountError.hidden = false;
+      deleteAccountBtn.disabled = false;
+    });
+
+    async function refreshSettingsView() {
+      const res = await fetch('/api/account');
+      if (!res.ok) return;
+      const me = await res.json();
+      const initials = (me.firstName?.[0] || me.email[0] || '?').toUpperCase();
+      document.getElementById('settings-avatar').textContent = initials;
+      document.getElementById('settings-user-name').innerHTML = escapeHtml(me.firstName || me.email);
+      document.getElementById('settings-user-email').textContent = me.email;
+      calendarConnected = !!me.calendarConnected;
+      renderCalendarState();
+      document.getElementById('settings-stat-spaces').textContent = String(me.spacesCount).padStart(2, '0');
+      document.getElementById('settings-stat-organizer').textContent = String(me.organizerCount).padStart(2, '0');
+      const since = new Date(me.createdAt.replace(' ', 'T'));
+      document.getElementById('settings-stat-since').textContent = `${MONTHS[since.getMonth()].slice(0, 3)} ${since.getFullYear()}`;
+      prefs = { weekStartsOn: me.weekStartsOn, openingView: me.openingView };
+      renderPrefs();
+    }
+
+    function showSettings() {
+      document.getElementById('personal-view').hidden = true;
+      document.getElementById('todo-view').hidden = true;
+      document.getElementById('notes-view').hidden = true;
+      document.getElementById('space-view').hidden = true;
+      document.getElementById('space-members-view').hidden = true;
+      document.getElementById('all-view').hidden = true;
+      document.getElementById('all-todo-view').hidden = true;
+      document.getElementById('settings-view').hidden = false;
+      railSettingsBtn.classList.add('is-active');
+      saveViewState({ scope: 'settings' });
+      refreshSettingsView();
+    }
+
+    railSettingsBtn.addEventListener('click', showSettings);
+    return { showSettings };
+  }
+
+  async function initApp(weekStartsOn = 0) {
     const catRoot = document.getElementById('cal-root');
     const monthEl = document.getElementById('cal-month');
     const yearEl = document.getElementById('cal-year');
@@ -590,6 +952,7 @@
     let dayDate = new Date();
 
     const cal = ClassyncCalendar.initMonthCalendar(catRoot, {
+      weekStartsOn,
       onMonthChange: (state) => {
         if (viewMode === 'month') {
           monthEl.textContent = MONTHS[state.month];
@@ -1003,7 +1366,7 @@
           form.querySelectorAll('input[name="kind"]').forEach((r) => { r.disabled = true; });
         }
         saveStatusEl.textContent = 'Saved';
-        await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel(), refreshTodoView(), refreshNotesView()]);
+        await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel(), refreshTodoView(), refreshNotesView(), crossViewRefresh.all?.()]);
       } catch (err) {
         saveStatusEl.textContent = "Couldn't save — will retry";
       }
@@ -1121,7 +1484,7 @@
         }
         modal.hidden = true;
         editingItemId = null;
-        await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel(), refreshTodoView(), refreshNotesView()]);
+        await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel(), refreshTodoView(), refreshNotesView(), crossViewRefresh.all?.()]);
       } finally {
         submitBtn.disabled = false;
       }
@@ -1214,7 +1577,7 @@
           if (!(await confirmDialog(`Delete "${raw.title}"? This can't be undone.`))) return;
           deleteBtn.disabled = true;
           await fetch(`/api/items/${raw.id}`, { method: 'DELETE' });
-          await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel(), refreshTodoView(), refreshNotesView()]);
+          await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel(), refreshTodoView(), refreshNotesView(), crossViewRefresh.all?.()]);
         });
 
         dayPanelBody.appendChild(row);
@@ -1286,16 +1649,6 @@
     const personalNavNotes = document.getElementById('personal-nav-notes');
     const personalViewEl = document.getElementById('personal-view');
     const notesView = document.getElementById('notes-view');
-
-    function formatTodoDate(dateStr) {
-      const [y, m, d] = dateStr.split('-').map(Number);
-      const dt = new Date(y, m - 1, d);
-      const todayIso = isoDate(new Date());
-      const tomorrowIso = isoDate(new Date(new Date().setDate(new Date().getDate() + 1)));
-      if (dateStr === todayIso) return 'Today';
-      if (dateStr === tomorrowIso) return 'Tomorrow';
-      return `${WEEKDAYS[dt.getDay()].slice(0, 3)} ${dt.getDate()} ${MONTHS[dt.getMonth()].slice(0, 3)}`;
-    }
 
     function formatTodoMeta(raw, isOverdue) {
       const parts = [];
@@ -1452,7 +1805,9 @@
     // debounced, POST-then-PATCH way the old modal's note mode did, just
     // against these inline inputs instead of a modal's.
     const notesListEl = document.getElementById('notes-list');
+    const notesShellEl = document.querySelector('#notes-view .notes-shell');
     const notesNewBtn = document.getElementById('notes-new-btn');
+    const notesBackBtn = document.getElementById('notes-back-btn');
     const notesEditorEmpty = document.getElementById('notes-editor-empty');
     const notesEditor = document.getElementById('notes-editor');
     const notesEditorMeta = document.getElementById('notes-editor-meta');
@@ -1503,6 +1858,14 @@
       notesWordCount.textContent = `${words} word${words === 1 ? '' : 's'}`;
     }
 
+    // On narrow screens the list and editor are two separate screens (like a
+    // phone notes app) rather than a permanent split view — this class is
+    // what switches between them; irrelevant above the mobile breakpoint,
+    // where CSS keeps both panes visible regardless of it.
+    function setNotesEditing(isEditing) {
+      notesShellEl.classList.toggle('is-editing', isEditing);
+    }
+
     function selectNote(id) {
       clearTimeout(notesAutoSaveTimer);
       selectedNoteId = id;
@@ -1511,6 +1874,7 @@
       if (!note) {
         notesEditorEmpty.hidden = false;
         notesEditor.hidden = true;
+        setNotesEditing(false);
         return;
       }
       notesEditorEmpty.hidden = true;
@@ -1519,6 +1883,7 @@
       notesBodyInput.value = note.description || '';
       notesEditorMeta.textContent = formatNoteMeta(note);
       updateNotesWordCount();
+      setNotesEditing(true);
     }
 
     async function saveSelectedNote() {
@@ -1561,6 +1926,7 @@
         renderNotesList();
         notesEditorEmpty.hidden = false;
         notesEditor.hidden = true;
+        setNotesEditing(false);
       }
     }
 
@@ -1585,8 +1951,18 @@
       selectedNoteId = null;
       await refreshNotesView();
     });
+    notesBackBtn.addEventListener('click', async () => {
+      clearTimeout(notesAutoSaveTimer);
+      await saveSelectedNote();
+      selectedNoteId = null;
+      renderNotesList();
+      notesEditorEmpty.hidden = false;
+      notesEditor.hidden = true;
+      setNotesEditing(false);
+    });
 
     function showPersonalCalendar() {
+      leaveSettingsView();
       personalNavCalendar.classList.add('is-active');
       personalNavTodo.classList.remove('is-active');
       personalNavNotes.classList.remove('is-active');
@@ -1596,6 +1972,7 @@
       saveViewState({ scope: 'personal', view: 'calendar' });
     }
     async function showPersonalTodo() {
+      leaveSettingsView();
       personalNavTodo.classList.add('is-active');
       personalNavCalendar.classList.remove('is-active');
       personalNavNotes.classList.remove('is-active');
@@ -1606,6 +1983,7 @@
       await refreshTodoView();
     }
     async function showPersonalNotes() {
+      leaveSettingsView();
       personalNavNotes.classList.add('is-active');
       personalNavCalendar.classList.remove('is-active');
       personalNavTodo.classList.remove('is-active');
@@ -1651,6 +2029,17 @@
       if (savedView.view === 'todo') await showPersonalTodo();
       else if (savedView.view === 'notes') await showPersonalNotes();
     }
+
+    crossViewRefresh.personal = async () => {
+      await Promise.all([refreshCalendarView(), loadUrgent(), refreshTodoView(), refreshNotesView()]);
+    };
+    // All's own "+ New" always creates a Personal task (there's no single
+    // target Space in a merged view) — reuses this exact modal/flow rather
+    // than a second one, so it gets the same validation, color picker, etc.
+    crossViewRefresh.openModal = openModal;
+    // All's Notes tab reuses this #notes-view/refreshNotesView pair directly
+    // rather than a second copy of the same always-Personal list.
+    crossViewRefresh.refreshNotesView = refreshNotesView;
   }
 
   // Sidebar "You are in" switcher — Personal is always available; each Space
@@ -1658,19 +2047,22 @@
   // context today only swaps which sidebar nav + main content area shows;
   // Space calendars/tasks/roster aren't built yet, so a Space context shows
   // a placeholder rather than real (or fake) content.
-  async function initSpaceSwitcher(currentUserId) {
+  async function initSpaceSwitcher(currentUserId, weekStartsOn = 0, openingView = 'personal') {
     const switcherBtn = document.getElementById('scope-switcher-btn');
     const switcherPanel = document.getElementById('scope-switcher');
     const spacesContainer = document.getElementById('scope-switcher-spaces');
     const personalItem = switcherPanel.querySelector('.scope-switcher-item[data-scope="personal"]');
+    const allItem = switcherPanel.querySelector('.scope-switcher-item[data-scope="all"]');
 
     const scopeLabel = document.getElementById('scope-label');
     const scopeSub = document.getElementById('scope-sub');
     const personalView = document.getElementById('personal-view');
     const spaceView = document.getElementById('space-view');
+    const allView = document.getElementById('all-view');
     const railNavPersonal = document.getElementById('rail-nav-personal');
     const railNavSpace = document.getElementById('rail-nav-space');
     const railNavSpaceHeading = document.getElementById('rail-nav-space-heading');
+    const railNavAll = document.getElementById('rail-nav-all');
 
     const spaceNavCalendar = document.getElementById('space-nav-calendar');
     const spaceNavMembers = document.getElementById('space-nav-members');
@@ -1731,6 +2123,7 @@
       switcherPanel.querySelectorAll('.scope-switcher-item').forEach((el) => el.classList.remove('is-active'));
     }
     function showSpaceCalendar() {
+      leaveSettingsView();
       spaceNavCalendar.classList.add('is-active');
       spaceNavMembers.classList.remove('is-active');
       spaceView.hidden = false;
@@ -1740,6 +2133,7 @@
       refreshSpaceCalendarView();
     }
     function selectPersonal() {
+      leaveSettingsView();
       clearActive();
       personalItem.classList.add('is-active');
       scopeLabel.textContent = 'Personal · private';
@@ -1748,8 +2142,11 @@
       personalView.hidden = false;
       spaceView.hidden = true;
       spaceMembersView.hidden = true;
+      allView.hidden = true;
+      document.getElementById('all-todo-view').hidden = true;
       railNavPersonal.hidden = false;
       railNavSpace.hidden = true;
+      railNavAll.hidden = true;
       // reset to the Calendar sub-view every time, same as selectSpace()
       // always resetting to its own Calendar sub-view via showSpaceCalendar()
       document.getElementById('todo-view').hidden = true;
@@ -1761,6 +2158,7 @@
       closeSwitcher();
     }
     function selectSpace(space) {
+      leaveSettingsView();
       clearActive();
       const btn = spacesContainer.querySelector(`[data-space-id="${space.id}"]`);
       if (btn) btn.classList.add('is-active');
@@ -1768,12 +2166,78 @@
       scopeLabel.textContent = space.name;
       scopeSub.textContent = space.role === 'organizer' ? 'Organizer' : 'Member';
       personalView.hidden = true;
+      allView.hidden = true;
+      document.getElementById('all-todo-view').hidden = true;
       document.getElementById('todo-view').hidden = true;
       document.getElementById('notes-view').hidden = true;
       railNavPersonal.hidden = true;
       railNavSpace.hidden = false;
+      railNavAll.hidden = true;
       railNavSpaceHeading.textContent = `${space.name} · view`;
       showSpaceCalendar();
+      closeSwitcher();
+    }
+    // FR-M1: every Space's items merged with Personal's, browsable and
+    // mark-done-able but not editable (pick a specific Space or Personal
+    // from the switcher for that). Notes never merge anything — they're
+    // always Personal-only — so All's Notes tab just reuses Personal's own
+    // #notes-view/refreshNotesView rather than a second copy of the same list.
+    const allNavCalendar = document.getElementById('all-nav-calendar');
+    const allNavTodo = document.getElementById('all-nav-todo');
+    const allNavNotes = document.getElementById('all-nav-notes');
+    const allTodoViewEl = document.getElementById('all-todo-view');
+    const notesViewFromAll = document.getElementById('notes-view');
+    function showAllCalendar() {
+      allNavCalendar.classList.add('is-active');
+      allNavTodo.classList.remove('is-active');
+      allNavNotes.classList.remove('is-active');
+      allView.hidden = false;
+      allTodoViewEl.hidden = true;
+      notesViewFromAll.hidden = true;
+      saveViewState({ scope: 'all', view: 'calendar' });
+      refreshAllCalendarView();
+    }
+    async function showAllTodo() {
+      allNavTodo.classList.add('is-active');
+      allNavCalendar.classList.remove('is-active');
+      allNavNotes.classList.remove('is-active');
+      allView.hidden = true;
+      allTodoViewEl.hidden = false;
+      notesViewFromAll.hidden = true;
+      saveViewState({ scope: 'all', view: 'todo' });
+      await refreshAllTodoView();
+    }
+    async function showAllNotes() {
+      allNavNotes.classList.add('is-active');
+      allNavCalendar.classList.remove('is-active');
+      allNavTodo.classList.remove('is-active');
+      allView.hidden = true;
+      allTodoViewEl.hidden = true;
+      notesViewFromAll.hidden = false;
+      saveViewState({ scope: 'all', view: 'notes' });
+      await crossViewRefresh.refreshNotesView();
+    }
+    allNavCalendar.addEventListener('click', showAllCalendar);
+    allNavTodo.addEventListener('click', showAllTodo);
+    allNavNotes.addEventListener('click', showAllNotes);
+
+    function selectAll() {
+      allViewVisited = true;
+      leaveSettingsView();
+      clearActive();
+      allItem.classList.add('is-active');
+      scopeLabel.textContent = 'All Spaces';
+      scopeSub.textContent = 'Calendar only';
+      currentSpace = null;
+      personalView.hidden = true;
+      spaceView.hidden = true;
+      spaceMembersView.hidden = true;
+      document.getElementById('todo-view').hidden = true;
+      document.getElementById('notes-view').hidden = true;
+      railNavPersonal.hidden = true;
+      railNavSpace.hidden = true;
+      railNavAll.hidden = false;
+      showAllCalendar();
       closeSwitcher();
     }
 
@@ -1790,6 +2254,7 @@
       switcherPanel.hidden ? openSwitcher() : closeSwitcher();
     });
     personalItem.addEventListener('click', selectPersonal);
+    allItem.addEventListener('click', selectAll);
     spacesContainer.addEventListener('click', (e) => {
       const btn = e.target.closest('.scope-switcher-item');
       if (!btn) return;
@@ -1959,6 +2424,7 @@
     }
 
     function showMembersView() {
+      leaveSettingsView();
       spaceNavMembers.classList.add('is-active');
       spaceNavCalendar.classList.remove('is-active');
       spaceView.hidden = true;
@@ -2085,6 +2551,7 @@
     function getSpaceCal() {
       if (!spaceCal) {
         spaceCal = ClassyncCalendar.initMonthCalendar(spaceCalRoot, {
+          weekStartsOn,
           onMonthChange: (state) => {
             spaceCalMonthEl.textContent = MONTHS[state.month];
             spaceCalYearEl.textContent = state.year;
@@ -2109,6 +2576,254 @@
     document.getElementById('space-cal-prev').addEventListener('click', () => { getSpaceCal().prev(); refreshSpaceCalendarView(); });
     document.getElementById('space-cal-next').addEventListener('click', () => { getSpaceCal().next(); refreshSpaceCalendarView(); });
     document.getElementById('space-cal-today').addEventListener('click', () => { getSpaceCal().today(); refreshSpaceCalendarView(); });
+
+    // --- All Spaces: every Space's items merged with Personal (FR-M1),
+    // sharing the same lazy-init pattern as the Space calendar above and the
+    // same reason for it — an eager instance would duplicate .calendar-day
+    // cells into the DOM for every user, Space or not. Interactive (mark
+    // done) but not editable here — an item could be Personal or from any
+    // Space, each needing a different edit modal, so editing/deleting always
+    // goes through that specific scope instead. A new item made from All is
+    // always Personal (there's no single target Space in a merged view) —
+    // it reuses Personal's own task modal via crossViewRefresh.openModal
+    // rather than building a second create flow.
+    const allCalRoot = document.getElementById('all-cal-root');
+    const allCalMonthEl = document.getElementById('all-cal-month');
+    const allCalYearEl = document.getElementById('all-cal-year');
+
+    function toAllCalItem(apiItem) {
+      if (apiItem.space_id == null) {
+        return { id: apiItem.id, title: apiItem.title, type: 'personal', color: apiItem.color, done: apiItem.status === 'completed', dueTime: apiItem.due_time };
+      }
+      return { id: apiItem.id, title: apiItem.title, type: apiItem.kind, done: apiItem.status === 'completed', dueTime: apiItem.due_time };
+    }
+    async function fetchAllItems(from, to) {
+      const res = await fetch(`/api/items/all?from=${from}&to=${to}`);
+      if (!res.ok) return [];
+      return (await res.json()).items || [];
+    }
+    // Whether the user has actually opened All at least once this load —
+    // guards every OTHER scope's mutation from refreshing All (below) so
+    // creating/completing a Personal or Space item never triggers All's own
+    // lazy calendar init on its behalf. Without this, the exact bug the
+    // lazy-init comment above warns about comes back through the back door:
+    // any item mutation, anywhere, would call refreshAllCalendarView() and
+    // paint real .calendar-day cells into #all-cal-root for every user,
+    // breaking unscoped .calendar-day/.cal-item locators across the whole
+    // test suite (confirmed live — this exact regression happened once
+    // crossViewRefresh.all was wired to fire on every mutation).
+    let allViewVisited = false;
+    let allCal = null;
+    function getAllCal() {
+      if (!allCal) {
+        allCal = ClassyncCalendar.initMonthCalendar(allCalRoot, {
+          weekStartsOn,
+          onMonthChange: (state) => {
+            allCalMonthEl.textContent = MONTHS[state.month];
+            allCalYearEl.textContent = state.year;
+          },
+        });
+      }
+      return allCal;
+    }
+    async function refreshAllCalendarView() {
+      const cal = getAllCal();
+      const { year, month } = cal.state;
+      cal.setItems({});
+      const from = isoDate(new Date(year, month, 1));
+      const to = isoDate(new Date(year, month + 1, 0));
+      const items = await fetchAllItems(from, to);
+      const itemsByDate = {};
+      items.forEach((raw) => {
+        (itemsByDate[raw.due_date] ||= []).push(toAllCalItem(raw));
+      });
+      cal.setItems(itemsByDate);
+    }
+    document.getElementById('all-cal-prev').addEventListener('click', () => { getAllCal().prev(); refreshAllCalendarView(); });
+    document.getElementById('all-cal-next').addEventListener('click', () => { getAllCal().next(); refreshAllCalendarView(); });
+    document.getElementById('all-cal-today').addEventListener('click', () => { getAllCal().today(); refreshAllCalendarView(); });
+    document.getElementById('all-new-task-btn').addEventListener('click', () => crossViewRefresh.openModal());
+
+    const allDayPanel = document.getElementById('all-day-panel');
+    const allDayPanelTitle = document.getElementById('all-day-panel-title');
+    const allDayPanelBody = document.getElementById('all-day-panel-body');
+    let allDayPanelDate = null;
+
+    async function refreshAllDayPanel() {
+      if (!allDayPanelDate) return;
+      const items = await fetchAllItems(allDayPanelDate, allDayPanelDate);
+      allDayPanelBody.innerHTML = '';
+      if (!items.length) {
+        allDayPanelBody.innerHTML = '<p class="day-panel-empty">Nothing due this day.</p>';
+        return;
+      }
+      items.forEach((raw) => {
+        const row = document.createElement('div');
+        row.className = 'day-panel-row';
+
+        const isTask = raw.kind === 'task';
+        const check = document.createElement(isTask ? 'button' : 'span');
+        if (isTask) check.type = 'button';
+        check.className = (isTask ? 'day-panel-row-check' : 'day-panel-row-check-spacer') + (raw.status === 'completed' ? ' is-done' : '');
+        if (isTask) {
+          check.setAttribute('aria-label', raw.status === 'completed' ? 'Mark as not done' : 'Mark as done');
+          check.innerHTML = '<svg class="day-panel-row-check-icon" width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.3l3.3 3.3L13 4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        }
+        row.appendChild(check);
+
+        const body = document.createElement('div');
+        body.className = 'day-panel-row-body';
+        const titleEl = document.createElement('span');
+        titleEl.className = 'day-panel-row-title' + (raw.status === 'completed' ? ' is-done' : '');
+        titleEl.textContent = raw.title;
+        body.appendChild(titleEl);
+        const meta = [raw.space_id ? raw.space_name : 'Personal', raw.kind === 'event' ? 'Event' : (raw.category || 'Task'), raw.due_time ? raw.due_time.slice(0, 5) : null]
+          .filter(Boolean).join(' · ');
+        const metaEl = document.createElement('span');
+        metaEl.className = 'day-panel-row-meta';
+        metaEl.textContent = meta;
+        body.appendChild(metaEl);
+        row.appendChild(body);
+
+        if (isTask) {
+          check.addEventListener('click', async () => {
+            check.disabled = true;
+            const nextStatus = raw.status === 'completed' ? 'pending' : 'completed';
+            await fetch(`/api/items/${raw.id}/status`, {
+              method: 'PATCH',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ status: nextStatus }),
+            });
+            await Promise.all([refreshAllCalendarView(), refreshAllDayPanel(), refreshAllTodoView(), crossViewRefresh.personal?.()]);
+          });
+        }
+
+        allDayPanelBody.appendChild(row);
+      });
+    }
+    async function openAllDayPanel(dateStr) {
+      allDayPanelDate = dateStr;
+      allDayPanelTitle.textContent = formatSpacePanelDate(dateStr);
+      allDayPanelBody.innerHTML = '<p class="day-panel-empty">Loading…</p>';
+      allDayPanel.hidden = false;
+      await refreshAllDayPanel();
+    }
+    function closeAllDayPanel() {
+      allDayPanel.hidden = true;
+      allDayPanelDate = null;
+    }
+    document.getElementById('all-day-panel-close').addEventListener('click', closeAllDayPanel);
+    document.getElementById('all-day-panel-add').addEventListener('click', () => {
+      crossViewRefresh.openModal(null, allDayPanelDate);
+    });
+    allDayPanel.addEventListener('click', (e) => {
+      if (e.target === allDayPanel) closeAllDayPanel();
+    });
+    allCalRoot.addEventListener('click', (e) => {
+      const dayCell = e.target.closest('.calendar-day');
+      if (dayCell) openAllDayPanel(dayCell.dataset.date);
+    });
+
+    // --- All's own To Do: every task (Personal + every Space's), same
+    // Active/Overdue/Completed layout as Personal's To Do, minus its
+    // Due-now rail (that rail is fed by Personal-only /api/items/urgent —
+    // merging Space urgency into it is a bigger, separate piece of work).
+    const allTodoBody = document.getElementById('all-todo-body');
+    const allTodoTabActive = document.getElementById('all-todo-tab-active');
+    const allTodoTabOverdue = document.getElementById('all-todo-tab-overdue');
+    const allTodoTabDone = document.getElementById('all-todo-tab-done');
+    const allTodoCountActive = document.getElementById('all-todo-count-active');
+    const allTodoCountOverdue = document.getElementById('all-todo-count-overdue');
+    const allTodoCountDone = document.getElementById('all-todo-count-done');
+    let allTodoTasksCache = [];
+    let allTodoFilter = 'active';
+
+    function formatAllTodoMeta(raw, isOverdue) {
+      const parts = [];
+      if (isOverdue) parts.push('Overdue');
+      if (raw.due_date) parts.push(formatTodoDate(raw.due_date));
+      if (raw.due_time) parts.push(raw.due_time.slice(0, 5));
+      parts.push(raw.space_id ? raw.space_name : 'Personal');
+      return parts.join(' · ');
+    }
+    function buildAllTodoRow(raw) {
+      const row = document.createElement('div');
+      row.className = 'todo-row';
+
+      const isDone = raw.status === 'completed';
+      const isOverdue = raw.due_date && raw.due_date < isoDate(new Date()) && !isDone;
+
+      const check = document.createElement('button');
+      check.type = 'button';
+      check.className = 'todo-row-check' + (isDone ? ' is-done' : '');
+      check.setAttribute('aria-label', isDone ? 'Mark as not done' : 'Mark as done');
+      check.addEventListener('click', async () => {
+        check.disabled = true;
+        const nextStatus = isDone ? 'pending' : 'completed';
+        await fetch(`/api/items/${raw.id}/status`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ status: nextStatus }),
+        });
+        await Promise.all([refreshAllTodoView(), refreshAllCalendarView(), refreshAllDayPanel(), crossViewRefresh.personal?.()]);
+      });
+      row.appendChild(check);
+
+      const titleEl = document.createElement('span');
+      titleEl.className = 'todo-row-title' + (isDone ? ' is-done' : '');
+      titleEl.textContent = raw.title;
+      row.appendChild(titleEl);
+
+      const metaEl = document.createElement('span');
+      metaEl.className = 'todo-row-meta' + (isOverdue ? ' is-overdue' : '');
+      metaEl.textContent = formatAllTodoMeta(raw, isOverdue);
+      row.appendChild(metaEl);
+
+      return row;
+    }
+    function renderAllTodoBody() {
+      const todayIso = isoDate(new Date());
+      const isLate = (t) => t.due_date && t.due_date < todayIso;
+      const overdue = allTodoTasksCache.filter((t) => t.status !== 'completed' && isLate(t));
+      const active = allTodoTasksCache.filter((t) => t.status !== 'completed' && !isLate(t));
+      const done = allTodoTasksCache.filter((t) => t.status === 'completed');
+      allTodoCountActive.textContent = String(active.length).padStart(2, '0');
+      allTodoCountOverdue.textContent = String(overdue.length).padStart(2, '0');
+      allTodoCountDone.textContent = String(done.length).padStart(2, '0');
+      allTodoTabActive.classList.toggle('is-active', allTodoFilter === 'active');
+      allTodoTabOverdue.classList.toggle('is-active', allTodoFilter === 'overdue');
+      allTodoTabDone.classList.toggle('is-active', allTodoFilter === 'done');
+
+      const shown = allTodoFilter === 'done' ? done : allTodoFilter === 'overdue' ? overdue : active;
+      allTodoBody.innerHTML = '';
+      if (!shown.length) {
+        const emptyText = allTodoFilter === 'done' ? 'Nothing finished yet.'
+          : allTodoFilter === 'overdue' ? 'Nothing overdue.'
+          : 'Nothing left. The list is clear.';
+        allTodoBody.innerHTML = `<p class="todo-empty">${emptyText}</p>`;
+        return;
+      }
+      shown.forEach((raw) => allTodoBody.appendChild(buildAllTodoRow(raw)));
+    }
+    async function refreshAllTodoView() {
+      const res = await fetch('/api/items/all/todo');
+      if (!res.ok) return;
+      const { items } = await res.json();
+      allTodoTasksCache = items;
+      renderAllTodoBody();
+    }
+    allTodoTabActive.addEventListener('click', () => { allTodoFilter = 'active'; renderAllTodoBody(); });
+    allTodoTabOverdue.addEventListener('click', () => { allTodoFilter = 'overdue'; renderAllTodoBody(); });
+    allTodoTabDone.addEventListener('click', () => { allTodoFilter = 'done'; renderAllTodoBody(); });
+    document.getElementById('all-todo-new-btn').addEventListener('click', () => crossViewRefresh.openModal());
+
+    // Guarded by allViewVisited (see its own comment) — never fires All's
+    // lazy calendar/list init on behalf of a mutation from another scope.
+    async function refreshAllIfVisited() {
+      if (!allViewVisited) return;
+      await Promise.all([refreshAllCalendarView(), refreshAllTodoView(), refreshAllDayPanel()]);
+    }
+    crossViewRefresh.all = refreshAllIfVisited;
 
     function formatSpacePanelDate(dateStr) {
       const [y, m, d] = dateStr.split('-').map(Number);
@@ -2174,7 +2889,7 @@
             if (!(await confirmDialog(`Delete "${raw.title}"? This can't be undone.`))) return;
             deleteBtn.disabled = true;
             await fetch(`/api/items/${raw.id}`, { method: 'DELETE' });
-            await Promise.all([refreshSpaceCalendarView(), refreshSpaceDayPanel()]);
+            await Promise.all([refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshAllIfVisited()]);
           });
           actions.appendChild(deleteBtn);
         }
@@ -2189,7 +2904,7 @@
               headers: { 'content-type': 'application/json' },
               body: JSON.stringify({ status: nextStatus }),
             });
-            await Promise.all([refreshSpaceCalendarView(), refreshSpaceDayPanel()]);
+            await Promise.all([refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshAllIfVisited()]);
           });
         }
 
@@ -2332,7 +3047,7 @@
           return;
         }
         closeSpaceItemModal();
-        await Promise.all([refreshSpaceCalendarView(), refreshSpaceDayPanel()]);
+        await Promise.all([refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshAllIfVisited()]);
       } finally {
         submitBtn.disabled = false;
       }
@@ -2344,12 +3059,16 @@
       if (!spaceDayPanel.hidden) { closeSpaceDayPanel(); return; }
     });
 
-    // Restore a Space scope saved before a refresh — overrides initApp's own
-    // restoration (which only acts on a saved Personal sub-view) since this
-    // runs after it in the bootstrap sequence. Falls through to whatever
-    // initApp already showed if the saved Space is gone (left, removed, or
-    // deactivated) — no error, just the same "no longer applies" fallback
-    // loadSpaces()'s own space list already implies.
+    // Restore a Space/All scope saved before a refresh — overrides initApp's
+    // own restoration (which only acts on a saved Personal sub-view) since
+    // this runs after it in the bootstrap sequence. Falls through to
+    // whatever initApp already showed if the saved Space is gone (left,
+    // removed, or deactivated) — no error, just the same "no longer
+    // applies" fallback loadSpaces()'s own space list already implies.
+    //
+    // openingView only ever applies when there's no saved view at all —
+    // once anything has been saved, that's a more specific, more recent
+    // signal of what the user actually wants than the login-time default.
     const savedView = loadViewState();
     if (savedView && savedView.scope === 'space') {
       const savedSpace = spaces.find((s) => s.id === savedView.spaceId);
@@ -2357,10 +3076,16 @@
         selectSpace(savedSpace);
         if (savedView.view === 'members') showMembersView();
       }
+    } else if (savedView && savedView.scope === 'all') {
+      selectAll();
+      if (savedView.view === 'todo') await showAllTodo();
+      else if (savedView.view === 'notes') await showAllNotes();
+    } else if (!savedView && openingView === 'all') {
+      selectAll();
     }
   }
 
-  const res = await fetch('/api/me');
+  const res = await fetch('/api/account');
   if (res.status === 401) {
     window.location.href = '/signin.html?next=app';
   } else if (res.ok) {
@@ -2370,8 +3095,12 @@
     document.getElementById('user-name').innerHTML = name;
     document.getElementById('user-initials').textContent = initials;
     document.getElementById('user-initials-2').textContent = initials;
-    await initApp();
-    await initSpaceSwitcher(me.id);
+    const weekStartsOn = me.weekStartsOn === 'monday' ? 1 : 0;
+    const { showSettings } = initSettings();
+    await initApp(weekStartsOn);
+    await initSpaceSwitcher(me.id, weekStartsOn, me.openingView);
+    const savedView = loadViewState();
+    if (savedView && savedView.scope === 'settings') showSettings();
   }
 
   document.getElementById('sign-out').addEventListener('click', async () => {
@@ -2380,12 +3109,31 @@
   });
 
   const rail = document.getElementById('rail');
-  if (window.matchMedia('(max-width: 760px)').matches) {
+  function isMobileRail() {
+    return window.matchMedia('(max-width: 760px)').matches;
+  }
+  if (isMobileRail()) {
     rail.classList.add('is-collapsed');
   }
   document.getElementById('rail-toggle').addEventListener('click', () => {
     rail.classList.toggle('is-collapsed');
   });
+
+  // On mobile the rail is a drawer, not a permanent sidebar: picking any
+  // destination inside it (a nav item, a scope, Settings, Sign out) closes
+  // it, and so does a tap anywhere outside it — it shouldn't just sit open
+  // over the content until the hamburger is tapped again.
+  rail.addEventListener('click', (e) => {
+    if (!isMobileRail()) return;
+    const btn = e.target.closest('button');
+    if (!btn || btn.id === 'scope-switcher-btn') return;
+    rail.classList.add('is-collapsed');
+  });
+  document.addEventListener('click', (e) => {
+    if (!isMobileRail() || rail.classList.contains('is-collapsed')) return;
+    if (rail.contains(e.target) || e.target.closest('#rail-toggle')) return;
+    rail.classList.add('is-collapsed');
+  }, true);
 </script>
 </body>
 </html>
