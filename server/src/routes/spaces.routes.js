@@ -128,6 +128,31 @@ router.post('/api/spaces/:id/members/:userId/promote', requireLogin, async (req,
   }
 });
 
+router.post('/api/spaces/:id/members/:userId/demote', requireLogin, async (req, res, next) => {
+  try {
+    const result = await SpaceRepo.demoteMember({
+      spaceId: req.params.id,
+      actingUserId: req.user.id,
+      targetUserId: Number(req.params.userId),
+    });
+    if (result.error === 'forbidden') {
+      return res.status(403).json({ error: 'Only an Organizer can demote another Organizer.' });
+    }
+    if (result.error === 'cannot_target_self') {
+      return res.status(400).json({ error: 'You can\'t change your own role here.' });
+    }
+    if (result.error === 'not_found') {
+      return res.status(404).json({ error: 'That person isn\'t a member of this Space.' });
+    }
+    if (result.error === 'not_organizer') {
+      return res.status(400).json({ error: 'They\'re not an Organizer.' });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.delete('/api/spaces/:id/members/:userId', requireLogin, async (req, res, next) => {
   try {
     const result = await SpaceRepo.removeMember({

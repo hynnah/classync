@@ -107,6 +107,30 @@ describe('/api/spaces', () => {
     expect([400, 403]).toContain(remove.status);
   });
 
+  test('demote: happy path, self-demote is rejected, and a plain member gets 403', async () => {
+    const { agent: orgAgent, userId: orgUserId } = await loggedInAgent('demote-owner');
+    const created = await orgAgent.post('/api/spaces').send({ name: 'Demote route test' });
+    createdSpaceIds.push(created.body.space.id);
+    const spaceId = created.body.space.id;
+
+    const { agent: coOrgAgent, userId: coOrgUserId } = await loggedInAgent('demote-coorg');
+    await coOrgAgent.post('/api/spaces/join').send({ joinCode: created.body.space.joinCode });
+    await orgAgent.post(`/api/spaces/${spaceId}/members/${coOrgUserId}/promote`);
+
+    const selfDemote = await orgAgent.post(`/api/spaces/${spaceId}/members/${orgUserId}/demote`);
+    expect(selfDemote.status).toBe(400);
+
+    const demote = await orgAgent.post(`/api/spaces/${spaceId}/members/${coOrgUserId}/demote`);
+    expect(demote.status).toBe(200);
+    const members = await orgAgent.get(`/api/spaces/${spaceId}/members`);
+    expect(members.body.members.find((m) => m.id === coOrgUserId).role).toBe('member');
+
+    const { agent: plainAgent } = await loggedInAgent('demote-plain');
+    await plainAgent.post('/api/spaces/join').send({ joinCode: created.body.space.joinCode });
+    const forbidden = await plainAgent.post(`/api/spaces/${spaceId}/members/${orgUserId}/demote`);
+    expect(forbidden.status).toBe(403);
+  });
+
   test('leaving as a sole organizer with other members present is blocked with a 400', async () => {
     const { agent: orgAgent } = await loggedInAgent('leave-403-owner');
     const created = await orgAgent.post('/api/spaces').send({ name: 'Leave 400 test' });

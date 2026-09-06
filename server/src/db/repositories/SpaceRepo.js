@@ -69,6 +69,16 @@ async function createSpace({ name, creatorUserId }) {
 // "space doesn't exist" are both routine, expected outcomes a caller needs to
 // tell apart to answer the user (FR-U3's "real error on an invalid/expired
 // code"), not exceptional ones.
+//
+// Also backfills a pending assignment for every existing "open to all" item
+// in the Space (FR-M3's "open to the Space" category means every member,
+// not just the ones present when it was created) — without this, a joiner
+// has no item_assignments row for items opened before they arrived, and
+// listForSpace's assignment-gated join makes those invisible to them
+// entirely, not just unmarked. Items assigned to specific other members
+// (not open-to-all) are correctly left alone; those were never meant to be
+// visible Space-wide. Both inserts share one transaction so a join can't
+// half-succeed (membership without the backfill, or vice versa).
 async function joinSpace({ joinCode, userId }) {
   const space = await findByJoinCode(joinCode);
   if (!space || !space.is_active) {
@@ -78,10 +88,25 @@ async function joinSpace({ joinCode, userId }) {
   if (existing) {
     return { error: 'already_member', space };
   }
-  await getPool().query(
-    "INSERT INTO space_members (space_id, user_id, role) VALUES (?, ?, 'member')",
-    [space.id, userId]
-  );
+  const conn = await getPool().getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query(
+      "INSERT INTO space_members (space_id, user_id, role) VALUES (?, ?, 'member')",
+      [space.id, userId]
+    );
+    await conn.query(
+      `INSERT IGNORE INTO item_assignments (item_id, user_id, status)
+       SELECT id, ?, 'pending' FROM items WHERE space_id = ? AND is_open_to_all = TRUE`,
+      [userId, space.id]
+    );
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
   return { space };
 }
 
@@ -133,6 +158,34 @@ async function promoteMember({ spaceId, actingUserId, targetUserId }) {
   }
   await getPool().query(
     "UPDATE space_members SET role = 'organizer' WHERE space_id = ? AND user_id = ?",
+    [spaceId, targetUserId]
+  );
+  return { ok: true };
+}
+
+// Demoting yourself isn't a route this exposes — same symmetry as
+// removeMember's use_leave_instead: self-targeting goes through a dedicated
+// flow, not this one. Because of that, an acting Organizer always remains
+// an Organizer after demoting someone else, so this can never take a Space
+// to zero Organizers the way leaveSpace/deleteAccount have to guard
+// against — no lock or FR-O5-style check needed here.
+async function demoteMember({ spaceId, actingUserId, targetUserId }) {
+  const acting = await getMembership(spaceId, actingUserId);
+  if (!acting || acting.role !== 'organizer') {
+    return { error: 'forbidden' };
+  }
+  if (targetUserId === actingUserId) {
+    return { error: 'cannot_target_self' };
+  }
+  const target = await getMembership(spaceId, targetUserId);
+  if (!target) {
+    return { error: 'not_found' };
+  }
+  if (target.role !== 'organizer') {
+    return { error: 'not_organizer' };
+  }
+  await getPool().query(
+    "UPDATE space_members SET role = 'member' WHERE space_id = ? AND user_id = ?",
     [spaceId, targetUserId]
   );
   return { ok: true };
@@ -235,6 +288,7 @@ module.exports = {
     listMembers,
     rename,
     promoteMember,
+    demoteMember,
     removeMember,
     leaveSpace,
   },

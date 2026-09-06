@@ -1,6 +1,7 @@
 const { getPool } = require('../../server/src/db/pool');
 const { UserRepo } = require('../../server/src/db/repositories/UserRepo');
 const { SpaceRepo } = require('../../server/src/db/repositories/SpaceRepo');
+const { ItemRepo } = require('../../server/src/db/repositories/ItemRepo');
 
 afterAll(async () => {
   await getPool().end();
@@ -83,6 +84,35 @@ describe('SpaceRepo', () => {
       );
       expect(rows[0].n).toBe(1);
     });
+
+    // Without this backfill, a joiner has no item_assignments row for items
+    // opened before they arrived, and listForSpace's assignment-gated join
+    // makes those invisible to them entirely — not just unmarked, actually
+    // absent from their calendar. FR-M3's "open to the Space" category means
+    // every member, not just whoever was there when it was created.
+    test('backfills a pending assignment for pre-existing open-to-all items, but not ones assigned to specific other members', async () => {
+      const owner = await makeUser('join-backfill-owner');
+      const joiner = await makeUser('join-backfill-joiner');
+      const space = await SpaceRepo.createSpace({ name: 'Join backfill test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+
+      const openItem = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'event', title: 'Open to all, pre-existing',
+        description: null, category: null, dueDate: '2026-10-01', dueTime: null, color: null,
+        isOpenToAll: true, assigneeUserIds: undefined,
+      });
+      const targetedItem = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'task', title: 'Assigned only to owner',
+        description: null, category: null, dueDate: '2026-10-02', dueTime: null, color: null,
+        isOpenToAll: false, assigneeUserIds: [owner.id],
+      });
+
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: joiner.id });
+
+      const visible = await ItemRepo.listForSpace({ spaceId: space.id, userId: joiner.id, from: '2026-10-01', to: '2026-10-31' });
+      expect(visible.map((i) => i.id)).toContain(openItem.id);
+      expect(visible.map((i) => i.id)).not.toContain(targetedItem.id);
+    });
   });
 
   describe('rename', () => {
@@ -145,6 +175,63 @@ describe('SpaceRepo', () => {
 
       const result = await SpaceRepo.promoteMember({ spaceId: space.id, actingUserId: owner.id, targetUserId: owner.id });
       expect(result.error).toBe('already_organizer');
+    });
+  });
+
+  describe('demoteMember', () => {
+    test('an organizer can demote a co-Organizer back to Member', async () => {
+      const owner = await makeUser('demote-owner');
+      const coOrg = await makeUser('demote-coorg');
+      const space = await SpaceRepo.createSpace({ name: 'Demote test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: coOrg.id });
+      await SpaceRepo.promoteMember({ spaceId: space.id, actingUserId: owner.id, targetUserId: coOrg.id });
+
+      const result = await SpaceRepo.demoteMember({ spaceId: space.id, actingUserId: owner.id, targetUserId: coOrg.id });
+      expect(result.ok).toBe(true);
+
+      const membership = await SpaceRepo.getMembership(space.id, coOrg.id);
+      expect(membership.role).toBe('member');
+    });
+
+    test('a plain member cannot demote anyone', async () => {
+      const owner = await makeUser('demote-forbid-owner');
+      const coOrg = await makeUser('demote-forbid-coorg');
+      const plain = await makeUser('demote-forbid-plain');
+      const space = await SpaceRepo.createSpace({ name: 'Demote forbid test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: coOrg.id });
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: plain.id });
+      await SpaceRepo.promoteMember({ spaceId: space.id, actingUserId: owner.id, targetUserId: coOrg.id });
+
+      const result = await SpaceRepo.demoteMember({ spaceId: space.id, actingUserId: plain.id, targetUserId: coOrg.id });
+      expect(result.error).toBe('forbidden');
+    });
+
+    test('an organizer cannot demote themself this way', async () => {
+      const owner = await makeUser('demote-self-owner');
+      const coOrg = await makeUser('demote-self-coorg');
+      const space = await SpaceRepo.createSpace({ name: 'Demote self test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: coOrg.id });
+      await SpaceRepo.promoteMember({ spaceId: space.id, actingUserId: owner.id, targetUserId: coOrg.id });
+
+      const result = await SpaceRepo.demoteMember({ spaceId: space.id, actingUserId: owner.id, targetUserId: owner.id });
+      expect(result.error).toBe('cannot_target_self');
+
+      const membership = await SpaceRepo.getMembership(space.id, owner.id);
+      expect(membership.role).toBe('organizer');
+    });
+
+    test('demoting someone who is already a plain Member is a no-op error, not a silent success', async () => {
+      const owner = await makeUser('demote-noop-owner');
+      const member = await makeUser('demote-noop-member');
+      const space = await SpaceRepo.createSpace({ name: 'Demote noop test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: member.id });
+
+      const result = await SpaceRepo.demoteMember({ spaceId: space.id, actingUserId: owner.id, targetUserId: member.id });
+      expect(result.error).toBe('not_organizer');
     });
   });
 
