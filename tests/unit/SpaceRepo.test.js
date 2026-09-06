@@ -271,6 +271,35 @@ describe('SpaceRepo', () => {
       const result = await SpaceRepo.removeMember({ spaceId: space.id, actingUserId: owner.id, targetUserId: owner.id });
       expect(result.error).toBe('use_leave_instead');
     });
+
+    // Without this cleanup, a removed member's item_assignments row on this
+    // Space's items outlives their membership — invisible everywhere until
+    // the unified All-calendar (ItemRepo.listAllScoped) merges across every
+    // Space a user's assignments touch, which would otherwise surface it as
+    // a ghost item from a Space they no longer belong to.
+    test('removing a member deletes their assignment rows on this Space\'s items, not just their membership', async () => {
+      const owner = await makeUser('remove-cleanup-owner');
+      const member = await makeUser('remove-cleanup-member');
+      const space = await SpaceRepo.createSpace({ name: 'Remove cleanup test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: member.id });
+      const item = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'event', title: 'Remove cleanup item',
+        dueDate: '2026-10-05', isOpenToAll: true,
+      });
+
+      const [before] = await getPool().query(
+        'SELECT * FROM item_assignments WHERE item_id = ? AND user_id = ?', [item.id, member.id]
+      );
+      expect(before).toHaveLength(1);
+
+      await SpaceRepo.removeMember({ spaceId: space.id, actingUserId: owner.id, targetUserId: member.id });
+
+      const [after] = await getPool().query(
+        'SELECT * FROM item_assignments WHERE item_id = ? AND user_id = ?', [item.id, member.id]
+      );
+      expect(after).toHaveLength(0);
+    });
   });
 
   describe('leaveSpace (FR-O5 / FR-O6)', () => {
@@ -352,6 +381,25 @@ describe('SpaceRepo', () => {
       expect(!!spaceRow.is_active).toBe(true);
       const remaining = await SpaceRepo.getMembership(space.id, member.id);
       expect(remaining.role).toBe('organizer');
+    });
+
+    test('leaving deletes the leaver\'s assignment rows on that Space\'s items, not just their membership', async () => {
+      const owner = await makeUser('leave-cleanup-owner');
+      const member = await makeUser('leave-cleanup-member');
+      const space = await SpaceRepo.createSpace({ name: 'Leave cleanup test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: member.id });
+      const item = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'task', title: 'Leave cleanup item',
+        dueDate: '2026-10-06', isOpenToAll: true,
+      });
+
+      await SpaceRepo.leaveSpace({ spaceId: space.id, userId: member.id });
+
+      const [rows] = await getPool().query(
+        'SELECT * FROM item_assignments WHERE item_id = ? AND user_id = ?', [item.id, member.id]
+      );
+      expect(rows).toHaveLength(0);
     });
 
     test('leaving a Space you do not belong to reports not_a_member', async () => {

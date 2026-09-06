@@ -324,3 +324,105 @@ describe('/api/items/todo — the To Do view', () => {
     expect(ids).not.toContain(othersNote.body.item.id);
   });
 });
+
+describe('/api/items/all — the unified All-calendar (FR-M1)', () => {
+  const app = createApp();
+  const createdIds = [];
+  const createdSpaceIds = [];
+
+  afterAll(async () => {
+    if (createdIds.length) {
+      await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+    }
+    if (createdSpaceIds.length) {
+      await getPool().query('DELETE FROM spaces WHERE id IN (?)', [createdSpaceIds]);
+    }
+    await getPool().query("DELETE FROM users WHERE email LIKE 'itemsall-%@example.com'");
+  });
+
+  async function loggedInAgent(label) {
+    const email = `itemsall-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+    const agent = request.agent(app);
+    await agent.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+    return agent;
+  }
+
+  test('requires login and validates from/to', async () => {
+    const anon = await request(app).get('/api/items/all?from=2026-01-01&to=2026-01-31');
+    expect(anon.status).toBe(401);
+
+    const agent = await loggedInAgent('validate');
+    const badRange = await agent.get('/api/items/all?from=nope&to=2026-01-31');
+    expect(badRange.status).toBe(400);
+  });
+
+  test('merges Personal items with every joined Space\'s open-to-all items', async () => {
+    const agent = await loggedInAgent('merge');
+    const personal = await agent.post('/api/items').send({ kind: 'task', title: 'All-route personal', dueDate: '2026-08-10' });
+    createdIds.push(personal.body.item.id);
+
+    const created = await agent.post('/api/spaces').send({ name: 'All-route space' });
+    createdSpaceIds.push(created.body.space.id);
+    const spaceItem = await agent.post('/api/items').send({
+      spaceId: created.body.space.id, kind: 'event', title: 'All-route space event',
+      dueDate: '2026-08-11', isOpenToAll: true,
+    });
+
+    const res = await agent.get('/api/items/all?from=2026-08-01&to=2026-08-31');
+    expect(res.status).toBe(200);
+    const ids = res.body.items.map((i) => i.id);
+    expect(ids).toContain(personal.body.item.id);
+    expect(ids).toContain(spaceItem.body.item.id);
+  });
+});
+
+describe('/api/items/all/todo — the merged All To Do list (FR-M1)', () => {
+  const app = createApp();
+  const createdIds = [];
+  const createdSpaceIds = [];
+
+  afterAll(async () => {
+    if (createdIds.length) {
+      await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+    }
+    if (createdSpaceIds.length) {
+      await getPool().query('DELETE FROM spaces WHERE id IN (?)', [createdSpaceIds]);
+    }
+    await getPool().query("DELETE FROM users WHERE email LIKE 'itemsalltodo-%@example.com'");
+  });
+
+  async function loggedInAgent(label) {
+    const email = `itemsalltodo-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+    const agent = request.agent(app);
+    await agent.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+    return agent;
+  }
+
+  test('requires login', async () => {
+    const anon = await request(app).get('/api/items/all/todo');
+    expect(anon.status).toBe(401);
+  });
+
+  test('merges an undated Personal task with a Space task, excludes a Space event', async () => {
+    const agent = await loggedInAgent('merge');
+    const personal = await agent.post('/api/items').send({ kind: 'task', title: 'All-todo-route personal undated' });
+    createdIds.push(personal.body.item.id);
+
+    const created = await agent.post('/api/spaces').send({ name: 'All-todo-route space' });
+    createdSpaceIds.push(created.body.space.id);
+    const spaceTask = await agent.post('/api/items').send({
+      spaceId: created.body.space.id, kind: 'task', title: 'All-todo-route space task', isOpenToAll: true,
+    });
+    const spaceEvent = await agent.post('/api/items').send({
+      spaceId: created.body.space.id, kind: 'event', title: 'All-todo-route space event',
+      dueDate: '2026-08-12', isOpenToAll: true,
+    });
+
+    const res = await agent.get('/api/items/all/todo');
+    expect(res.status).toBe(200);
+    const ids = res.body.items.map((i) => i.id);
+    expect(ids).toContain(personal.body.item.id);
+    expect(ids).toContain(spaceTask.body.item.id);
+    expect(ids).not.toContain(spaceEvent.body.item.id);
+  });
+});

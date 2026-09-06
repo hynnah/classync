@@ -207,6 +207,16 @@ async function removeMember({ spaceId, actingUserId, targetUserId }) {
     'DELETE FROM space_members WHERE space_id = ? AND user_id = ?',
     [spaceId, targetUserId]
   );
+  // Without this, a removed member keeps a stale assignment row on this
+  // Space's items forever — invisible everywhere today, but exactly what
+  // the unified All-calendar (listAllScoped) would otherwise surface as a
+  // ghost item from a Space they no longer belong to.
+  await getPool().query(
+    `DELETE item_assignments FROM item_assignments
+     JOIN items ON items.id = item_assignments.item_id
+     WHERE items.space_id = ? AND item_assignments.user_id = ?`,
+    [spaceId, targetUserId]
+  );
   return { ok: true };
 }
 
@@ -258,6 +268,15 @@ async function leaveSpace({ spaceId, userId }) {
     }
     await conn.query(
       'DELETE FROM space_members WHERE space_id = ? AND user_id = ?',
+      [spaceId, userId]
+    );
+    // Same reason removeMember does this: a stale assignment row would
+    // otherwise outlive the membership and show up as a ghost item in the
+    // unified All-calendar.
+    await conn.query(
+      `DELETE item_assignments FROM item_assignments
+       JOIN items ON items.id = item_assignments.item_id
+       WHERE items.space_id = ? AND item_assignments.user_id = ?`,
       [spaceId, userId]
     );
     const [[{ remaining }]] = await conn.query(

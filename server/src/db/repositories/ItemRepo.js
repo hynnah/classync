@@ -6,6 +6,16 @@ const SELECT_WITH_STATUS = `
   JOIN item_assignments ON item_assignments.item_id = items.id
 `;
 
+// Only the unified All-scope queries need to say *which* Space an item
+// belongs to — Personal-only and single-Space queries already have that
+// context implicit in which view/endpoint the caller used.
+const SELECT_WITH_STATUS_AND_SPACE = `
+  SELECT items.*, item_assignments.status, spaces.name AS space_name
+  FROM items
+  JOIN item_assignments ON item_assignments.item_id = items.id
+  LEFT JOIN spaces ON spaces.id = items.space_id
+`;
+
 async function findById(id) {
   const [rows] = await getPool().query('SELECT * FROM items WHERE id = ?', [id]);
   return rows[0] || null;
@@ -95,8 +105,8 @@ async function listAllForUser(userId) {
 }
 
 // A member sees a Space item only once they have an assignment row on it —
-// see create()'s note on why a member who joins after an "open to all" item
-// was created won't see that particular item.
+// joinSpace backfills one for every existing "open to all" item so a late
+// joiner isn't missing items created before they arrived (see its own note).
 async function listForSpace({ spaceId, userId, from, to }) {
   const [rows] = await getPool().query(
     `${SELECT_WITH_STATUS}
@@ -104,6 +114,41 @@ async function listForSpace({ spaceId, userId, from, to }) {
        AND items.due_date BETWEEN ? AND ?
      ORDER BY items.due_date ASC, items.due_time ASC`,
     [spaceId, userId, from, to]
+  );
+  return rows;
+}
+
+// FR-M1's unified "All" calendar: every Space this user currently belongs to,
+// merged with their own Personal items, in one date-ranged list. The
+// space_members membership check is a defense-in-depth alongside the
+// assignment-row check — removeMember/leaveSpace also clean up a departed
+// member's item_assignments rows directly, but this guards against ever
+// surfacing a stale one if that cleanup were ever missed on some path.
+async function listAllScoped({ userId, from, to }) {
+  const [rows] = await getPool().query(
+    `${SELECT_WITH_STATUS_AND_SPACE}
+     WHERE item_assignments.user_id = ?
+       AND (items.space_id IS NULL OR items.space_id IN (SELECT space_id FROM space_members WHERE user_id = ?))
+       AND items.due_date BETWEEN ? AND ?
+     ORDER BY items.due_date ASC, items.due_time ASC`,
+    [userId, userId, from, to]
+  );
+  return rows;
+}
+
+// Backs All's own To Do list — every task (not event; events never get a
+// done state) the user can see, personal or across every Space they belong
+// to, regardless of due date (same reason listAllForUser exists for
+// Personal's To Do: BETWEEN never matches a NULL due_date, so an undated
+// task needs a date-range-free query to ever surface at all).
+async function listAllScopedTodo(userId) {
+  const [rows] = await getPool().query(
+    `${SELECT_WITH_STATUS_AND_SPACE}
+     WHERE item_assignments.user_id = ?
+       AND items.kind = 'task'
+       AND (items.space_id IS NULL OR items.space_id IN (SELECT space_id FROM space_members WHERE user_id = ?))
+     ORDER BY items.due_date IS NULL, items.due_date ASC, items.due_time ASC`,
+    [userId, userId]
   );
   return rows;
 }
@@ -193,5 +238,5 @@ async function remove({ itemId, userId }) {
 }
 
 module.exports = {
-  ItemRepo: { findById, findForUser, create, listForUser, listForSpace, listAllForUser, listUrgentForUser, setStatus, update, remove },
+  ItemRepo: { findById, findForUser, create, listForUser, listForSpace, listAllForUser, listAllScoped, listAllScopedTodo, listUrgentForUser, setStatus, update, remove },
 };

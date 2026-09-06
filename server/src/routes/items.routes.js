@@ -93,6 +93,28 @@ router.get('/api/items/todo', requireLogin, async (req, res, next) => {
   }
 });
 
+router.get('/api/items/all', requireLogin, async (req, res, next) => {
+  try {
+    const { from, to } = req.query;
+    if (!DATE_RE.test(from || '') || !DATE_RE.test(to || '')) {
+      return res.status(400).json({ error: 'from and to (YYYY-MM-DD) are required.' });
+    }
+    const items = await ItemRepo.listAllScoped({ userId: req.user.id, from, to });
+    res.json({ items });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/api/items/all/todo', requireLogin, async (req, res, next) => {
+  try {
+    const items = await ItemRepo.listAllScopedTodo(req.user.id);
+    res.json({ items });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/api/items/urgent', requireLogin, async (req, res, next) => {
   try {
     const { dueToday, dueWeek } = await ItemRepo.listUrgentForUser(req.user.id);

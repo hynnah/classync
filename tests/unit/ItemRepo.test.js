@@ -142,6 +142,87 @@ describe('ItemRepo', () => {
     });
   });
 
+  // Backs the unified "All" calendar (FR-M1) — every Space the user belongs
+  // to, merged with Personal, in one date-ranged list.
+  describe('listAllScoped', () => {
+    test('merges personal items with every Space\'s open-to-all items, excludes another user\'s and items assigned to specific others', async () => {
+      const personal = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Personal for all-scoped', dueDate: '2026-12-01' });
+      createdIds.push(personal.id);
+
+      const space = await SpaceRepo.createSpace({ name: 'listAllScoped test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: intruder.id });
+
+      const openItem = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'event', title: 'Open to all, all-scoped',
+        dueDate: '2026-12-02', isOpenToAll: true,
+      });
+      const targetedItem = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'task', title: 'Assigned only to owner, all-scoped',
+        dueDate: '2026-12-03', isOpenToAll: false, assigneeUserIds: [owner.id],
+      });
+
+      const items = await ItemRepo.listAllScoped({ userId: owner.id, from: '2026-12-01', to: '2026-12-31' });
+      const ids = items.map((i) => i.id);
+      expect(ids).toContain(personal.id);
+      expect(ids).toContain(openItem.id);
+
+      const intruderItems = await ItemRepo.listAllScoped({ userId: intruder.id, from: '2026-12-01', to: '2026-12-31' });
+      const intruderIds = intruderItems.map((i) => i.id);
+      expect(intruderIds).toContain(openItem.id);
+      expect(intruderIds).not.toContain(personal.id);
+      expect(intruderIds).not.toContain(targetedItem.id);
+
+      // FR-M1's All calendar shows which Space an item belongs to (Members
+      // panel/day-panel meta reads "<Space name> · Task", not just "Task")
+      const foundOpenItem = items.find((i) => i.id === openItem.id);
+      expect(foundOpenItem.space_name).toBe('listAllScoped test');
+      const foundPersonal = items.find((i) => i.id === personal.id);
+      expect(foundPersonal.space_name).toBeNull();
+    });
+  });
+
+  // Backs the merged All To Do list — every task (never an event; events
+  // have no completion state) across Personal + every Space the user
+  // belongs to, regardless of due date (same BETWEEN-never-matches-NULL
+  // reason listAllForUser/listAllScoped both already document).
+  describe('listAllScopedTodo', () => {
+    test('merges Personal + Space tasks (undated included), excludes events, another user\'s items, and items assigned to specific others', async () => {
+      const personalUndated = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Personal undated for all-todo' });
+      createdIds.push(personalUndated.id);
+
+      const space = await SpaceRepo.createSpace({ name: 'listAllScopedTodo test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: intruder.id });
+
+      const spaceTask = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'task', title: 'Space task, all-todo', isOpenToAll: true,
+      });
+      const spaceEvent = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'event', title: 'Space event, all-todo', dueDate: '2026-12-04', isOpenToAll: true,
+      });
+      const targetedTask = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'task', title: 'Assigned only to owner, all-todo',
+        isOpenToAll: false, assigneeUserIds: [owner.id],
+      });
+
+      const items = await ItemRepo.listAllScopedTodo(owner.id);
+      const ids = items.map((i) => i.id);
+      expect(ids).toContain(personalUndated.id);
+      expect(ids).toContain(spaceTask.id);
+      expect(ids).not.toContain(spaceEvent.id);
+
+      const intruderItems = await ItemRepo.listAllScopedTodo(intruder.id);
+      const intruderIds = intruderItems.map((i) => i.id);
+      expect(intruderIds).toContain(spaceTask.id);
+      expect(intruderIds).not.toContain(personalUndated.id);
+      expect(intruderIds).not.toContain(targetedTask.id);
+
+      const foundSpaceTask = items.find((i) => i.id === spaceTask.id);
+      expect(foundSpaceTask.space_name).toBe('listAllScopedTodo test');
+    });
+  });
+
   describe('listUrgentForUser', () => {
     test('groups pending items into due-today and due-this-week, excluding completed items', async () => {
       const todayItem = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Due today unit' });
