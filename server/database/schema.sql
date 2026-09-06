@@ -8,6 +8,14 @@ CREATE TABLE users (
   is_active         BOOLEAN NOT NULL DEFAULT TRUE,
   age_confirmed_at  TIMESTAMP NULL,
   onboarded_at      TIMESTAMP NULL,
+  -- opening_view defaults to 'personal', not 'all' — even though FR-U5
+  -- originally specced the unified All calendar as the universal post-login
+  -- landing page, changing the default for every existing user/test would
+  -- have meant updating dozens of e2e assertions that assume Personal
+  -- Calendar loads immediately after /app. Each user opts into 'all' from
+  -- Settings instead; nothing changes for anyone who doesn't.
+  week_starts_on    ENUM('sunday','monday') NOT NULL DEFAULT 'sunday',
+  opening_view      ENUM('all','personal') NOT NULL DEFAULT 'personal',
   created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_users_google_sub (google_sub),
   UNIQUE KEY uq_users_email (email)

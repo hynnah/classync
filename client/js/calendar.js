@@ -6,8 +6,15 @@
     return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   }
 
-  function buildCells(year, month) {
-    const startOffset = new Date(year, month, 1).getDay();
+  // weekStartsOn: 0 for Sunday (default), 1 for Monday — per-user preference
+  // (Settings' "Week starts on"). Shifts both the day-of-week header labels
+  // and the leading-blank-cell offset by the same amount so they stay in sync.
+  function dowLabels(weekStartsOn) {
+    return weekStartsOn === 1 ? [...DOW.slice(1), DOW[0]] : DOW;
+  }
+
+  function buildCells(year, month, weekStartsOn = 0) {
+    const startOffset = (new Date(year, month, 1).getDay() - weekStartsOn + 7) % 7;
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrevMonth = new Date(year, month, 0).getDate();
     const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
@@ -55,12 +62,12 @@
     return el;
   }
 
-  function paint(root, { year, month, itemsByDate, todayISO }) {
+  function paint(root, { year, month, itemsByDate, todayISO, weekStartsOn = 0 }) {
     root.innerHTML = '';
 
     const dowRow = document.createElement('div');
     dowRow.className = 'calendar-dow-row';
-    DOW.forEach((label) => {
+    dowLabels(weekStartsOn).forEach((label) => {
       const span = document.createElement('span');
       span.textContent = label;
       dowRow.appendChild(span);
@@ -70,7 +77,7 @@
     const grid = document.createElement('div');
     grid.className = 'calendar-days';
 
-    buildCells(year, month).forEach((cell) => {
+    buildCells(year, month, weekStartsOn).forEach((cell) => {
       const iso = isoDate(cell.y, cell.m, cell.d);
       const isToday = iso === todayISO;
 
@@ -99,7 +106,7 @@
     root.appendChild(grid);
   }
 
-  function initMonthCalendar(root, { itemsByDate = {}, year, month, onMonthChange } = {}) {
+  function initMonthCalendar(root, { itemsByDate = {}, year, month, onMonthChange, weekStartsOn = 0 } = {}) {
     const now = new Date();
     const state = {
       year: year ?? now.getFullYear(),
@@ -108,7 +115,7 @@
     const todayISO = isoDate(now.getFullYear(), now.getMonth(), now.getDate());
 
     function repaint() {
-      paint(root, { ...state, itemsByDate, todayISO });
+      paint(root, { ...state, itemsByDate, todayISO, weekStartsOn });
       if (onMonthChange) onMonthChange({ ...state });
     }
 

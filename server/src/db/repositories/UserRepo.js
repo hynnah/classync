@@ -45,6 +45,14 @@ async function markOnboarded(userId) {
   return findById(userId);
 }
 
+async function updatePreferences(userId, { weekStartsOn, openingView }) {
+  await getPool().query(
+    'UPDATE users SET week_starts_on = ?, opening_view = ? WHERE id = ?',
+    [weekStartsOn, openingView, userId]
+  );
+  return findById(userId);
+}
+
 // Mirrors leaveSpace's own rule (FR-O5): deleting your account can't leave a
 // Space with Members but no Organizer, so it's blocked wherever you're the
 // sole Organizer and other Members remain — same fix-it-first message as
@@ -106,4 +114,4 @@ async function deleteAccount(userId) {
   }
 }
 
-module.exports = { UserRepo: { findByGoogleSub, findById, create, upsertFromGoogle, markOnboarded, deleteAccount } };
+module.exports = { UserRepo: { findByGoogleSub, findById, create, upsertFromGoogle, markOnboarded, updatePreferences, deleteAccount } };

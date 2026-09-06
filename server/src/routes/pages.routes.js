@@ -48,16 +48,12 @@ router.get('/firstrun.html', async (req, res, next) => {
   }
 });
 
-router.get('/settings', async (req, res, next) => {
-  try {
-    const user = await loadSessionUser(req);
-    if (!user) {
-      return res.redirect('/signin.html');
-    }
-    res.sendFile(path.join(CLIENT_DIR, 'settings.html'));
-  } catch (err) {
-    next(err);
-  }
+// Settings is a view inside app.html now (reachable via the sidebar's
+// Settings button), not its own page — this only exists so an old bookmark
+// or link still lands somewhere sensible. /app's own auth check handles a
+// signed-out visitor from here.
+router.get('/settings', (req, res) => {
+  res.redirect('/app');
 });
 
 router.get('/continue-solo', async (req, res, next) => {

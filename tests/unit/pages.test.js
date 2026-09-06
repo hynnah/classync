@@ -35,6 +35,15 @@ describe('GET /app and /firstrun.html', () => {
     expect(res.headers.location).toBe('/signin.html?next=firstrun');
   });
 
+  // Settings is a view inside app.html now, not its own page — /settings
+  // just redirects to /app, whose own auth check handles a signed-out
+  // visitor from there (a real browser follows both hops in one go).
+  test('/settings redirects to /app', async () => {
+    const res = await request(app).get('/settings');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/app');
+  });
+
   test('a brand-new (not-yet-onboarded) signed-in user hitting /app is bounced to first-run', async () => {
     const email = `pages-new-${Date.now()}@example.com`;
     createdEmails.push(email);

@@ -2,19 +2,47 @@ const express = require('express');
 const { requireLogin } = require('../auth/guard');
 const { UserRepo } = require('../db/repositories/UserRepo');
 const { CalendarTokenRepo } = require('../db/repositories/CalendarTokenRepo');
+const { SpaceRepo } = require('../db/repositories/SpaceRepo');
 
 const router = express.Router();
 
+const WEEK_STARTS_ON_VALUES = ['sunday', 'monday'];
+const OPENING_VIEW_VALUES = ['all', 'personal'];
+
 router.get('/api/account', requireLogin, async (req, res, next) => {
   try {
-    const token = await CalendarTokenRepo.getForUser(req.user.id);
+    const [token, spaces] = await Promise.all([
+      CalendarTokenRepo.getForUser(req.user.id),
+      SpaceRepo.listSpacesForUser(req.user.id),
+    ]);
     res.json({
       id: req.user.id,
       email: req.user.email,
       firstName: req.user.first_name,
       lastName: req.user.last_name,
+      createdAt: req.user.created_at,
+      weekStartsOn: req.user.week_starts_on,
+      openingView: req.user.opening_view,
       calendarConnected: !!(token && token.is_connected),
+      spacesCount: spaces.length,
+      organizerCount: spaces.filter((s) => s.role === 'organizer').length,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/api/account/preferences', requireLogin, async (req, res, next) => {
+  try {
+    const { weekStartsOn, openingView } = req.body || {};
+    if (!WEEK_STARTS_ON_VALUES.includes(weekStartsOn)) {
+      return res.status(400).json({ error: `weekStartsOn must be one of: ${WEEK_STARTS_ON_VALUES.join(', ')}` });
+    }
+    if (!OPENING_VIEW_VALUES.includes(openingView)) {
+      return res.status(400).json({ error: `openingView must be one of: ${OPENING_VIEW_VALUES.join(', ')}` });
+    }
+    await UserRepo.updatePreferences(req.user.id, { weekStartsOn, openingView });
+    res.json({ weekStartsOn, openingView });
   } catch (err) {
     next(err);
   }

@@ -35,11 +35,50 @@ describe('/api/account and /api/calendar', () => {
     expect(res.status).toBe(401);
   });
 
-  test('GET /api/account reports calendarConnected: false with no prior opt-in', async () => {
+  test('GET /api/account reports calendarConnected: false and default preferences with no prior opt-in', async () => {
     const { agent } = await loggedInAgent('me-default');
     const res = await agent.get('/api/account');
     expect(res.status).toBe(200);
     expect(res.body.calendarConnected).toBe(false);
+    expect(res.body.weekStartsOn).toBe('sunday');
+    expect(res.body.openingView).toBe('personal');
+    expect(res.body.spacesCount).toBe(0);
+    expect(res.body.organizerCount).toBe(0);
+    expect(res.body.createdAt).toBeTruthy();
+  });
+
+  test('GET /api/account counts Spaces and Organizer roles correctly', async () => {
+    const { agent } = await loggedInAgent('stats-owner');
+    const spaceA = await agent.post('/api/spaces').send({ name: 'Stats test space' });
+    createdSpaceIds.push(spaceA.body.space.id);
+    const { agent: memberAgent } = await loggedInAgent('stats-member');
+    const created = await agent.post('/api/spaces').send({ name: 'Stats test space 2' });
+    createdSpaceIds.push(created.body.space.id);
+    await memberAgent.post('/api/spaces/join').send({ joinCode: created.body.space.joinCode });
+
+    const ownerAccount = await agent.get('/api/account');
+    expect(ownerAccount.body.spacesCount).toBe(2);
+    expect(ownerAccount.body.organizerCount).toBe(2);
+
+    const memberAccount = await memberAgent.get('/api/account');
+    expect(memberAccount.body.spacesCount).toBe(1);
+    expect(memberAccount.body.organizerCount).toBe(0);
+  });
+
+  test('PATCH /api/account/preferences validates and persists both fields', async () => {
+    const { agent } = await loggedInAgent('prefs');
+
+    const badWeek = await agent.patch('/api/account/preferences').send({ weekStartsOn: 'nope', openingView: 'all' });
+    expect(badWeek.status).toBe(400);
+    const badView = await agent.patch('/api/account/preferences').send({ weekStartsOn: 'monday', openingView: 'nope' });
+    expect(badView.status).toBe(400);
+
+    const ok = await agent.patch('/api/account/preferences').send({ weekStartsOn: 'monday', openingView: 'all' });
+    expect(ok.status).toBe(200);
+
+    const me = await agent.get('/api/account');
+    expect(me.body.weekStartsOn).toBe('monday');
+    expect(me.body.openingView).toBe('all');
   });
 
   test('connect then disconnect flips calendarConnected, and disconnect actually erases the row', async () => {

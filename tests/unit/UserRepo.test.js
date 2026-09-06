@@ -106,3 +106,30 @@ describe('UserRepo.deleteAccount', () => {
     expect(items).toHaveLength(0);
   });
 });
+
+describe('UserRepo.updatePreferences', () => {
+  const createdUserIds = [];
+
+  afterAll(async () => {
+    if (createdUserIds.length) {
+      await getPool().query('DELETE FROM users WHERE id IN (?)', [createdUserIds]);
+    }
+  });
+
+  test('defaults to sunday/personal, and persists a change to both fields', async () => {
+    const stamp = Date.now() + '-' + Math.random().toString(36).slice(2);
+    const user = await UserRepo.create({
+      googleSub: `userrepo-prefs-${stamp}`,
+      email: `userrepo-prefs-${stamp}@example.com`,
+      firstName: 'Prefs', lastName: 'Test',
+    });
+    createdUserIds.push(user.id);
+
+    expect(user.week_starts_on).toBe('sunday');
+    expect(user.opening_view).toBe('personal');
+
+    const updated = await UserRepo.updatePreferences(user.id, { weekStartsOn: 'monday', openingView: 'all' });
+    expect(updated.week_starts_on).toBe('monday');
+    expect(updated.opening_view).toBe('all');
+  });
+});
