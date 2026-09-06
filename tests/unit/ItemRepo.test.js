@@ -53,21 +53,31 @@ describe('ItemRepo', () => {
       expect(rows[0].user_id).toBe(owner.id);
     });
 
+    // Regression: this used to check a whole-table `COUNT(*) FROM items`
+    // before/after — Jest runs test *files* in parallel by default, so any
+    // other file's own inserts landing in that same shared table during the
+    // window between the two queries could shift the count and fail this
+    // assertion on nothing this test actually did. Confirmed live in CI: a
+    // fresh, empty DB (the count starts near 0) makes a couple of
+    // concurrent rows from another file enough to flip a small "before"
+    // count entirely, where a large pre-existing local dev DB mostly hides
+    // it. Scoped to created_by instead — no other test file uses this
+    // owner's id, so nothing else can move this specific count.
     test('rejects kind=event for a personal item (DB constraint) with no orphaned items row', async () => {
-      const [before] = await getPool().query('SELECT COUNT(*) as c FROM items');
+      const [before] = await getPool().query('SELECT COUNT(*) as c FROM items WHERE created_by = ?', [owner.id]);
       await expect(
         ItemRepo.create({ createdBy: owner.id, kind: 'event', title: 'Should be rejected' })
       ).rejects.toThrow();
-      const [after] = await getPool().query('SELECT COUNT(*) as c FROM items');
+      const [after] = await getPool().query('SELECT COUNT(*) as c FROM items WHERE created_by = ?', [owner.id]);
       expect(after[0].c).toBe(before[0].c);
     });
 
     test('rolls back the items insert when the assignment insert fails, leaving no orphan row', async () => {
-      const [before] = await getPool().query('SELECT COUNT(*) as c FROM items');
+      const [before] = await getPool().query('SELECT COUNT(*) as c FROM items WHERE created_by = ?', [999999999]);
       await expect(
         ItemRepo.create({ createdBy: 999999999, kind: 'task', title: 'Orphan bait' })
       ).rejects.toThrow();
-      const [after] = await getPool().query('SELECT COUNT(*) as c FROM items');
+      const [after] = await getPool().query('SELECT COUNT(*) as c FROM items WHERE created_by = ?', [999999999]);
       expect(after[0].c).toBe(before[0].c);
     });
 
