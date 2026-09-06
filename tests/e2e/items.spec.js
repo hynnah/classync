@@ -611,3 +611,189 @@ test.describe('Escape key across stacked layers', () => {
     }
   });
 });
+
+test.describe('the To Do view (FR-M6, tasks only — Notes split into its own view)', () => {
+  test('undated and overdue tasks — invisible to the calendar by design — show up here, sorted chronologically', async ({ page }) => {
+    const email = `e2e-todoview-${Date.now()}@example.com`;
+    const createdIds = [];
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      const todayIso = await page.evaluate(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+      const created = await page.evaluate(async (dueDate) => {
+        async function make(payload) {
+          const r = await fetch('/api/items', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          return (await r.json()).item;
+        }
+        return {
+          undated: await make({ kind: 'task', title: 'E2E todo undated task' }),
+          overdue: await make({ kind: 'task', title: 'E2E todo overdue task', dueDate: '2020-01-01' }),
+          today: await make({ kind: 'task', title: 'E2E todo today task', dueDate }),
+        };
+      }, todayIso);
+      createdIds.push(created.undated.id, created.overdue.id, created.today.id);
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      await page.locator('#personal-nav-todo').click();
+      await expect(page.locator('#todo-view')).toBeVisible();
+      await expect(page.locator('#personal-view')).toBeHidden();
+
+      // undated and today's tasks live in Active; overdue tasks get their own tab
+      await expect(page.locator('.todo-row-title', { hasText: 'E2E todo undated task' })).toBeVisible();
+      await expect(page.locator('.todo-row-title', { hasText: 'E2E todo overdue task' })).toHaveCount(0);
+      const todayRow = page.locator('.todo-row', { has: page.locator('.todo-row-title', { hasText: 'E2E todo today task' }) });
+      await expect(todayRow.locator('.todo-row-meta')).toHaveText('Today · Private');
+
+      await page.locator('#todo-tab-overdue').click();
+      const overdueRow = page.locator('.todo-row', { has: page.locator('.todo-row-title', { hasText: 'E2E todo overdue task' }) });
+      await expect(overdueRow.locator('.todo-row-meta')).toHaveClass(/is-overdue/);
+      await page.locator('#todo-tab-active').click();
+
+      // marking a task done moves it out of the Active tab and into Completed
+      await todayRow.locator('.todo-row-check').click();
+      await expect(page.locator('.todo-row-title', { hasText: 'E2E todo today task' })).toHaveCount(0);
+      await page.locator('#todo-tab-done').click();
+      const doneRow = page.locator('.todo-row', { has: page.locator('.todo-row-title', { hasText: 'E2E todo today task' }) });
+      await expect(doneRow.locator('.todo-row-check')).toHaveClass(/is-done/);
+      await expect(doneRow.locator('.todo-row-title')).toHaveClass(/is-done/);
+      await page.locator('#todo-tab-active').click();
+
+      // "New" reuses the same create-mode modal as the calendar's own button
+      await page.locator('#todo-new-btn').click();
+      await expect(page.locator('#task-modal-title')).toHaveText('New task');
+      await page.locator('#task-modal-cancel').click();
+    } finally {
+      if (createdIds.length) await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+});
+
+test.describe('the Notes view (split from To Do)', () => {
+  test('a note is invisible to the calendar and to To Do, but listed here with a list + editor pane that auto-saves', async ({ page }) => {
+    const email = `e2e-notesview-${Date.now()}@example.com`;
+    const createdIds = [];
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      const created = await page.evaluate(async () => {
+        const r = await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ kind: 'note', title: 'E2E notes view note', description: 'Original body text.' }),
+        });
+        return (await r.json()).item;
+      });
+      createdIds.push(created.id);
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      await expect(page.locator('.cal-item-title', { hasText: 'E2E notes view note' })).toHaveCount(0);
+      await page.locator('#personal-nav-todo').click();
+      await expect(page.locator('.todo-row-title', { hasText: 'E2E notes view note' })).toHaveCount(0);
+
+      await page.locator('#personal-nav-notes').click();
+      await expect(page.locator('#notes-view')).toBeVisible();
+      await expect(page.locator('#personal-view')).toBeHidden();
+      await expect(page.locator('#todo-view')).toBeHidden();
+
+      const listItem = page.locator('.notes-list-item', { hasText: 'E2E notes view note' });
+      await expect(listItem).toBeVisible();
+      // the recurring button text-transform inheritance bug, this time on the
+      // list row's title/preview — assert real casing, not just visibility
+      await expect(listItem.locator('.notes-list-title')).toHaveText('E2E notes view note');
+
+      await listItem.click();
+      await expect(page.locator('#notes-editor')).toBeVisible();
+      await expect(page.locator('#notes-editor-title')).toHaveValue('E2E notes view note');
+      await expect(page.locator('#notes-editor-body')).toHaveValue('Original body text.');
+
+      await page.locator('#notes-editor-body').fill('Updated body text.');
+      await expect(page.locator('#notes-word-count')).toHaveText('3 words');
+      await page.waitForTimeout(900); // debounced auto-save
+
+      const saved = await page.evaluate(async (id) => {
+        const r = await fetch('/api/items/todo');
+        const body = await r.json();
+        return body.items.find((i) => i.id === id);
+      }, created.id);
+      expect(saved.description).toBe('Updated body text.');
+
+      // new note via the "+ New" button
+      await page.locator('#notes-new-btn').click();
+      await expect(page.locator('#notes-editor-title')).toHaveValue('Untitled');
+      const newNote = await page.evaluate(async () => {
+        const r = await fetch('/api/items/todo');
+        const body = await r.json();
+        return body.items.find((i) => i.title === 'Untitled');
+      });
+      if (newNote) createdIds.push(newNote.id);
+
+      // delete via the editor pane, using the shared confirm dialog
+      await page.locator('.notes-list-item', { hasText: 'E2E notes view note' }).click();
+      await page.locator('#notes-delete-btn').click();
+      await expect(page.locator('#confirm-dialog')).toBeVisible();
+      await page.locator('#confirm-dialog-ok').click();
+      await expect(page.locator('.notes-list-item', { hasText: 'E2E notes view note' })).toHaveCount(0);
+      createdIds.splice(createdIds.indexOf(created.id), 1);
+    } finally {
+      if (createdIds.length) await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
+  test('switching to a Space hides To Do and Notes; switching back resets to Calendar', async ({ page }) => {
+    const email = `e2e-todoswitch-${Date.now()}@example.com`;
+    let spaceId;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.goto('/app');
+      const space = await page.evaluate(async () => {
+        const r = await fetch('/api/spaces', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name: 'E2E To Do Switch Test' }),
+        });
+        return (await r.json()).space;
+      });
+      spaceId = space.id;
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#personal-nav-notes').click();
+      await expect(page.locator('#notes-view')).toBeVisible();
+
+      await page.locator('#scope-switcher-btn').click();
+      await page.locator('.scope-switcher-item', { hasText: 'E2E To Do Switch Test' }).click();
+      await expect(page.locator('#notes-view')).toBeHidden();
+      await expect(page.locator('#todo-view')).toBeHidden();
+      await expect(page.locator('#space-cal-root')).toBeVisible();
+
+      await page.locator('#scope-switcher-btn').click();
+      await page.locator('.scope-switcher-item[data-scope="personal"]').click();
+      await expect(page.locator('#personal-view')).toBeVisible();
+      await expect(page.locator('#todo-view')).toBeHidden();
+      await expect(page.locator('#notes-view')).toBeHidden();
+      await expect(page.locator('#personal-nav-calendar')).toHaveClass(/is-active/);
+    } finally {
+      if (spaceId) await getPool().query('DELETE FROM spaces WHERE id = ?', [spaceId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+});

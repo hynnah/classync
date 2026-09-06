@@ -56,19 +56,17 @@
 
     <div id="rail-nav-personal" class="rail-section rail-nav">
       <div class="rail-heading">Personal · view</div>
-      <button class="rail-item is-active" type="button">
+      <button id="personal-nav-calendar" class="rail-item is-active" type="button">
         <svg class="rail-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
         <span class="rail-item-label">Calendar</span>
       </button>
-      <button class="rail-item" type="button" disabled>
+      <button id="personal-nav-todo" class="rail-item" type="button">
         <svg class="rail-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3" y="2.5" width="10" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M6 1.5h4v1.5H6z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M5.5 7.5l1.2 1.2L9 6.3M5.5 11l1.2 1.2L9 9.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span class="rail-item-label">My Planner</span>
-        <span class="rail-item-soon">Soon</span>
+        <span class="rail-item-label">To Do</span>
       </button>
-      <button class="rail-item" type="button" disabled>
+      <button id="personal-nav-notes" class="rail-item" type="button">
         <svg class="rail-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 2h6l2.5 2.5V14H4z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M10 2v2.5h2.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 8h4M6 10.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
         <span class="rail-item-label">Notes</span>
-        <span class="rail-item-soon">Soon</span>
       </button>
       <p class="rail-hint">Create or join a Space above to share a calendar with a class or group — your Personal to-dos stay private either way.</p>
     </div>
@@ -88,19 +86,19 @@
         <svg class="rail-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="6" cy="5.5" r="2.3" stroke="currentColor" stroke-width="1.2"/><path d="M1.8 13.5c.5-2.6 2.2-4 4.2-4s3.7 1.4 4.2 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="11.5" cy="5" r="1.8" stroke="currentColor" stroke-width="1.1"/><path d="M10.3 8.1c1.6.2 2.8 1.4 3.2 3.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
         <span class="rail-item-label">Members</span>
       </button>
-      <p class="rail-hint">A separate Tasks list arrives in a later build day — for now the calendar covers both. Members has the roster, and rename/promote/remove/leave if you're an Organizer.</p>
+      <p class="rail-hint">A separate Tasks list arrives in a later build day — for now the calendar covers both. Members has the roster, and rename/promote/demote/remove/leave if you're an Organizer.</p>
     </div>
 
     <span class="rail-fill"></span>
 
     <div class="rail-footer">
-      <div class="rail-user">
+      <a id="rail-user-link" class="rail-user" href="/settings">
         <span id="user-initials-2" class="user-avatar"></span>
         <span class="rail-user-text">
           <span id="user-name">Loading…</span>
           <span class="rail-user-role">Solo</span>
         </span>
-      </div>
+      </a>
       <button id="sign-out" class="rail-signout" type="button">Sign out</button>
     </div>
   </aside>
@@ -156,6 +154,75 @@
     </div>
     </div>
 
+    <div id="todo-view" class="todo-view" hidden>
+      <div class="cal-toolbar">
+        <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
+        <div class="cal-toolbar-left">
+          <div class="cal-kicker">Personal · to do</div>
+          <div class="toolbar-heading">To Do</div>
+        </div>
+        <div class="cal-toolbar-right">
+          <button id="todo-new-btn" class="cal-new-task" type="button">+ New</button>
+        </div>
+      </div>
+      <div class="todo-content">
+        <div class="todo-main">
+          <div class="todo-switch">
+            <button id="todo-tab-active" class="todo-switch-btn is-active" type="button">Active <span id="todo-count-active" class="todo-switch-count">00</span></button>
+            <button id="todo-tab-overdue" class="todo-switch-btn" type="button">Overdue <span id="todo-count-overdue" class="todo-switch-count">00</span></button>
+            <button id="todo-tab-done" class="todo-switch-btn" type="button">Completed <span id="todo-count-done" class="todo-switch-count">00</span></button>
+          </div>
+          <div id="todo-body" class="todo-body"></div>
+        </div>
+        <div class="todo-rail">
+          <div class="todo-rail-head">
+            <div class="urgent-kicker">Urgent</div>
+            <div class="urgent-title">Due now</div>
+          </div>
+          <div id="todo-due-body" class="todo-due-body"></div>
+          <img class="todo-rail-plate" src="/assets/swan.png" alt="" aria-hidden="true">
+          <p class="todo-rail-footer">Kept to yourself · not visible to any Space</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="notes-view" class="notes-view" hidden>
+      <div class="cal-toolbar">
+        <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
+        <div class="cal-toolbar-left">
+          <div class="cal-kicker">Personal · notes</div>
+          <div class="toolbar-heading">Notes</div>
+        </div>
+        <div class="cal-toolbar-right">
+          <button id="notes-new-btn" class="cal-new-task" type="button">+ New</button>
+        </div>
+      </div>
+      <div class="notes-shell">
+        <div class="notes-list-pane">
+          <div id="notes-list" class="notes-list"></div>
+        </div>
+        <div class="notes-editor-pane">
+          <p id="notes-editor-empty" class="notes-editor-empty">Select a note, or create a new one.</p>
+          <div id="notes-editor" hidden>
+            <div class="notes-editor-head">
+              <span id="notes-editor-meta" class="kicker"></span>
+              <span class="kicker-rule"></span>
+              <button id="notes-delete-btn" class="notes-delete-btn" type="button">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5v8a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7v4M9.5 7v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                Delete
+              </button>
+            </div>
+            <input id="notes-editor-title" class="notes-editor-title-input" type="text" placeholder="Untitled" maxlength="255">
+            <textarea id="notes-editor-body" class="notes-editor-body-input" placeholder="Write something…"></textarea>
+            <div class="notes-editor-footer">
+              <span id="notes-word-count"></span>
+              <span>Kept to yourself · not visible to any Space</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="space-view" hidden>
       <div class="cal-toolbar">
         <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
@@ -187,36 +254,42 @@
     </div>
 
     <div id="space-members-view" class="space-members" hidden>
-      <p id="space-members-kicker" class="cal-kicker">SPACE</p>
-      <h1 class="space-members-title">Members</h1>
-
-      <div id="space-organizer-tools" class="space-organizer-tools" hidden>
-        <form id="space-rename-form" class="space-rename-form">
-          <div class="field">
-            <div class="field-label">Space name</div>
-            <input id="space-rename-input" type="text" maxlength="255" required>
-          </div>
-          <button type="submit" class="modal-cancel">Save</button>
-        </form>
-        <p id="space-rename-error" class="form-error" hidden></p>
-
-        <div class="space-joincode-field">
-          <span class="field-label">Join code</span>
-          <div class="space-joincode-row">
-            <span id="space-members-joincode" class="space-placeholder-joincode"></span>
-            <button id="space-joincode-copy" type="button" class="modal-cancel">Copy</button>
-          </div>
+      <div class="cal-toolbar">
+        <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
+        <div class="cal-toolbar-left">
+          <div id="space-members-kicker" class="cal-kicker">Space · members</div>
+          <div class="toolbar-heading">Members</div>
         </div>
       </div>
+      <div class="space-members-body">
+        <div id="space-organizer-tools" class="space-organizer-tools" hidden>
+          <form id="space-rename-form" class="space-rename-form">
+            <div class="field">
+              <div class="field-label">Space name</div>
+              <input id="space-rename-input" type="text" maxlength="255" required>
+            </div>
+            <button type="submit" class="modal-cancel">Save</button>
+          </form>
+          <p id="space-rename-error" class="form-error" hidden></p>
 
-      <div class="space-roster-head">
-        <span class="field-label">Roster</span>
-        <span id="space-roster-count" class="space-roster-count"></span>
+          <div class="space-joincode-field">
+            <span class="field-label">Join code</span>
+            <div class="space-joincode-row">
+              <span id="space-members-joincode" class="space-placeholder-joincode"></span>
+              <button id="space-joincode-copy" type="button" class="modal-cancel">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-roster-head">
+          <span class="field-label">Roster</span>
+          <span id="space-roster-count" class="space-roster-count"></span>
+        </div>
+        <div id="space-roster-list" class="space-roster-list"></div>
+
+        <button id="space-leave-btn" type="button" class="space-leave-btn">Leave Space</button>
+        <p id="space-leave-error" class="form-error" hidden></p>
       </div>
-      <div id="space-roster-list" class="space-roster-list"></div>
-
-      <button id="space-leave-btn" type="button" class="space-leave-btn">Leave Space</button>
-      <p id="space-leave-error" class="form-error" hidden></p>
     </div>
   </main>
 </div>
@@ -490,6 +563,19 @@
   confirmDialogEl.addEventListener('click', (e) => {
     if (e.target === confirmDialogEl) closeConfirmDialog(false);
   });
+
+  // Remembers which scope/sub-view was showing so a refresh lands back where
+  // the user left off, instead of always resetting to Personal Calendar.
+  // initApp() and initSpaceSwitcher() are separate closures that each own
+  // their own nav functions, so this stays a plain top-level read/write
+  // rather than something either closure could expose to the other.
+  const VIEW_STATE_KEY = 'classync-last-view';
+  function saveViewState(state) {
+    try { localStorage.setItem(VIEW_STATE_KEY, JSON.stringify(state)); } catch { /* private browsing, etc. — just skip persisting */ }
+  }
+  function loadViewState() {
+    try { return JSON.parse(localStorage.getItem(VIEW_STATE_KEY)); } catch { return null; }
+  }
 
   async function initApp() {
     const catRoot = document.getElementById('cal-root');
@@ -917,7 +1003,7 @@
           form.querySelectorAll('input[name="kind"]').forEach((r) => { r.disabled = true; });
         }
         saveStatusEl.textContent = 'Saved';
-        await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel()]);
+        await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel(), refreshTodoView(), refreshNotesView()]);
       } catch (err) {
         saveStatusEl.textContent = "Couldn't save — will retry";
       }
@@ -1035,7 +1121,7 @@
         }
         modal.hidden = true;
         editingItemId = null;
-        await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel()]);
+        await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel(), refreshTodoView(), refreshNotesView()]);
       } finally {
         submitBtn.disabled = false;
       }
@@ -1118,7 +1204,7 @@
               headers: { 'content-type': 'application/json' },
               body: JSON.stringify({ status: nextStatus }),
             });
-            await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel()]);
+            await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel(), refreshTodoView()]);
           });
         }
 
@@ -1128,7 +1214,7 @@
           if (!(await confirmDialog(`Delete "${raw.title}"? This can't be undone.`))) return;
           deleteBtn.disabled = true;
           await fetch(`/api/items/${raw.id}`, { method: 'DELETE' });
-          await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel()]);
+          await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel(), refreshTodoView(), refreshNotesView()]);
         });
 
         dayPanelBody.appendChild(row);
@@ -1179,6 +1265,361 @@
       if (!dayPanel.hidden) { closeDayPanel(); return; }
     });
 
+    // --- To Do (FR-M6): Personal tasks and notes together, in one view —
+    // the first place a note or an undated task becomes visible/manageable
+    // anywhere at all, since the calendar can only ever place dated items.
+    // Reuses the day panel's own row markup (checkbox/spacer, edit/delete,
+    // openModal for editing, confirmDialog for delete) and the urgent
+    // panel's group-header treatment, rather than a fourth bespoke look.
+    const todoView = document.getElementById('todo-view');
+    const todoBody = document.getElementById('todo-body');
+    const todoNewBtn = document.getElementById('todo-new-btn');
+    const todoTabActive = document.getElementById('todo-tab-active');
+    const todoTabOverdue = document.getElementById('todo-tab-overdue');
+    const todoTabDone = document.getElementById('todo-tab-done');
+    const todoCountActive = document.getElementById('todo-count-active');
+    const todoCountOverdue = document.getElementById('todo-count-overdue');
+    const todoCountDone = document.getElementById('todo-count-done');
+    const todoDueBody = document.getElementById('todo-due-body');
+    const personalNavCalendar = document.getElementById('personal-nav-calendar');
+    const personalNavTodo = document.getElementById('personal-nav-todo');
+    const personalNavNotes = document.getElementById('personal-nav-notes');
+    const personalViewEl = document.getElementById('personal-view');
+    const notesView = document.getElementById('notes-view');
+
+    function formatTodoDate(dateStr) {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      const todayIso = isoDate(new Date());
+      const tomorrowIso = isoDate(new Date(new Date().setDate(new Date().getDate() + 1)));
+      if (dateStr === todayIso) return 'Today';
+      if (dateStr === tomorrowIso) return 'Tomorrow';
+      return `${WEEKDAYS[dt.getDay()].slice(0, 3)} ${dt.getDate()} ${MONTHS[dt.getMonth()].slice(0, 3)}`;
+    }
+
+    function formatTodoMeta(raw, isOverdue) {
+      const parts = [];
+      if (isOverdue) parts.push('Overdue');
+      if (raw.due_date) parts.push(formatTodoDate(raw.due_date));
+      if (raw.due_time) parts.push(raw.due_time.slice(0, 5));
+      parts.push('Private');
+      return parts.join(' · ');
+    }
+
+    function buildTodoRow(raw) {
+      const row = document.createElement('div');
+      row.className = 'todo-row';
+
+      const isDone = raw.status === 'completed';
+      const isOverdue = raw.due_date && raw.due_date < isoDate(new Date()) && !isDone;
+
+      const check = document.createElement('button');
+      check.type = 'button';
+      check.className = 'todo-row-check' + (isDone ? ' is-done' : '');
+      check.setAttribute('aria-label', isDone ? 'Mark as not done' : 'Mark as done');
+      check.addEventListener('click', async () => {
+        check.disabled = true;
+        const nextStatus = isDone ? 'pending' : 'completed';
+        await fetch(`/api/items/${raw.id}/status`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ status: nextStatus }),
+        });
+        await Promise.all([refreshTodoView(), refreshCalendarView(), loadUrgent()]);
+      });
+      row.appendChild(check);
+
+      const titleEl = document.createElement('span');
+      titleEl.className = 'todo-row-title' + (isDone ? ' is-done' : '');
+      titleEl.textContent = raw.title;
+      row.appendChild(titleEl);
+
+      const metaEl = document.createElement('span');
+      metaEl.className = 'todo-row-meta' + (isOverdue ? ' is-overdue' : '');
+      metaEl.textContent = formatTodoMeta(raw, isOverdue);
+      row.appendChild(metaEl);
+
+      const actions = document.createElement('div');
+      actions.className = 'todo-row-actions';
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'todo-row-action-btn';
+      editBtn.setAttribute('aria-label', 'Edit');
+      editBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.3 2.3a1.5 1.5 0 0 1 2.1 2.1L5.5 12.3l-2.8.7.7-2.8 7.9-7.9Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+      editBtn.addEventListener('click', () => openModal(raw));
+      actions.appendChild(editBtn);
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'todo-row-action-btn';
+      deleteBtn.setAttribute('aria-label', 'Delete');
+      deleteBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5v8a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7v4M9.5 7v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+      deleteBtn.addEventListener('click', async () => {
+        if (!(await confirmDialog(`Delete "${raw.title}"? This can't be undone.`))) return;
+        deleteBtn.disabled = true;
+        await fetch(`/api/items/${raw.id}`, { method: 'DELETE' });
+        await Promise.all([refreshTodoView(), refreshCalendarView(), loadUrgent()]);
+      });
+      actions.appendChild(deleteBtn);
+      row.appendChild(actions);
+
+      return row;
+    }
+
+    // Same font/size/click-to-complete behavior as the Calendar's own
+    // Urgent-panel rows (CSS shared via a comma-joined selector with
+    // .urgent-item*) — a distinct class name so the two don't collide when
+    // both refresh in the background regardless of which view is visible.
+    function buildTodoDueRow(raw) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'todo-due-item';
+      row.dataset.id = raw.id;
+      const meta = [raw.category || 'Task', raw.due_time ? raw.due_time.slice(0, 5) : null].filter(Boolean).join(' · ');
+      row.innerHTML = `<span class="todo-due-item-check" aria-hidden="true"></span><span class="todo-due-item-body"><span class="todo-due-item-title">${escapeHtml(raw.title)}</span><span class="todo-due-item-meta">${escapeHtml(meta)}</span></span>`;
+      return row;
+    }
+
+    let todoTasksCache = [];
+    let todoFilter = 'active';
+
+    function renderTodoBody() {
+      const todayIso = isoDate(new Date());
+      const isLate = (t) => t.due_date && t.due_date < todayIso;
+      const overdue = todoTasksCache.filter((t) => t.status !== 'completed' && isLate(t));
+      const active = todoTasksCache.filter((t) => t.status !== 'completed' && !isLate(t));
+      const done = todoTasksCache.filter((t) => t.status === 'completed');
+      todoCountActive.textContent = String(active.length).padStart(2, '0');
+      todoCountOverdue.textContent = String(overdue.length).padStart(2, '0');
+      todoCountDone.textContent = String(done.length).padStart(2, '0');
+      todoTabActive.classList.toggle('is-active', todoFilter === 'active');
+      todoTabOverdue.classList.toggle('is-active', todoFilter === 'overdue');
+      todoTabDone.classList.toggle('is-active', todoFilter === 'done');
+
+      const shown = todoFilter === 'done' ? done : todoFilter === 'overdue' ? overdue : active;
+      todoBody.innerHTML = '';
+      if (!shown.length) {
+        const emptyText = todoFilter === 'done' ? 'Nothing finished yet.'
+          : todoFilter === 'overdue' ? 'Nothing overdue.'
+          : 'Nothing left. The list is clear.';
+        todoBody.innerHTML = `<p class="todo-empty">${emptyText}</p>`;
+        return;
+      }
+      shown.forEach((raw) => todoBody.appendChild(buildTodoRow(raw)));
+    }
+
+    async function refreshTodoRail() {
+      const res = await fetch('/api/items/urgent');
+      if (!res.ok) return;
+      const { dueToday } = await res.json();
+      const dueSoon = dueToday.filter((i) => i.kind === 'task');
+      todoDueBody.innerHTML = '';
+      if (!dueSoon.length) {
+        todoDueBody.innerHTML = '<p class="urgent-empty">Nothing due today.</p>';
+        return;
+      }
+      dueSoon.forEach((raw) => todoDueBody.appendChild(buildTodoDueRow(raw)));
+    }
+
+    todoDueBody.addEventListener('click', async (e) => {
+      const row = e.target.closest('.todo-due-item');
+      if (!row) return;
+      row.disabled = true;
+      await fetch(`/api/items/${row.dataset.id}/status`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      });
+      await Promise.all([refreshTodoView(), refreshCalendarView(), loadUrgent()]);
+    });
+
+    async function refreshTodoView() {
+      const res = await fetch('/api/items/todo');
+      if (!res.ok) return;
+      const { items } = await res.json();
+      // dated tasks chronologically first (overdue naturally sorts to the
+      // top), undated ones after — matches listAllForUser's own ordering
+      todoTasksCache = items.filter((i) => i.kind === 'task');
+      renderTodoBody();
+      await refreshTodoRail();
+    }
+
+    todoTabActive.addEventListener('click', () => { todoFilter = 'active'; renderTodoBody(); });
+    todoTabOverdue.addEventListener('click', () => { todoFilter = 'overdue'; renderTodoBody(); });
+    todoTabDone.addEventListener('click', () => { todoFilter = 'done'; renderTodoBody(); });
+
+    // --- Notes: its own list + editor view, split from To Do (2026-09-06
+    // design review — see the reference mockups). Auto-saves the same
+    // debounced, POST-then-PATCH way the old modal's note mode did, just
+    // against these inline inputs instead of a modal's.
+    const notesListEl = document.getElementById('notes-list');
+    const notesNewBtn = document.getElementById('notes-new-btn');
+    const notesEditorEmpty = document.getElementById('notes-editor-empty');
+    const notesEditor = document.getElementById('notes-editor');
+    const notesEditorMeta = document.getElementById('notes-editor-meta');
+    const notesDeleteBtn = document.getElementById('notes-delete-btn');
+    const notesTitleInput = document.getElementById('notes-editor-title');
+    const notesBodyInput = document.getElementById('notes-editor-body');
+    const notesWordCount = document.getElementById('notes-word-count');
+
+    let notesCache = [];
+    let selectedNoteId = null;
+    let notesAutoSaveTimer = null;
+
+    function formatNoteMeta(item) {
+      const d = new Date((item.updated_at || item.created_at).replace(' ', 'T'));
+      const sameDay = d.toDateString() === new Date().toDateString();
+      const datePart = sameDay ? 'Today' : `${WEEKDAYS[d.getDay()].slice(0, 3)} ${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}`;
+      const timePart = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      return `Edited ${datePart} · ${timePart}`;
+    }
+
+    function renderNotesList() {
+      notesListEl.innerHTML = '';
+      if (!notesCache.length) {
+        notesListEl.innerHTML = '<p class="todo-empty">No notes yet.</p>';
+        return;
+      }
+      notesCache.forEach((note) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'notes-list-item' + (note.id === selectedNoteId ? ' is-active' : '');
+        const title = document.createElement('p');
+        title.className = 'notes-list-title';
+        title.textContent = note.title;
+        const preview = document.createElement('p');
+        preview.className = 'notes-list-preview';
+        preview.textContent = note.description || '';
+        const meta = document.createElement('span');
+        meta.className = 'notes-list-meta';
+        meta.textContent = formatNoteMeta(note);
+        item.append(title, preview, meta);
+        item.addEventListener('click', () => selectNote(note.id));
+        notesListEl.appendChild(item);
+      });
+    }
+
+    function updateNotesWordCount() {
+      const words = notesBodyInput.value.trim().split(/\s+/).filter(Boolean).length;
+      notesWordCount.textContent = `${words} word${words === 1 ? '' : 's'}`;
+    }
+
+    function selectNote(id) {
+      clearTimeout(notesAutoSaveTimer);
+      selectedNoteId = id;
+      const note = notesCache.find((n) => n.id === id);
+      renderNotesList();
+      if (!note) {
+        notesEditorEmpty.hidden = false;
+        notesEditor.hidden = true;
+        return;
+      }
+      notesEditorEmpty.hidden = true;
+      notesEditor.hidden = false;
+      notesTitleInput.value = note.title;
+      notesBodyInput.value = note.description || '';
+      notesEditorMeta.textContent = formatNoteMeta(note);
+      updateNotesWordCount();
+    }
+
+    async function saveSelectedNote() {
+      if (!selectedNoteId) return;
+      const title = notesTitleInput.value.trim() || 'Untitled';
+      const description = notesBodyInput.value || null;
+      const res = await fetch(`/api/items/${selectedNoteId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title, description }),
+      });
+      if (!res.ok) return;
+      const body = await res.json();
+      const idx = notesCache.findIndex((n) => n.id === selectedNoteId);
+      if (idx !== -1) notesCache[idx] = body.item;
+      notesEditorMeta.textContent = formatNoteMeta(body.item);
+      renderNotesList();
+    }
+    function scheduleNotesAutoSave() {
+      clearTimeout(notesAutoSaveTimer);
+      notesAutoSaveTimer = setTimeout(saveSelectedNote, AUTOSAVE_DEBOUNCE_MS);
+    }
+    notesTitleInput.addEventListener('input', scheduleNotesAutoSave);
+    notesBodyInput.addEventListener('input', () => {
+      updateNotesWordCount();
+      scheduleNotesAutoSave();
+    });
+
+    async function refreshNotesView() {
+      const res = await fetch('/api/items/todo');
+      if (!res.ok) return;
+      const { items } = await res.json();
+      notesCache = items
+        .filter((i) => i.kind === 'note')
+        .sort((a, b) => new Date(b.updated_at.replace(' ', 'T')) - new Date(a.updated_at.replace(' ', 'T')));
+      if (selectedNoteId && !notesCache.find((n) => n.id === selectedNoteId)) selectedNoteId = null;
+      if (selectedNoteId) {
+        selectNote(selectedNoteId);
+      } else {
+        renderNotesList();
+        notesEditorEmpty.hidden = false;
+        notesEditor.hidden = true;
+      }
+    }
+
+    notesNewBtn.addEventListener('click', async () => {
+      const res = await fetch('/api/items', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ kind: 'note', title: 'Untitled' }),
+      });
+      if (!res.ok) return;
+      const { item } = await res.json();
+      notesCache.unshift(item);
+      selectNote(item.id);
+      notesTitleInput.focus();
+      notesTitleInput.select();
+    });
+    notesDeleteBtn.addEventListener('click', async () => {
+      if (!selectedNoteId) return;
+      const note = notesCache.find((n) => n.id === selectedNoteId);
+      if (!note || !(await confirmDialog(`Delete "${note.title}"? This can't be undone.`))) return;
+      await fetch(`/api/items/${selectedNoteId}`, { method: 'DELETE' });
+      selectedNoteId = null;
+      await refreshNotesView();
+    });
+
+    function showPersonalCalendar() {
+      personalNavCalendar.classList.add('is-active');
+      personalNavTodo.classList.remove('is-active');
+      personalNavNotes.classList.remove('is-active');
+      personalViewEl.hidden = false;
+      todoView.hidden = true;
+      notesView.hidden = true;
+      saveViewState({ scope: 'personal', view: 'calendar' });
+    }
+    async function showPersonalTodo() {
+      personalNavTodo.classList.add('is-active');
+      personalNavCalendar.classList.remove('is-active');
+      personalNavNotes.classList.remove('is-active');
+      personalViewEl.hidden = true;
+      todoView.hidden = false;
+      notesView.hidden = true;
+      saveViewState({ scope: 'personal', view: 'todo' });
+      await refreshTodoView();
+    }
+    async function showPersonalNotes() {
+      personalNavNotes.classList.add('is-active');
+      personalNavCalendar.classList.remove('is-active');
+      personalNavTodo.classList.remove('is-active');
+      personalViewEl.hidden = true;
+      todoView.hidden = true;
+      notesView.hidden = false;
+      saveViewState({ scope: 'personal', view: 'notes' });
+      await refreshNotesView();
+    }
+    personalNavCalendar.addEventListener('click', showPersonalCalendar);
+    personalNavTodo.addEventListener('click', showPersonalTodo);
+    personalNavNotes.addEventListener('click', showPersonalNotes);
+    todoNewBtn.addEventListener('click', () => openModal());
+
     async function openDayPanelFromTarget(target) {
       const dayCell = target.closest('.calendar-day');
       if (dayCell) {
@@ -1201,6 +1642,15 @@
 
     await refreshCalendarView();
     await loadUrgent();
+
+    // Restore whichever Personal sub-view was showing before a refresh —
+    // a Space scope (if any) is restored separately by initSpaceSwitcher,
+    // which runs after this and takes over if that's what was saved.
+    const savedView = loadViewState();
+    if (savedView && savedView.scope === 'personal') {
+      if (savedView.view === 'todo') await showPersonalTodo();
+      else if (savedView.view === 'notes') await showPersonalNotes();
+    }
   }
 
   // Sidebar "You are in" switcher — Personal is always available; each Space
@@ -1286,6 +1736,7 @@
       spaceView.hidden = false;
       spaceMembersView.hidden = true;
       spaceCalKicker.textContent = `${currentSpace.name} · calendar`;
+      saveViewState({ scope: 'space', spaceId: currentSpace.id, view: 'calendar' });
       refreshSpaceCalendarView();
     }
     function selectPersonal() {
@@ -1299,6 +1750,14 @@
       spaceMembersView.hidden = true;
       railNavPersonal.hidden = false;
       railNavSpace.hidden = true;
+      // reset to the Calendar sub-view every time, same as selectSpace()
+      // always resetting to its own Calendar sub-view via showSpaceCalendar()
+      document.getElementById('todo-view').hidden = true;
+      document.getElementById('notes-view').hidden = true;
+      document.getElementById('personal-nav-calendar').classList.add('is-active');
+      document.getElementById('personal-nav-todo').classList.remove('is-active');
+      document.getElementById('personal-nav-notes').classList.remove('is-active');
+      saveViewState({ scope: 'personal', view: 'calendar' });
       closeSwitcher();
     }
     function selectSpace(space) {
@@ -1309,6 +1768,8 @@
       scopeLabel.textContent = space.name;
       scopeSub.textContent = space.role === 'organizer' ? 'Organizer' : 'Member';
       personalView.hidden = true;
+      document.getElementById('todo-view').hidden = true;
+      document.getElementById('notes-view').hidden = true;
       railNavPersonal.hidden = true;
       railNavSpace.hidden = false;
       railNavSpaceHeading.textContent = `${space.name} · view`;
@@ -1462,6 +1923,19 @@
               await refreshRoster();
             });
             actions.appendChild(promoteBtn);
+          } else {
+            const demoteBtn = document.createElement('button');
+            demoteBtn.type = 'button';
+            demoteBtn.className = 'space-roster-action-btn';
+            demoteBtn.setAttribute('aria-label', 'Demote to Member');
+            demoteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 11.3l1.8-3.7 4.1-.6-3-2.9.7-4.1L8 1.7 4.4 0 5.1 4.1l-3 2.9 4.1.6L8 11.3Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+            demoteBtn.addEventListener('click', async () => {
+              if (!(await confirmDialog(`Demote ${nameEl.textContent} to Member?`))) return;
+              demoteBtn.disabled = true;
+              await fetch(`/api/spaces/${currentSpace.id}/members/${member.id}/demote`, { method: 'POST' });
+              await refreshRoster();
+            });
+            actions.appendChild(demoteBtn);
           }
 
           const removeBtn = document.createElement('button');
@@ -1500,6 +1974,7 @@
         spaceJoincodeEl.textContent = currentSpace.joinCode;
         spaceJoincodeCopyBtn.textContent = 'Copy';
       }
+      saveViewState({ scope: 'space', spaceId: currentSpace.id, view: 'members' });
       refreshRoster();
     }
 
@@ -1868,6 +2343,21 @@
       if (!spaceItemModal.hidden) { closeSpaceItemModal(); return; }
       if (!spaceDayPanel.hidden) { closeSpaceDayPanel(); return; }
     });
+
+    // Restore a Space scope saved before a refresh — overrides initApp's own
+    // restoration (which only acts on a saved Personal sub-view) since this
+    // runs after it in the bootstrap sequence. Falls through to whatever
+    // initApp already showed if the saved Space is gone (left, removed, or
+    // deactivated) — no error, just the same "no longer applies" fallback
+    // loadSpaces()'s own space list already implies.
+    const savedView = loadViewState();
+    if (savedView && savedView.scope === 'space') {
+      const savedSpace = spaces.find((s) => s.id === savedView.spaceId);
+      if (savedSpace) {
+        selectSpace(savedSpace);
+        if (savedView.view === 'members') showMembersView();
+      }
+    }
   }
 
   const res = await fetch('/api/me');

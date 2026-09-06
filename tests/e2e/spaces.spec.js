@@ -211,7 +211,21 @@ test.describe('Manage Space (the Members view)', () => {
 
       // promote the member
       const memberRow = page.locator('.space-roster-row', { hasText: memberEmail });
-      await memberRow.locator('.space-roster-action-btn').first().click();
+      await memberRow.locator('.space-roster-action-btn[aria-label="Promote to Organizer"]').click();
+      await expect(memberRow.locator('.space-roster-role')).toHaveText('Organizer');
+
+      // demote them back — cancel then confirm
+      await memberRow.locator('.space-roster-action-btn[aria-label="Demote to Member"]').click();
+      await expect(page.locator('#confirm-dialog')).toBeVisible();
+      await page.locator('#confirm-dialog-cancel').click();
+      await expect(memberRow.locator('.space-roster-role')).toHaveText('Organizer');
+
+      await memberRow.locator('.space-roster-action-btn[aria-label="Demote to Member"]').click();
+      await page.locator('#confirm-dialog-ok').click();
+      await expect(memberRow.locator('.space-roster-role')).toHaveText('Member');
+
+      // promote again so the remove step below exercises removing a co-organizer
+      await memberRow.locator('.space-roster-action-btn[aria-label="Promote to Organizer"]').click();
       await expect(memberRow.locator('.space-roster-role')).toHaveText('Organizer');
 
       // remove the (now co-organizer) member — cancel then confirm
@@ -413,6 +427,81 @@ test.describe('creating or joining a Space from inside the app (not just first-r
     } finally {
       if (spaceId) await getPool().query('DELETE FROM spaces WHERE id = ?', [spaceId]);
       await getPool().query('DELETE FROM users WHERE email IN (?, ?)', [ownerEmail, joinerEmail]);
+    }
+  });
+});
+
+test.describe('refreshing the page restores the last-viewed scope/sub-view', () => {
+  test('a Space\'s Members view survives a refresh, instead of always resetting to Personal Calendar', async ({ page }) => {
+    const email = `e2e-restoremembers-${Date.now()}@example.com`;
+    let spaceId;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.goto('/app');
+      const space = await page.evaluate(async () => {
+        const r = await fetch('/api/spaces', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name: 'E2E Refresh Restore Test' }),
+        });
+        return (await r.json()).space;
+      });
+      spaceId = space.id;
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#scope-switcher-btn').click();
+      await page.locator('.scope-switcher-item', { hasText: 'E2E Refresh Restore Test' }).click();
+      await page.locator('#space-nav-members').click();
+      await expect(page.locator('#space-members-view')).toBeVisible();
+
+      await page.reload();
+      await expect(page.locator('#space-members-view')).toBeVisible();
+      await expect(page.locator('#personal-view')).toBeHidden();
+      await expect(page.locator('#scope-label')).toHaveText('E2E Refresh Restore Test');
+    } finally {
+      if (spaceId) await getPool().query('DELETE FROM spaces WHERE id = ?', [spaceId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
+  test('a Personal sub-view (Notes) survives a refresh', async ({ page }) => {
+    const email = `e2e-restorenotes-${Date.now()}@example.com`;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      await page.locator('#personal-nav-notes').click();
+      await expect(page.locator('#notes-view')).toBeVisible();
+
+      await page.reload();
+      await expect(page.locator('#notes-view')).toBeVisible();
+      await expect(page.locator('#personal-view')).toBeHidden();
+      await expect(page.locator('#personal-nav-notes')).toHaveClass(/is-active/);
+    } finally {
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
+  test('a saved Space that no longer applies (left, removed, or just stale) falls back to Personal Calendar, not an error', async ({ page }) => {
+    const email = `e2e-restorefallback-${Date.now()}@example.com`;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.evaluate(() => {
+        localStorage.setItem('classync-last-view', JSON.stringify({ scope: 'space', spaceId: 999999999, view: 'calendar' }));
+      });
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      await expect(page.locator('#personal-view')).toBeVisible();
+      await expect(page.locator('#scope-label')).toHaveText('Personal · private');
+    } finally {
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
     }
   });
 });
