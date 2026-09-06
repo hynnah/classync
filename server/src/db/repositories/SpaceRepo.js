@@ -163,61 +163,117 @@ async function promoteMember({ spaceId, actingUserId, targetUserId }) {
   return { ok: true };
 }
 
-// Demoting yourself isn't a route this exposes — same symmetry as
-// removeMember's use_leave_instead: self-targeting goes through a dedicated
-// flow, not this one. Because of that, an acting Organizer always remains
-// an Organizer after demoting someone else, so this can never take a Space
-// to zero Organizers the way leaveSpace/deleteAccount have to guard
-// against — no lock or FR-O5-style check needed here.
+// Demoting yourself isn't a route this exposes — self-targeting goes
+// through leaveSpace instead. That guarantees an acting Organizer is always
+// a DIFFERENT Organizer than the target in any single call, which looks
+// like it rules out ever reaching zero Organizers — but two Organizers
+// demoting each other at close to the same moment is exactly the race
+// leaveSpace's lock exists to prevent, just reachable through a different
+// pair of calls: each reads "the other is still an Organizer" before
+// either UPDATE lands, both pass, both demote, zero Organizers remain with
+// Members still present. Confirmed live with two concurrent requests
+// before this fix (both succeeded). Locking the Space's membership rows
+// serializes them — same pattern as leaveSpace, and the same lock, so a
+// demote racing a concurrent leave/remove on the same Space is covered too.
 async function demoteMember({ spaceId, actingUserId, targetUserId }) {
-  const acting = await getMembership(spaceId, actingUserId);
-  if (!acting || acting.role !== 'organizer') {
-    return { error: 'forbidden' };
-  }
   if (targetUserId === actingUserId) {
     return { error: 'cannot_target_self' };
   }
-  const target = await getMembership(spaceId, targetUserId);
-  if (!target) {
-    return { error: 'not_found' };
+  const conn = await getPool().getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query('SELECT 1 FROM space_members WHERE space_id = ? FOR UPDATE', [spaceId]);
+
+    const [actingRows] = await conn.query(
+      'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
+      [spaceId, actingUserId]
+    );
+    const acting = actingRows[0];
+    if (!acting || acting.role !== 'organizer') {
+      await conn.rollback();
+      return { error: 'forbidden' };
+    }
+    const [targetRows] = await conn.query(
+      'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
+      [spaceId, targetUserId]
+    );
+    const target = targetRows[0];
+    if (!target) {
+      await conn.rollback();
+      return { error: 'not_found' };
+    }
+    if (target.role !== 'organizer') {
+      await conn.rollback();
+      return { error: 'not_organizer' };
+    }
+    await conn.query(
+      "UPDATE space_members SET role = 'member' WHERE space_id = ? AND user_id = ?",
+      [spaceId, targetUserId]
+    );
+    await conn.commit();
+    return { ok: true };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
-  if (target.role !== 'organizer') {
-    return { error: 'not_organizer' };
-  }
-  await getPool().query(
-    "UPDATE space_members SET role = 'member' WHERE space_id = ? AND user_id = ?",
-    [spaceId, targetUserId]
-  );
-  return { ok: true };
 }
 
+// Same race as demoteMember, just worse: two Organizers concurrently
+// removing each other both succeed for the same reason (each reads "the
+// other is still an Organizer" before either DELETE lands), and it's a
+// harder hole to climb out of, since the ejected pair can't even rejoin
+// except as plain Members. Same lock, same reason.
 async function removeMember({ spaceId, actingUserId, targetUserId }) {
-  const acting = await getMembership(spaceId, actingUserId);
-  if (!acting || acting.role !== 'organizer') {
-    return { error: 'forbidden' };
-  }
   if (targetUserId === actingUserId) {
     return { error: 'use_leave_instead' };
   }
-  const target = await getMembership(spaceId, targetUserId);
-  if (!target) {
-    return { error: 'not_found' };
+  const conn = await getPool().getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query('SELECT 1 FROM space_members WHERE space_id = ? FOR UPDATE', [spaceId]);
+
+    const [actingRows] = await conn.query(
+      'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
+      [spaceId, actingUserId]
+    );
+    const acting = actingRows[0];
+    if (!acting || acting.role !== 'organizer') {
+      await conn.rollback();
+      return { error: 'forbidden' };
+    }
+    const [targetRows] = await conn.query(
+      'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
+      [spaceId, targetUserId]
+    );
+    const target = targetRows[0];
+    if (!target) {
+      await conn.rollback();
+      return { error: 'not_found' };
+    }
+    await conn.query(
+      'DELETE FROM space_members WHERE space_id = ? AND user_id = ?',
+      [spaceId, targetUserId]
+    );
+    // Without this, a removed member keeps a stale assignment row on this
+    // Space's items forever — invisible everywhere today, but exactly what
+    // the unified All-calendar (listAllScoped) would otherwise surface as a
+    // ghost item from a Space they no longer belong to.
+    await conn.query(
+      `DELETE item_assignments FROM item_assignments
+       JOIN items ON items.id = item_assignments.item_id
+       WHERE items.space_id = ? AND item_assignments.user_id = ?`,
+      [spaceId, targetUserId]
+    );
+    await conn.commit();
+    return { ok: true };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
-  await getPool().query(
-    'DELETE FROM space_members WHERE space_id = ? AND user_id = ?',
-    [spaceId, targetUserId]
-  );
-  // Without this, a removed member keeps a stale assignment row on this
-  // Space's items forever — invisible everywhere today, but exactly what
-  // the unified All-calendar (listAllScoped) would otherwise surface as a
-  // ghost item from a Space they no longer belong to.
-  await getPool().query(
-    `DELETE item_assignments FROM item_assignments
-     JOIN items ON items.id = item_assignments.item_id
-     WHERE items.space_id = ? AND item_assignments.user_id = ?`,
-    [spaceId, targetUserId]
-  );
-  return { ok: true };
 }
 
 // FR-O5: a sole Organizer can't leave while other Members remain — they have

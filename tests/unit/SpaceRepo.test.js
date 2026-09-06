@@ -233,6 +233,39 @@ describe('SpaceRepo', () => {
       const result = await SpaceRepo.demoteMember({ spaceId: space.id, actingUserId: owner.id, targetUserId: member.id });
       expect(result.error).toBe('not_organizer');
     });
+
+    // Regression: demoteMember used to check-then-update with no lock. A
+    // single call can never take a Space to zero Organizers (self-targeting
+    // is blocked, so the acting Organizer always outlives the one they
+    // demote) — but two DIFFERENT Organizers demoting each other at close to
+    // the same moment could each read "the other is still an Organizer"
+    // before either UPDATE landed, so both passed and both demoted, leaving
+    // zero Organizers with a Member still present. Confirmed live with two
+    // concurrent calls before this fix (both succeeded). Same lock as
+    // leaveSpace fixes it the same way: the second caller's re-check (after
+    // acquiring the lock) sees the first caller's already-committed demotion.
+    test('two organizers demoting each other at the same moment: exactly one succeeds', async () => {
+      const org1 = await makeUser('demote-race-org1');
+      const org2 = await makeUser('demote-race-org2');
+      const space = await SpaceRepo.createSpace({ name: 'Demote race test', creatorUserId: org1.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: org2.id });
+      await SpaceRepo.promoteMember({ spaceId: space.id, actingUserId: org1.id, targetUserId: org2.id });
+
+      const [result1, result2] = await Promise.all([
+        SpaceRepo.demoteMember({ spaceId: space.id, actingUserId: org1.id, targetUserId: org2.id }),
+        SpaceRepo.demoteMember({ spaceId: space.id, actingUserId: org2.id, targetUserId: org1.id }),
+      ]);
+      const outcomes = [result1, result2];
+      expect(outcomes.filter((r) => r.ok).length).toBe(1);
+      expect(outcomes.filter((r) => r.error === 'forbidden').length).toBe(1);
+
+      const [[{ organizerCount }]] = await getPool().query(
+        "SELECT COUNT(*) AS organizerCount FROM space_members WHERE space_id = ? AND role = 'organizer'",
+        [space.id]
+      );
+      expect(organizerCount).toBe(1);
+    });
   });
 
   describe('removeMember', () => {
@@ -299,6 +332,34 @@ describe('SpaceRepo', () => {
         'SELECT * FROM item_assignments WHERE item_id = ? AND user_id = ?', [item.id, member.id]
       );
       expect(after).toHaveLength(0);
+    });
+
+    // Same race as demoteMember's, just worse: two Organizers concurrently
+    // removing each other both used to succeed, leaving the Space with zero
+    // Organizers and no way for either of them to get back in except as a
+    // fresh plain Member. Confirmed live with two concurrent calls before
+    // this fix (both succeeded). Same lock, same fix.
+    test('two organizers removing each other at the same moment: exactly one succeeds', async () => {
+      const org1 = await makeUser('remove-race-org1');
+      const org2 = await makeUser('remove-race-org2');
+      const space = await SpaceRepo.createSpace({ name: 'Remove race test', creatorUserId: org1.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: org2.id });
+      await SpaceRepo.promoteMember({ spaceId: space.id, actingUserId: org1.id, targetUserId: org2.id });
+
+      const [result1, result2] = await Promise.all([
+        SpaceRepo.removeMember({ spaceId: space.id, actingUserId: org1.id, targetUserId: org2.id }),
+        SpaceRepo.removeMember({ spaceId: space.id, actingUserId: org2.id, targetUserId: org1.id }),
+      ]);
+      const outcomes = [result1, result2];
+      expect(outcomes.filter((r) => r.ok).length).toBe(1);
+      expect(outcomes.filter((r) => r.error === 'forbidden').length).toBe(1);
+
+      const [[{ memberCount }]] = await getPool().query(
+        'SELECT COUNT(*) AS memberCount FROM space_members WHERE space_id = ?',
+        [space.id]
+      );
+      expect(memberCount).toBe(1);
     });
   });
 
