@@ -228,7 +228,7 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
     }
   });
 
-  test('clicking a day on the All calendar opens a mark-done-only panel (no edit/delete, since items may belong to different Spaces)', async ({ page }) => {
+  test('the All day panel lets you mark done, and closes on a backdrop click', async ({ page }) => {
     const email = `e2e-alldaypanel-${Date.now()}@example.com`;
     try {
       await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
@@ -254,8 +254,6 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
       await expect(page.locator('#all-day-panel')).toBeVisible();
       const row = page.locator('#all-day-panel .day-panel-row', { has: page.locator('.day-panel-row-title', { hasText: 'E2E All day panel task' }) });
       await expect(row).toBeVisible();
-      await expect(row.locator('.day-panel-edit-btn')).toHaveCount(0);
-      await expect(row.locator('.day-panel-delete-btn')).toHaveCount(0);
 
       await row.locator('.day-panel-row-check').click();
       await expect(row.locator('.day-panel-row-check')).toHaveClass(/is-done/);
@@ -269,6 +267,128 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
       const userIds = users.map((u) => u.id);
       if (userIds.length) await getPool().query('DELETE FROM items WHERE created_by IN (?)', [userIds]);
       await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
+  // Edit/delete used to be entirely absent from the All day panel — a
+  // deliberate scope cut, since an item there could belong to any of
+  // several different Spaces and there was no single "current Space" to
+  // hand an edit off to. Reversed once it became clear that's unnecessary
+  // friction for the exact case that matters most: editing your own item.
+  // Ownership still gates it exactly like everywhere else — this test
+  // covers a Personal item, a Space item you created, and a Space item
+  // someone else created (should show nothing).
+  test('the All day panel lets you edit/delete your own items — Personal or Space — but not someone else\'s', async ({ page, browser }) => {
+    const orgEmail = `e2e-alldaypanel-org-${Date.now()}@example.com`;
+    const coOrgEmail = `e2e-alldaypanel-coorg-${Date.now()}@example.com`;
+    let spaceId;
+    let coOrgContext;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(orgEmail)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      const todayIso = await page.evaluate(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+
+      const space = await page.evaluate(async (name) => {
+        const r = await fetch('/api/spaces', {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name }),
+        });
+        return (await r.json()).space;
+      }, 'E2E All Day Panel Edit Test ' + Date.now());
+      spaceId = space.id;
+
+      coOrgContext = await browser.newContext();
+      const coOrgPage = await coOrgContext.newPage();
+      await coOrgPage.request.get(`/auth/test-bypass?email=${encodeURIComponent(coOrgEmail)}`);
+      await coOrgPage.request.get('/continue-solo');
+      await coOrgPage.goto('/app');
+      await coOrgPage.waitForSelector('#cal-root .calendar-days');
+      const coOrgInfo = await coOrgPage.evaluate(async () => (await (await fetch('/api/me')).json()));
+      await coOrgPage.evaluate(async (joinCode) => {
+        await fetch('/api/spaces/join', {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ joinCode }),
+        });
+      }, space.joinCode);
+      await page.evaluate(async ({ spaceId, userId }) => {
+        await fetch(`/api/spaces/${spaceId}/members/${userId}/promote`, { method: 'POST' });
+      }, { spaceId, userId: coOrgInfo.id });
+
+      // a Personal task, a Space task the viewer created, and a Space task
+      // the co-Organizer created — all due today, all open-to-all
+      await page.evaluate(async (dueDate) => {
+        await fetch('/api/items', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ kind: 'task', title: 'My personal item', dueDate }),
+        });
+      }, todayIso);
+      await page.evaluate(async ({ spaceId, dueDate }) => {
+        await fetch('/api/items', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ spaceId, kind: 'task', title: 'My Space item', dueDate, isOpenToAll: true }),
+        });
+      }, { spaceId, dueDate: todayIso });
+      await coOrgPage.evaluate(async ({ spaceId, dueDate }) => {
+        await fetch('/api/items', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ spaceId, kind: 'task', title: 'Co-organizer\'s item', dueDate, isOpenToAll: true }),
+        });
+      }, { spaceId, dueDate: todayIso });
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#scope-switcher-btn').click();
+      await page.locator('.scope-switcher-item[data-scope="all"]').click();
+      await page.locator(`#all-cal-root .calendar-day[data-date="${todayIso}"]`).click();
+      await expect(page.locator('#all-day-panel')).toBeVisible();
+
+      const personalRow = page.locator('#all-day-panel .day-panel-row', { has: page.locator('.day-panel-row-title', { hasText: 'My personal item' }) });
+      const spaceRow = page.locator('#all-day-panel .day-panel-row', { has: page.locator('.day-panel-row-title', { hasText: 'My Space item' }) });
+      const coOrgRow = page.locator('#all-day-panel .day-panel-row', { has: page.locator('.day-panel-row-title', { hasText: 'Co-organizer\'s item' }) });
+
+      await expect(personalRow.locator('.day-panel-edit-btn')).toHaveCount(1);
+      await expect(personalRow.locator('.day-panel-delete-btn')).toHaveCount(1);
+      await expect(spaceRow.locator('.day-panel-edit-btn')).toHaveCount(1);
+      await expect(spaceRow.locator('.day-panel-delete-btn')).toHaveCount(1);
+      await expect(coOrgRow.locator('.day-panel-edit-btn')).toHaveCount(0);
+      await expect(coOrgRow.locator('.day-panel-delete-btn')).toHaveCount(0);
+
+      // editing the Personal item opens Personal's own modal, prefilled,
+      // and saving updates it in place without leaving the All view
+      await personalRow.locator('.day-panel-edit-btn').click();
+      await expect(page.locator('#task-modal')).toBeVisible();
+      await expect(page.locator('#task-title')).toHaveValue('My personal item');
+      await page.locator('#task-title').fill('My personal item, edited');
+      await page.locator('#task-modal button[type=submit]').click();
+      await expect(page.locator('#task-modal')).toBeHidden();
+      await expect(page.locator('#all-day-panel .day-panel-row', { hasText: 'My personal item, edited' })).toBeVisible();
+
+      // editing the Space item opens the Space modal, prefilled, and saves
+      // without needing to switch into that Space first
+      await spaceRow.locator('.day-panel-edit-btn').click();
+      await expect(page.locator('#space-item-modal')).toBeVisible();
+      await expect(page.locator('#space-item-title')).toHaveValue('My Space item');
+      await page.locator('#space-item-title').fill('My Space item, edited');
+      await page.locator('#space-item-form button[type=submit]').click();
+      await expect(page.locator('#space-item-modal')).toBeHidden();
+      await expect(page.locator('#all-day-panel .day-panel-row', { hasText: 'My Space item, edited' })).toBeVisible();
+
+      // deleting the Space item removes it from the panel
+      await page.locator('#all-day-panel .day-panel-row', { hasText: 'My Space item, edited' }).locator('.day-panel-delete-btn').click();
+      await page.locator('#confirm-dialog-ok').click();
+      await expect(page.locator('#all-day-panel .day-panel-row', { hasText: 'My Space item, edited' })).toHaveCount(0);
+
+      await coOrgContext.close();
+    } finally {
+      const [users] = await getPool().query('SELECT id FROM users WHERE email IN (?, ?)', [orgEmail, coOrgEmail]);
+      const userIds = users.map((u) => u.id);
+      if (userIds.length) await getPool().query('DELETE FROM items WHERE created_by IN (?)', [userIds]);
+      if (spaceId) await getPool().query('DELETE FROM spaces WHERE id = ?', [spaceId]);
+      await getPool().query('DELETE FROM users WHERE email IN (?, ?)', [orgEmail, coOrgEmail]);
     }
   });
 

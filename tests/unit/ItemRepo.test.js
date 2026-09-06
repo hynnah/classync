@@ -223,6 +223,43 @@ describe('ItemRepo', () => {
     });
   });
 
+  describe('listSpaceTodo', () => {
+    test('every task in this one Space (undated included), excludes events, another Space\'s tasks, and items assigned to specific others', async () => {
+      const space = await SpaceRepo.createSpace({ name: 'listSpaceTodo test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: intruder.id });
+
+      const undatedTask = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'task', title: 'Space undated task', isOpenToAll: true,
+      });
+      const spaceEvent = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'event', title: 'Space event, listSpaceTodo', dueDate: '2026-12-05', isOpenToAll: true,
+      });
+      const targetedTask = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'task', title: 'Assigned only to owner, listSpaceTodo',
+        isOpenToAll: false, assigneeUserIds: [owner.id],
+      });
+
+      const otherSpace = await SpaceRepo.createSpace({ name: 'listSpaceTodo other space', creatorUserId: owner.id });
+      createdSpaceIds.push(otherSpace.id);
+      const otherSpaceTask = await ItemRepo.create({
+        createdBy: owner.id, spaceId: otherSpace.id, kind: 'task', title: 'Other Space task', isOpenToAll: true,
+      });
+
+      const items = await ItemRepo.listSpaceTodo({ spaceId: space.id, userId: owner.id });
+      const ids = items.map((i) => i.id);
+      expect(ids).toContain(undatedTask.id);
+      expect(ids).toContain(targetedTask.id);
+      expect(ids).not.toContain(spaceEvent.id);
+      expect(ids).not.toContain(otherSpaceTask.id);
+
+      const intruderItems = await ItemRepo.listSpaceTodo({ spaceId: space.id, userId: intruder.id });
+      const intruderIds = intruderItems.map((i) => i.id);
+      expect(intruderIds).toContain(undatedTask.id);
+      expect(intruderIds).not.toContain(targetedTask.id);
+    });
+  });
+
   describe('listUrgentForUser', () => {
     test('groups pending items into due-today and due-this-week, excluding completed items', async () => {
       const todayItem = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Due today unit' });

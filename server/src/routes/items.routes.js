@@ -2,6 +2,16 @@ const express = require('express');
 const { requireLogin } = require('../auth/guard');
 const { ItemRepo } = require('../db/repositories/ItemRepo');
 const { SpaceRepo } = require('../db/repositories/SpaceRepo');
+const sseHub = require('../realtime/sseHub');
+
+// Notifies everyone with visibility into this item — every open session
+// refreshing whatever view they're already on picks up the change the same
+// way it already does after a local mutation, just without needing it to be
+// their own tab that made the change.
+async function notifyItemUpdated(itemId, spaceId) {
+  const assigneeIds = await ItemRepo.listAssigneeUserIds(itemId);
+  sseHub.notifyUsers(assigneeIds, 'item_updated', { itemId, spaceId: spaceId || null });
+}
 
 const router = express.Router();
 
@@ -50,6 +60,15 @@ function validateItemFields({ title, category, dueDate, dueTime, color, kind, sp
   if (dueDate !== undefined && dueDate !== null && !DATE_RE.test(dueDate)) {
     return 'dueDate must be in YYYY-MM-DD format.';
   }
+  // Unlike a Task (which has an undated home in the Tasks tab/To Do list),
+  // an Event only ever surfaces through a date-based view — the calendar,
+  // a day panel. Saved with no date, it's invisible everywhere and there's
+  // no way back to it through the UI at all. `=== null` (not just falsy)
+  // so an update that simply doesn't touch dueDate — leaving it undefined,
+  // meaning "no change" — isn't wrongly rejected as if it were clearing it.
+  if (kind === 'event' && dueDate === null) {
+    return 'Events need a due date.';
+  }
   if (dueTime !== undefined && dueTime !== null && !TIME_RE.test(dueTime)) {
     return 'dueTime must be in HH:MM or HH:MM:SS format.';
   }
@@ -86,6 +105,15 @@ router.get('/api/items', requireLogin, async (req, res, next) => {
 
 router.get('/api/items/todo', requireLogin, async (req, res, next) => {
   try {
+    const { spaceId } = req.query;
+    if (spaceId) {
+      const membership = await SpaceRepo.getMembership(spaceId, req.user.id);
+      if (!membership) {
+        return res.status(404).json({ error: 'Space not found.' });
+      }
+      const items = await ItemRepo.listSpaceTodo({ spaceId, userId: req.user.id });
+      return res.json({ items });
+    }
     const items = await ItemRepo.listAllForUser(req.user.id);
     res.json({ items });
   } catch (err) {
@@ -143,7 +171,13 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
       return res.status(400).json({ error: `kind must be one of: ${PERSONAL_KINDS.join(', ')}` });
     }
 
-    const fieldError = validateItemFields({ title, category, dueDate, dueTime, color, kind, spaceId });
+    // On create there's no prior value to preserve, so an omitted dueDate
+    // means the same thing an explicit null does — normalized here so
+    // validateItemFields' undefined-means-unchanged rule (which only makes
+    // sense for an update) doesn't let a dateless Event slip through create.
+    const fieldError = validateItemFields({
+      title, category, dueDate: dueDate === undefined ? null : dueDate, dueTime, color, kind, spaceId,
+    });
     if (fieldError) {
       return res.status(400).json({ error: fieldError });
     }
@@ -174,6 +208,7 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
       isOpenToAll: spaceId ? !!isOpenToAll : false,
       assigneeUserIds: normalizedAssignees,
     });
+    await notifyItemUpdated(item.id, item.space_id);
     res.status(201).json({ item });
   } catch (err) {
     next(err);
@@ -206,6 +241,7 @@ router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
     if (!item) {
       return res.status(404).json({ error: 'Item not found.' });
     }
+    await notifyItemUpdated(item.id, item.space_id);
     res.json({ item });
   } catch (err) {
     next(err);
@@ -222,6 +258,7 @@ router.patch('/api/items/:id/status', requireLogin, async (req, res, next) => {
     if (!item) {
       return res.status(404).json({ error: 'Item not found.' });
     }
+    await notifyItemUpdated(item.id, item.space_id);
     res.json({ item });
   } catch (err) {
     next(err);
@@ -230,10 +267,16 @@ router.patch('/api/items/:id/status', requireLogin, async (req, res, next) => {
 
 router.delete('/api/items/:id', requireLogin, async (req, res, next) => {
   try {
+    // Assignees and space_id have to be read before the delete — the row
+    // (and its item_assignments) won't exist to read from afterward.
+    const existing = await ItemRepo.findById(req.params.id);
+    const assigneeIds = existing ? await ItemRepo.listAssigneeUserIds(req.params.id) : [];
+
     const deleted = await ItemRepo.remove({ itemId: req.params.id, userId: req.user.id });
     if (!deleted) {
       return res.status(404).json({ error: 'Item not found.' });
     }
+    sseHub.notifyUsers(assigneeIds, 'item_updated', { itemId: Number(req.params.id), spaceId: existing.space_id, deleted: true });
     res.status(204).end();
   } catch (err) {
     next(err);

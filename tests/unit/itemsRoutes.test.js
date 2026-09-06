@@ -208,6 +208,42 @@ describe('Space-scoped items on /api/items', () => {
     expect(res.status).toBe(400);
   });
 
+  // Regression: an Event with no due date is invisible everywhere in the
+  // app forever — unlike a Task, it has no undated home (the Tasks tab
+  // filters kind='task' only) and the calendar can't place a dateless pill.
+  // Confirmed live: a real account created several via the modal (its due-
+  // date field had no `required` attribute at the time) and could never see
+  // or reach them again through the UI once saved.
+  test('rejects an Event with no due date', async () => {
+    const { orgAgent, orgId, spaceId } = await makeSpaceWithMember();
+    const res = await orgAgent.post('/api/items').send({
+      spaceId, kind: 'event', title: 'Dateless event', isOpenToAll: true, assigneeUserIds: [orgId],
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/due date/i);
+  });
+
+  test('an undated Task is still allowed — only Events require a due date', async () => {
+    const { orgAgent, orgId, spaceId } = await makeSpaceWithMember();
+    const res = await orgAgent.post('/api/items').send({
+      spaceId, kind: 'task', title: 'Undated task', isOpenToAll: true, assigneeUserIds: [orgId],
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.item.due_date).toBeNull();
+  });
+
+  test('an edit cannot clear an Event\'s due date to null either', async () => {
+    const { orgAgent, orgId, spaceId } = await makeSpaceWithMember();
+    const created = await orgAgent.post('/api/items').send({
+      spaceId, kind: 'event', title: 'Dated event', dueDate: '2026-09-20', isOpenToAll: true, assigneeUserIds: [orgId],
+    });
+    expect(created.status).toBe(201);
+
+    const res = await orgAgent.patch(`/api/items/${created.body.item.id}`).send({ title: 'Dated event', dueDate: null });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/due date/i);
+  });
+
   test('rejects a color on a Space task', async () => {
     const { orgAgent, orgId, spaceId } = await makeSpaceWithMember();
     const res = await orgAgent.post('/api/items').send({
@@ -285,10 +321,14 @@ describe('Space-scoped items on /api/items', () => {
 describe('/api/items/todo — the To Do view', () => {
   const app = createApp();
   const createdIds = [];
+  const createdSpaceIds = [];
 
   afterAll(async () => {
     if (createdIds.length) {
       await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+    }
+    if (createdSpaceIds.length) {
+      await getPool().query('DELETE FROM spaces WHERE id IN (?)', [createdSpaceIds]);
     }
     await getPool().query("DELETE FROM users WHERE email LIKE 'itemstodo-%@example.com'");
   });
@@ -322,6 +362,37 @@ describe('/api/items/todo — the To Do view', () => {
     expect(ids).toContain(undatedTask.body.item.id);
     expect(ids).toContain(note.body.item.id);
     expect(ids).not.toContain(othersNote.body.item.id);
+  });
+
+  test('?spaceId scopes to that Space\'s own Tasks tab — undated tasks included, events excluded', async () => {
+    const agent = await loggedInAgent('spacescope');
+    const created = await agent.post('/api/spaces').send({ name: 'Tasks tab route test' });
+    const spaceId = created.body.space.id;
+    createdSpaceIds.push(spaceId);
+
+    const undatedTask = await agent.post('/api/items').send({
+      spaceId, kind: 'task', title: 'Space tab undated task', isOpenToAll: true,
+    });
+    const spaceEvent = await agent.post('/api/items').send({
+      spaceId, kind: 'event', title: 'Space tab event', dueDate: '2026-09-20', isOpenToAll: true,
+    });
+    createdIds.push(undatedTask.body.item.id, spaceEvent.body.item.id);
+
+    const res = await agent.get(`/api/items/todo?spaceId=${spaceId}`);
+    expect(res.status).toBe(200);
+    const ids = res.body.items.map((i) => i.id);
+    expect(ids).toContain(undatedTask.body.item.id);
+    expect(ids).not.toContain(spaceEvent.body.item.id);
+  });
+
+  test('?spaceId for a Space the caller doesn\'t belong to is a 404, not a data leak', async () => {
+    const owner = await loggedInAgent('spacescope-owner');
+    const outsider = await loggedInAgent('spacescope-outsider');
+    const created = await owner.post('/api/spaces').send({ name: 'Tasks tab outsider test' });
+    createdSpaceIds.push(created.body.space.id);
+
+    const res = await outsider.get(`/api/items/todo?spaceId=${created.body.space.id}`);
+    expect(res.status).toBe(404);
   });
 });
 

@@ -2062,6 +2062,14 @@ a.btn-secondary:hover {
   color: var(--color-text-faintest);
   padding: 44px 0;
 }
+/* Notes' list pane sits beside the editor pane's own empty state
+   (.notes-editor-empty), which is centered — matching that here instead of
+   inheriting .todo-empty's left-aligned default keeps the two sides
+   consistent instead of one looking like leftover unstyled text. */
+.page-app .notes-list .todo-empty {
+  text-align: center;
+  padding: 60px 20px 44px;
+}
 
 .page-app .todo-rail {
   width: 380px;
@@ -3494,6 +3502,14 @@ a.btn-secondary:hover {
 .page-app #day-panel.modal-backdrop {
   z-index: 45;
 }
+/* Same reason as #day-panel above — since an All day-panel row's edit
+   button can open either #task-modal or #space-item-modal (both default
+   z-index 50) on top of it, and this panel comes later in the DOM than
+   #task-modal, an explicit lower z-index is the only thing that reliably
+   keeps it stacking underneath rather than winning that tie by DOM order. */
+.page-app #all-day-panel.modal-backdrop {
+  z-index: 45;
+}
 .page-app .day-panel-head-actions {
   display: flex;
   align-items: center;
@@ -3662,4 +3678,63 @@ a.btn-secondary:hover {
 }
 .page-app .day-panel-delete-btn:hover {
   color: var(--color-danger-text);
+}
+
+/* Toasts — live-update notices (a role change pushed over SSE, so far),
+   always above every modal (confirm-dialog tops out at 60) since a
+   promotion/demotion should surface even if the viewer has a modal open. */
+.page-app .toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  max-width: 340px;
+  pointer-events: none;
+}
+.page-app .toast {
+  pointer-events: auto;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-divider);
+  border-left: 3px solid var(--color-accent);
+  box-shadow: 0 14px 30px -18px rgba(38,37,33,0.35);
+  padding: 14px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  animation: toast-in 200ms ease;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.page-app .toast-body {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-text);
+}
+.page-app .toast-close {
+  flex-shrink: 0;
+  background: transparent;
+  border: 0;
+  color: var(--color-text-faint);
+  cursor: pointer;
+  padding: 0;
+  box-shadow: none;
+  font-size: 15px;
+  line-height: 1;
+}
+.page-app .toast-close:hover {
+  color: var(--color-accent);
+  box-shadow: none;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-app .toast {
+    animation: none;
+  }
 }

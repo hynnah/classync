@@ -21,6 +21,13 @@ async function findById(id) {
   return rows[0] || null;
 }
 
+// Who to notify (over SSE) when this item changes — everyone with an
+// assignment row on it, same set the visibility model already gates reads on.
+async function listAssigneeUserIds(itemId) {
+  const [rows] = await getPool().query('SELECT user_id FROM item_assignments WHERE item_id = ?', [itemId]);
+  return rows.map((r) => r.user_id);
+}
+
 async function findForUser(itemId, userId) {
   const [rows] = await getPool().query(
     `${SELECT_WITH_STATUS} WHERE items.id = ? AND item_assignments.user_id = ?`,
@@ -114,6 +121,20 @@ async function listForSpace({ spaceId, userId, from, to }) {
        AND items.due_date BETWEEN ? AND ?
      ORDER BY items.due_date ASC, items.due_time ASC`,
     [spaceId, userId, from, to]
+  );
+  return rows;
+}
+
+// Backs the Space's own Tasks tab — every task in this one Space (never an
+// event; events don't get a done state), regardless of due date. Same reason
+// listAllForUser/listAllScopedTodo exist: BETWEEN never matches a NULL
+// due_date, so an undated task needs a date-range-free query to ever surface.
+async function listSpaceTodo({ spaceId, userId }) {
+  const [rows] = await getPool().query(
+    `${SELECT_WITH_STATUS}
+     WHERE items.space_id = ? AND item_assignments.user_id = ? AND items.kind = 'task'
+     ORDER BY items.due_date IS NULL, items.due_date ASC, items.due_time ASC`,
+    [spaceId, userId]
   );
   return rows;
 }
@@ -238,5 +259,5 @@ async function remove({ itemId, userId }) {
 }
 
 module.exports = {
-  ItemRepo: { findById, findForUser, create, listForUser, listForSpace, listAllForUser, listAllScoped, listAllScopedTodo, listUrgentForUser, setStatus, update, remove },
+  ItemRepo: { findById, findForUser, listAssigneeUserIds, create, listForUser, listForSpace, listSpaceTodo, listAllForUser, listAllScoped, listAllScopedTodo, listUrgentForUser, setStatus, update, remove },
 };

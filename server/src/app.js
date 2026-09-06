@@ -10,6 +10,7 @@ const { pagesRouter } = require('./routes/pages.routes');
 const { itemsRouter } = require('./routes/items.routes');
 const { spacesRouter } = require('./routes/spaces.routes');
 const { accountRouter } = require('./routes/account.routes');
+const { sseRouter } = require('./routes/sse.routes');
 
 function createApp() {
   const app = express();
@@ -34,6 +35,7 @@ function createApp() {
   app.use(itemsRouter);
   app.use(spacesRouter);
   app.use(accountRouter);
+  app.use(sseRouter);
 
   app.use(express.static(path.join(__dirname, '..', '..', 'client')));
 
