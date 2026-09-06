@@ -1,6 +1,7 @@
 const { getPool } = require('../../server/src/db/pool');
 const { UserRepo } = require('../../server/src/db/repositories/UserRepo');
 const { ItemRepo } = require('../../server/src/db/repositories/ItemRepo');
+const { SpaceRepo } = require('../../server/src/db/repositories/SpaceRepo');
 
 afterAll(async () => {
   await getPool().end();
@@ -96,6 +97,48 @@ describe('ItemRepo', () => {
       expect(ids).toContain(inRange.id);
       expect(ids).not.toContain(outOfRange.id);
       expect(ids).not.toContain(othersItem.id);
+    });
+  });
+
+  // Backs the To Do view's /api/items/todo — the only route that can ever
+  // return a personal note or an undated task (listForUser's date-range
+  // BETWEEN never matches either). Never had a dedicated isolation test of
+  // its own before now (Day 6 checklist gap).
+  describe('listAllForUser', () => {
+    test('only returns the caller\'s own personal items — never another user\'s, never a Space item they created', async () => {
+      const dated = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Dated task', dueDate: '2026-09-15' });
+      const undated = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Undated task' });
+      const note = await ItemRepo.create({ createdBy: owner.id, kind: 'note', title: 'A note', description: 'body' });
+      const othersItem = await ItemRepo.create({ createdBy: intruder.id, kind: 'task', title: 'Not mine', dueDate: '2026-09-16' });
+      createdIds.push(dated.id, undated.id, note.id, othersItem.id);
+
+      const space = await SpaceRepo.createSpace({ name: 'listAllForUser isolation test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+      const spaceItem = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'task', title: 'Owner\'s Space task',
+        dueDate: '2026-09-17', isOpenToAll: true,
+      });
+
+      const items = await ItemRepo.listAllForUser(owner.id);
+      const ids = items.map((i) => i.id);
+
+      expect(ids).toContain(dated.id);
+      expect(ids).toContain(undated.id);
+      expect(ids).toContain(note.id);
+      expect(ids).not.toContain(othersItem.id);
+      expect(ids).not.toContain(spaceItem.id);
+    });
+
+    test('orders dated items chronologically first, undated items last', async () => {
+      const later = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Later dated', dueDate: '2026-11-20' });
+      const earlier = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Earlier dated', dueDate: '2026-11-10' });
+      const undated = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'No date at all' });
+      createdIds.push(later.id, earlier.id, undated.id);
+
+      const items = await ItemRepo.listAllForUser(owner.id);
+      const relevant = items.filter((i) => [later.id, earlier.id, undated.id].includes(i.id));
+
+      expect(relevant.map((i) => i.id)).toEqual([earlier.id, later.id, undated.id]);
     });
   });
 

@@ -84,6 +84,15 @@ router.get('/api/items', requireLogin, async (req, res, next) => {
   }
 });
 
+router.get('/api/items/todo', requireLogin, async (req, res, next) => {
+  try {
+    const items = await ItemRepo.listAllForUser(req.user.id);
+    res.json({ items });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/api/items/urgent', requireLogin, async (req, res, next) => {
   try {
     const { dueToday, dueWeek } = await ItemRepo.listUrgentForUser(req.user.id);

@@ -281,3 +281,46 @@ describe('Space-scoped items on /api/items', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('/api/items/todo — the To Do view', () => {
+  const app = createApp();
+  const createdIds = [];
+
+  afterAll(async () => {
+    if (createdIds.length) {
+      await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+    }
+    await getPool().query("DELETE FROM users WHERE email LIKE 'itemstodo-%@example.com'");
+  });
+
+  async function loggedInAgent(label) {
+    const email = `itemstodo-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+    const agent = request.agent(app);
+    await agent.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+    return agent;
+  }
+
+  test('requires login', async () => {
+    const res = await request(app).get('/api/items/todo');
+    expect(res.status).toBe(401);
+  });
+
+  test('only returns the caller\'s own personal items — an undated task and a note included, another user\'s items excluded', async () => {
+    const mine = await loggedInAgent('mine');
+    const theirs = await loggedInAgent('theirs');
+
+    const undatedTask = await mine.post('/api/items').send({ kind: 'task', title: 'Undated task, mine' });
+    const note = await mine.post('/api/items').send({ kind: 'note', title: 'A note, mine', description: 'body' });
+    createdIds.push(undatedTask.body.item.id, note.body.item.id);
+
+    const othersNote = await theirs.post('/api/items').send({ kind: 'note', title: 'Not mine at all' });
+    createdIds.push(othersNote.body.item.id);
+
+    const res = await mine.get('/api/items/todo');
+    expect(res.status).toBe(200);
+    const ids = res.body.items.map((i) => i.id);
+    expect(ids).toContain(undatedTask.body.item.id);
+    expect(ids).toContain(note.body.item.id);
+    expect(ids).not.toContain(othersNote.body.item.id);
+  });
+});

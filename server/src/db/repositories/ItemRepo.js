@@ -77,6 +77,23 @@ async function listForUser({ userId, from, to }) {
   return rows;
 }
 
+// For the To Do view (FR-M6), not the calendar: notes always have a NULL
+// due_date, and a task's due date is optional — both fail a `BETWEEN ? AND ?`
+// unconditionally (SQL's BETWEEN never matches NULL), so listForUser's
+// date-range query was never able to return them regardless of range. This
+// is why, before To Do existed, a note had no view anywhere it could show
+// up in at all once created — it wasn't reachable through the calendar by
+// design (no due date to place it on a day), and there was no other list.
+async function listAllForUser(userId) {
+  const [rows] = await getPool().query(
+    `${SELECT_WITH_STATUS}
+     WHERE items.space_id IS NULL AND items.created_by = ?
+     ORDER BY items.due_date IS NULL, items.due_date ASC, items.due_time ASC`,
+    [userId]
+  );
+  return rows;
+}
+
 // A member sees a Space item only once they have an assignment row on it —
 // see create()'s note on why a member who joins after an "open to all" item
 // was created won't see that particular item.
@@ -176,5 +193,5 @@ async function remove({ itemId, userId }) {
 }
 
 module.exports = {
-  ItemRepo: { findById, findForUser, create, listForUser, listForSpace, listUrgentForUser, setStatus, update, remove },
+  ItemRepo: { findById, findForUser, create, listForUser, listForSpace, listAllForUser, listUrgentForUser, setStatus, update, remove },
 };
