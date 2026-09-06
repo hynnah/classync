@@ -48,6 +48,18 @@ router.get('/firstrun.html', async (req, res, next) => {
   }
 });
 
+router.get('/settings', async (req, res, next) => {
+  try {
+    const user = await loadSessionUser(req);
+    if (!user) {
+      return res.redirect('/signin.html');
+    }
+    res.sendFile(path.join(CLIENT_DIR, 'settings.html'));
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/continue-solo', async (req, res, next) => {
   try {
     const user = await loadSessionUser(req);

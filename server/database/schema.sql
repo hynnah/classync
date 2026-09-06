@@ -17,11 +17,15 @@ CREATE TABLE spaces (
   id                BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name              VARCHAR(255) NOT NULL,
   join_code         CHAR(6) NOT NULL,
-  creator_user_id   BIGINT UNSIGNED NOT NULL,
+  -- Nullable + SET NULL (not RESTRICT) so a creator can delete their own
+  -- account later without being blocked by a Space they may no longer even
+  -- belong to (they could have left or been removed after creating it) —
+  -- the Space itself is never deleted just because its creator's account is.
+  creator_user_id   BIGINT UNSIGNED NULL,
   is_active         BOOLEAN NOT NULL DEFAULT TRUE,
   created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_spaces_join_code (join_code),
-  FOREIGN KEY (creator_user_id) REFERENCES users(id)
+  FOREIGN KEY (creator_user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE space_members (
@@ -66,9 +70,13 @@ CREATE TABLE item_assignments (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- encrypted_refresh_token is nullable until Day 7's real incremental-consent
+-- flow lands and starts populating it — today's Settings opt-in just records
+-- is_connected/connected_at as a stub, per the Day 6 scope decision to ship
+-- the opt-in UI ahead of the actual Calendar sync mechanics.
 CREATE TABLE google_calendar_tokens (
   user_id                 BIGINT UNSIGNED PRIMARY KEY,
-  encrypted_refresh_token TEXT NOT NULL,
+  encrypted_refresh_token TEXT NULL,
   is_connected            BOOLEAN NOT NULL DEFAULT TRUE,
   connected_at            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

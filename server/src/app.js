@@ -9,6 +9,7 @@ const { authRouter } = require('./routes/auth.routes');
 const { pagesRouter } = require('./routes/pages.routes');
 const { itemsRouter } = require('./routes/items.routes');
 const { spacesRouter } = require('./routes/spaces.routes');
+const { accountRouter } = require('./routes/account.routes');
 
 function createApp() {
   const app = express();
@@ -32,6 +33,7 @@ function createApp() {
   app.use(pagesRouter);
   app.use(itemsRouter);
   app.use(spacesRouter);
+  app.use(accountRouter);
 
   app.use(express.static(path.join(__dirname, '..', '..', 'client')));
 
