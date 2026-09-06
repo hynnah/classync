@@ -1,5 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const { getPool } = require('../../server/src/db/pool');
+const { CalendarTokenRepo } = require('../../server/src/db/repositories/CalendarTokenRepo');
+const { encrypt } = require('../../server/src/auth/tokenCrypto');
 
 // Settings is a view inside app.html (reached via the sidebar's Settings
 // button), not its own page — /settings is kept only as a redirect to /app
@@ -50,8 +52,8 @@ test.describe('Settings page', () => {
     }
   });
 
-  test('Google Calendar connect/disconnect persists across a reload', async ({ page }) => {
-    const email = `e2e-settingscal-${Date.now()}@example.com`;
+  test('clicking Connect navigates to Google\'s real consent screen, not a fake in-app toggle', async ({ page }) => {
+    const email = `e2e-settingscal-connect-${Date.now()}@example.com`;
     try {
       await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
       await page.request.get('/continue-solo');
@@ -62,7 +64,33 @@ test.describe('Settings page', () => {
       await expect(page.locator('#calendar-status-label')).toHaveText('Not connected');
       await expect(page.locator('#calendar-toggle-btn')).toHaveText('Connect');
 
+      // The actual code exchange (and what a real consent grant stores) is
+      // covered with a mocked Google in tests/unit/calendarAuthRoutes.test.js
+      // — there's no real Google account to click through in this sandbox,
+      // same reason the plain sign-in flow's own e2e test stops at the
+      // redirect target rather than a full round trip.
       await page.locator('#calendar-toggle-btn').click();
+      await page.waitForURL(/accounts\.google\.com/);
+    } finally {
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
+  test('a connected state persists across a reload, and Disconnect erases it', async ({ page }) => {
+    const email = `e2e-settingscal-persist-${Date.now()}@example.com`;
+    try {
+      const bypass = await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      const { userId } = await bypass.json();
+      await page.request.get('/continue-solo');
+      // Seeded directly rather than via a real Connect click, for the same
+      // reason as above — but this exercises the real disconnect route,
+      // including its (best-effort, non-blocking) live revoke-token call.
+      await CalendarTokenRepo.connect(userId, encrypt('e2e-fake-refresh-token'));
+
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+      await openSettings(page);
+
       await expect(page.locator('#calendar-status-label')).toHaveText('Connected');
       await expect(page.locator('#calendar-toggle-btn')).toHaveText('Disconnect');
 
@@ -74,6 +102,8 @@ test.describe('Settings page', () => {
 
       await page.locator('#calendar-toggle-btn').click();
       await expect(page.locator('#calendar-status-label')).toHaveText('Not connected');
+      const token = await CalendarTokenRepo.getForUser(userId);
+      expect(token).toBeNull();
     } finally {
       await getPool().query('DELETE FROM users WHERE email = ?', [email]);
     }

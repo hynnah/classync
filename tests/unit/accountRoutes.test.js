@@ -1,10 +1,15 @@
 const ORIGINAL_TEST_AUTH_BYPASS = process.env.TEST_AUTH_BYPASS;
 process.env.TEST_AUTH_BYPASS = 'true';
 
+jest.mock('../../server/src/calendar/googleCalendar');
+
 const request = require('supertest');
 const { createApp } = require('../../server/src/app');
 const { sessionStore } = require('../../server/src/auth/sessionStore');
 const { getPool } = require('../../server/src/db/pool');
+const { CalendarTokenRepo } = require('../../server/src/db/repositories/CalendarTokenRepo');
+const { encrypt } = require('../../server/src/auth/tokenCrypto');
+const googleCalendar = require('../../server/src/calendar/googleCalendar');
 
 afterAll(async () => {
   process.env.TEST_AUTH_BYPASS = ORIGINAL_TEST_AUTH_BYPASS;
@@ -81,12 +86,12 @@ describe('/api/account and /api/calendar', () => {
     expect(me.body.openingView).toBe('all');
   });
 
-  test('connect then disconnect flips calendarConnected, and disconnect actually erases the row', async () => {
+  test('POST /api/calendar/disconnect erases the token row (connecting itself is a real OAuth redirect, tested in calendarAuthRoutes.test.js)', async () => {
     const { agent, userId } = await loggedInAgent('calendar-toggle');
+    await CalendarTokenRepo.connect(userId, encrypt('fake-refresh-token'));
+    googleCalendar.clientForRefreshToken.mockReturnValue({ events: { delete: jest.fn().mockResolvedValue({}) } });
+    googleCalendar.revokeToken.mockResolvedValue();
 
-    const connect = await agent.post('/api/calendar/connect');
-    expect(connect.status).toBe(200);
-    expect(connect.body.connected).toBe(true);
     let me = await agent.get('/api/account');
     expect(me.body.calendarConnected).toBe(true);
 

@@ -925,11 +925,16 @@
     });
 
     calendarToggleBtn.addEventListener('click', async () => {
+      if (!calendarConnected) {
+        // Connecting is a real Google consent round-trip, not a fetch — the
+        // browser has to actually navigate to Google's consent screen.
+        window.location.href = '/calendar/connect/start';
+        return;
+      }
       calendarToggleBtn.disabled = true;
-      const endpoint = calendarConnected ? '/api/calendar/disconnect' : '/api/calendar/connect';
-      const res = await fetch(endpoint, { method: 'POST' });
+      const res = await fetch('/api/calendar/disconnect', { method: 'POST' });
       if (res.ok) {
-        calendarConnected = !calendarConnected;
+        calendarConnected = false;
         renderCalendarState();
       }
       calendarToggleBtn.disabled = false;
@@ -3383,6 +3388,21 @@
     await initSpaceSwitcher(me.id, weekStartsOn, me.openingView);
     const savedView = loadViewState();
     if (savedView && savedView.scope === 'settings') showSettings();
+
+    // Landing back here straight off the Google Calendar consent redirect —
+    // surface the result and drop the visitor back on Settings regardless of
+    // whichever view they were last on, then scrub the param so a reload
+    // doesn't re-show the toast.
+    const calendarResult = new URLSearchParams(window.location.search).get('calendar');
+    if (calendarResult) {
+      showSettings();
+      showToast(calendarResult === 'connected'
+        ? 'Google Calendar connected — syncing your existing items now.'
+        : 'Could not connect Google Calendar. Please try again.');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('calendar');
+      window.history.replaceState({}, '', url);
+    }
 
     // Live updates over SSE — opened once both closures above have
     // registered their crossViewRefresh handlers, so nothing can arrive

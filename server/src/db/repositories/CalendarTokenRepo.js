@@ -5,15 +5,15 @@ async function getForUser(userId) {
   return rows[0] || null;
 }
 
-// Stub for Day 6 — no real Google consent round-trip yet (that's Day 7's
-// incremental-auth flow), so encrypted_refresh_token stays NULL. This just
-// records the user's opt-in so Settings has real, persisted state to show.
-async function connect(userId) {
+// Called once the Day 7 incremental-consent round-trip (separate from sign-in)
+// actually exchanges a code for a refresh token — encryptedRefreshToken is
+// already encrypted (tokenCrypto.encrypt) by the caller, never stored raw.
+async function connect(userId, encryptedRefreshToken) {
   await getPool().query(
-    `INSERT INTO google_calendar_tokens (user_id, is_connected, connected_at)
-     VALUES (?, TRUE, NOW())
-     ON DUPLICATE KEY UPDATE is_connected = TRUE, connected_at = NOW()`,
-    [userId]
+    `INSERT INTO google_calendar_tokens (user_id, encrypted_refresh_token, is_connected, connected_at)
+     VALUES (?, ?, TRUE, NOW())
+     ON DUPLICATE KEY UPDATE encrypted_refresh_token = VALUES(encrypted_refresh_token), is_connected = TRUE, connected_at = NOW()`,
+    [userId, encryptedRefreshToken]
   );
 }
 

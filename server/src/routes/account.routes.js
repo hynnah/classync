@@ -3,6 +3,7 @@ const { requireLogin } = require('../auth/guard');
 const { UserRepo } = require('../db/repositories/UserRepo');
 const { CalendarTokenRepo } = require('../db/repositories/CalendarTokenRepo');
 const { SpaceRepo } = require('../db/repositories/SpaceRepo');
+const { disconnectAndCleanup } = require('../calendar/sync');
 
 const router = express.Router();
 
@@ -48,18 +49,12 @@ router.patch('/api/account/preferences', requireLogin, async (req, res, next) =>
   }
 });
 
-router.post('/api/calendar/connect', requireLogin, async (req, res, next) => {
-  try {
-    await CalendarTokenRepo.connect(req.user.id);
-    res.json({ connected: true });
-  } catch (err) {
-    next(err);
-  }
-});
-
+// Connecting is a real Google consent round-trip (GET /calendar/connect/start,
+// a redirect — see calendarAuth.routes.js), not a JSON POST: there's no
+// meaningful "connect" without the user actually granting Calendar access.
 router.post('/api/calendar/disconnect', requireLogin, async (req, res, next) => {
   try {
-    await CalendarTokenRepo.disconnect(req.user.id);
+    await disconnectAndCleanup(req.user.id);
     res.json({ connected: false });
   } catch (err) {
     next(err);

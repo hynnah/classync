@@ -1,10 +1,19 @@
 const ORIGINAL_TEST_AUTH_BYPASS = process.env.TEST_AUTH_BYPASS;
 process.env.TEST_AUTH_BYPASS = 'true';
 
+// Inert for every describe block below except "Google Calendar sync wiring"
+// — no other test here ever connects a user's calendar, so syncItemForUser
+// exits before it would call into this module either way. Mocked file-wide
+// so nothing in this file can ever make a real Google API call by accident.
+jest.mock('../../server/src/calendar/googleCalendar');
+
 const request = require('supertest');
 const { createApp } = require('../../server/src/app');
 const { sessionStore } = require('../../server/src/auth/sessionStore');
 const { getPool } = require('../../server/src/db/pool');
+const { CalendarTokenRepo } = require('../../server/src/db/repositories/CalendarTokenRepo');
+const { encrypt } = require('../../server/src/auth/tokenCrypto');
+const googleCalendar = require('../../server/src/calendar/googleCalendar');
 
 afterAll(async () => {
   process.env.TEST_AUTH_BYPASS = ORIGINAL_TEST_AUTH_BYPASS;
@@ -495,5 +504,94 @@ describe('/api/items/all/todo — the merged All To Do list (FR-M1)', () => {
     expect(ids).toContain(personal.body.item.id);
     expect(ids).toContain(spaceTask.body.item.id);
     expect(ids).not.toContain(spaceEvent.body.item.id);
+  });
+});
+
+describe('Google Calendar sync wiring on /api/items', () => {
+  const app = createApp();
+  const createdIds = [];
+
+  afterAll(async () => {
+    if (createdIds.length) {
+      await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+    }
+    await getPool().query("DELETE FROM users WHERE email LIKE 'itemsroutes-calsync-%@example.com'");
+  });
+
+  beforeEach(() => {
+    googleCalendar.clientForRefreshToken.mockReset();
+  });
+
+  async function connectedAgent(label) {
+    const email = `itemsroutes-calsync-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+    const agent = request.agent(app);
+    const res = await agent.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+    await CalendarTokenRepo.connect(res.body.userId, encrypt('fake-refresh-token'));
+    return agent;
+  }
+
+  test('creating a dated task pushes it to the connected creator\'s Google Calendar', async () => {
+    const agent = await connectedAgent('create');
+    const insert = jest.fn().mockResolvedValue({ data: { id: 'evt-created' } });
+    googleCalendar.clientForRefreshToken.mockReturnValue({ events: { insert, update: jest.fn(), delete: jest.fn() } });
+
+    const res = await agent.post('/api/items').send({ kind: 'task', title: 'Synced task', dueDate: '2026-09-15' });
+    createdIds.push(res.body.item.id);
+
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert.mock.calls[0][0].requestBody.summary).toBe('Synced task');
+  });
+
+  test('editing a synced item pushes an update, not a second insert', async () => {
+    const agent = await connectedAgent('edit');
+    const insert = jest.fn().mockResolvedValue({ data: { id: 'evt-edit' } });
+    const update = jest.fn().mockResolvedValue({ data: {} });
+    googleCalendar.clientForRefreshToken.mockReturnValue({ events: { insert, update, delete: jest.fn() } });
+
+    const created = await agent.post('/api/items').send({ kind: 'task', title: 'Edit me', dueDate: '2026-09-15' });
+    createdIds.push(created.body.item.id);
+    await agent.patch(`/api/items/${created.body.item.id}`).send({ title: 'Edited title' });
+
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+
+  test('deleting a synced item removes the Google Calendar event', async () => {
+    const agent = await connectedAgent('delete');
+    const insert = jest.fn().mockResolvedValue({ data: { id: 'evt-delete' } });
+    const del = jest.fn().mockResolvedValue({});
+    googleCalendar.clientForRefreshToken.mockReturnValue({ events: { insert, update: jest.fn(), delete: del } });
+
+    const created = await agent.post('/api/items').send({ kind: 'task', title: 'Delete me', dueDate: '2026-09-15' });
+    const res = await agent.delete(`/api/items/${created.body.item.id}`);
+
+    expect(res.status).toBe(204);
+    expect(del).toHaveBeenCalledWith(expect.objectContaining({ eventId: 'evt-delete' }));
+  });
+
+  test('marking a task done does not touch Google Calendar — nothing calendar-relevant changed', async () => {
+    const agent = await connectedAgent('status');
+    const insert = jest.fn().mockResolvedValue({ data: { id: 'evt-status' } });
+    const update = jest.fn().mockResolvedValue({ data: {} });
+    googleCalendar.clientForRefreshToken.mockReturnValue({ events: { insert, update, delete: jest.fn() } });
+
+    const created = await agent.post('/api/items').send({ kind: 'task', title: 'Status only', dueDate: '2026-09-15' });
+    createdIds.push(created.body.item.id);
+    insert.mockClear();
+    await agent.patch(`/api/items/${created.body.item.id}/status`).send({ status: 'completed' });
+
+    expect(insert).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  test('creating an undated task never touches Google Calendar', async () => {
+    const agent = await connectedAgent('undated');
+    const insert = jest.fn();
+    googleCalendar.clientForRefreshToken.mockReturnValue({ events: { insert, update: jest.fn(), delete: jest.fn() } });
+
+    const res = await agent.post('/api/items').send({ kind: 'task', title: 'No date' });
+    createdIds.push(res.body.item.id);
+
+    expect(insert).not.toHaveBeenCalled();
   });
 });

@@ -174,6 +174,22 @@ async function listAllScopedTodo(userId) {
   return rows;
 }
 
+// Backfill-only: every dated item (task or event; a note has no due_date to
+// sync) visible to this user across Personal + every Space they belong to,
+// with no date-range bound — used once when a user connects Google Calendar
+// so pre-existing items get pushed too, not just ones touched after connect.
+async function listAllDatedForUser(userId) {
+  const [rows] = await getPool().query(
+    `${SELECT_WITH_STATUS_AND_SPACE}
+     WHERE item_assignments.user_id = ?
+       AND items.due_date IS NOT NULL
+       AND (items.space_id IS NULL OR items.space_id IN (SELECT space_id FROM space_members WHERE user_id = ?))
+     ORDER BY items.due_date ASC, items.due_time ASC`,
+    [userId, userId]
+  );
+  return rows;
+}
+
 async function listUrgentForUser(userId) {
   const [dueToday] = await getPool().query(
     `${SELECT_WITH_STATUS}
@@ -259,5 +275,5 @@ async function remove({ itemId, userId }) {
 }
 
 module.exports = {
-  ItemRepo: { findById, findForUser, listAssigneeUserIds, create, listForUser, listForSpace, listSpaceTodo, listAllForUser, listAllScoped, listAllScopedTodo, listUrgentForUser, setStatus, update, remove },
+  ItemRepo: { findById, findForUser, listAssigneeUserIds, create, listForUser, listForSpace, listSpaceTodo, listAllForUser, listAllScoped, listAllScopedTodo, listAllDatedForUser, listUrgentForUser, setStatus, update, remove },
 };

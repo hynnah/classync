@@ -2,15 +2,19 @@ const express = require('express');
 const { requireLogin } = require('../auth/guard');
 const { ItemRepo } = require('../db/repositories/ItemRepo');
 const { SpaceRepo } = require('../db/repositories/SpaceRepo');
+const { ItemCalendarEventRepo } = require('../db/repositories/ItemCalendarEventRepo');
 const sseHub = require('../realtime/sseHub');
+const { syncItemForUsers, deleteCalendarEventsForItem } = require('../calendar/sync');
 
 // Notifies everyone with visibility into this item — every open session
 // refreshing whatever view they're already on picks up the change the same
 // way it already does after a local mutation, just without needing it to be
-// their own tab that made the change.
+// their own tab that made the change. Returns the assignee list so callers
+// that also need to sync Google Calendar don't have to look it up twice.
 async function notifyItemUpdated(itemId, spaceId) {
   const assigneeIds = await ItemRepo.listAssigneeUserIds(itemId);
   sseHub.notifyUsers(assigneeIds, 'item_updated', { itemId, spaceId: spaceId || null });
+  return assigneeIds;
 }
 
 const router = express.Router();
@@ -208,7 +212,8 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
       isOpenToAll: spaceId ? !!isOpenToAll : false,
       assigneeUserIds: normalizedAssignees,
     });
-    await notifyItemUpdated(item.id, item.space_id);
+    const assigneeIds = await notifyItemUpdated(item.id, item.space_id);
+    await syncItemForUsers(item, assigneeIds);
     res.status(201).json({ item });
   } catch (err) {
     next(err);
@@ -241,7 +246,8 @@ router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
     if (!item) {
       return res.status(404).json({ error: 'Item not found.' });
     }
-    await notifyItemUpdated(item.id, item.space_id);
+    const assigneeIds = await notifyItemUpdated(item.id, item.space_id);
+    await syncItemForUsers(item, assigneeIds);
     res.json({ item });
   } catch (err) {
     next(err);
@@ -267,16 +273,20 @@ router.patch('/api/items/:id/status', requireLogin, async (req, res, next) => {
 
 router.delete('/api/items/:id', requireLogin, async (req, res, next) => {
   try {
-    // Assignees and space_id have to be read before the delete — the row
-    // (and its item_assignments) won't exist to read from afterward.
+    // Assignees, space_id, and any synced-calendar-event mapping all have to
+    // be read before the delete — the row (and its item_assignments/
+    // item_calendar_events, both FK cascade-deleted) won't exist to read from
+    // afterward.
     const existing = await ItemRepo.findById(req.params.id);
     const assigneeIds = existing ? await ItemRepo.listAssigneeUserIds(req.params.id) : [];
+    const calendarMappings = existing ? await ItemCalendarEventRepo.listForItem(req.params.id) : [];
 
     const deleted = await ItemRepo.remove({ itemId: req.params.id, userId: req.user.id });
     if (!deleted) {
       return res.status(404).json({ error: 'Item not found.' });
     }
     sseHub.notifyUsers(assigneeIds, 'item_updated', { itemId: Number(req.params.id), spaceId: existing.space_id, deleted: true });
+    await deleteCalendarEventsForItem(calendarMappings);
     res.status(204).end();
   } catch (err) {
     next(err);
