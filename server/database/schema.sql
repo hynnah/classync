@@ -106,9 +106,14 @@ CREATE TABLE activity_log (
   action_type     VARCHAR(50) NOT NULL,
   target_type     ENUM('user','space','item') NULL,
   target_id       BIGINT UNSIGNED NULL,
+  -- Captured at log time, not resolved via a join on read — so a row still
+  -- reads sensibly after its target (or even its actor) is later deleted.
   target_label    VARCHAR(255),
   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (actor_user_id) REFERENCES users(id)
+  -- SET NULL, not the default RESTRICT — same reasoning as spaces.creator_user_id
+  -- above: an admin who's ever performed a logged action must still be able to
+  -- delete their own account afterward without a dangling FK blocking it.
+  FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_items_space ON items(space_id);

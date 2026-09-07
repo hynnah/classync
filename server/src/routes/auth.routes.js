@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { buildAuthUrl, exchangeCodeForProfile } = require('../auth/oauth');
 const { UserRepo } = require('../db/repositories/UserRepo');
+const { oauthCallbackLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ router.get('/auth/google', (req, res) => {
   });
 });
 
-router.get('/auth/google/callback', async (req, res) => {
+router.get('/auth/google/callback', oauthCallbackLimiter, async (req, res) => {
   const { code, state, error } = req.query;
 
   if (error) {

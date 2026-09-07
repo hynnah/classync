@@ -1,4 +1,4 @@
-const { getPool } = require('../pool');
+const { getPool, withDeadlockRetry } = require('../pool');
 
 async function findByGoogleSub(googleSub) {
   const [rows] = await getPool().query('SELECT * FROM users WHERE google_sub = ?', [googleSub]);
@@ -68,50 +68,52 @@ async function updatePreferences(userId, { weekStartsOn, openingView }) {
 // to NULL rather than blocking (see schema.sql). Any Space left with zero
 // members as a result auto-deactivates, matching leaveSpace's FR-O6 behavior.
 async function deleteAccount(userId) {
-  const conn = await getPool().getConnection();
-  try {
-    await conn.beginTransaction();
-    const [mySpaces] = await conn.query(
-      `SELECT sm.space_id, sm.role, s.name
-       FROM space_members sm JOIN spaces s ON s.id = sm.space_id
-       WHERE sm.user_id = ? FOR UPDATE`,
-      [userId]
-    );
+  return withDeadlockRetry(async () => {
+    const conn = await getPool().getConnection();
+    try {
+      await conn.beginTransaction();
+      const [mySpaces] = await conn.query(
+        `SELECT sm.space_id, sm.role, s.name
+         FROM space_members sm JOIN spaces s ON s.id = sm.space_id
+         WHERE sm.user_id = ? FOR UPDATE`,
+        [userId]
+      );
 
-    for (const sm of mySpaces) {
-      if (sm.role !== 'organizer') continue;
-      const [[{ otherOrganizers }]] = await conn.query(
-        "SELECT COUNT(*) AS otherOrganizers FROM space_members WHERE space_id = ? AND role = 'organizer' AND user_id != ?",
-        [sm.space_id, userId]
-      );
-      const [[{ otherMembers }]] = await conn.query(
-        'SELECT COUNT(*) AS otherMembers FROM space_members WHERE space_id = ? AND user_id != ?',
-        [sm.space_id, userId]
-      );
-      if (otherOrganizers === 0 && otherMembers > 0) {
-        await conn.rollback();
-        return { error: 'sole_organizer', spaceName: sm.name };
+      for (const sm of mySpaces) {
+        if (sm.role !== 'organizer') continue;
+        const [[{ otherOrganizers }]] = await conn.query(
+          "SELECT COUNT(*) AS otherOrganizers FROM space_members WHERE space_id = ? AND role = 'organizer' AND user_id != ?",
+          [sm.space_id, userId]
+        );
+        const [[{ otherMembers }]] = await conn.query(
+          'SELECT COUNT(*) AS otherMembers FROM space_members WHERE space_id = ? AND user_id != ?',
+          [sm.space_id, userId]
+        );
+        if (otherOrganizers === 0 && otherMembers > 0) {
+          await conn.rollback();
+          return { error: 'sole_organizer', spaceName: sm.name };
+        }
       }
-    }
 
-    const spaceIds = mySpaces.map((sm) => sm.space_id);
-    await conn.query('DELETE FROM items WHERE created_by = ?', [userId]);
-    await conn.query('DELETE FROM users WHERE id = ?', [userId]);
-    if (spaceIds.length) {
-      await conn.query(
-        `UPDATE spaces SET is_active = FALSE
-         WHERE id IN (?) AND id NOT IN (SELECT space_id FROM space_members WHERE space_id IN (?))`,
-        [spaceIds, spaceIds]
-      );
+      const spaceIds = mySpaces.map((sm) => sm.space_id);
+      await conn.query('DELETE FROM items WHERE created_by = ?', [userId]);
+      await conn.query('DELETE FROM users WHERE id = ?', [userId]);
+      if (spaceIds.length) {
+        await conn.query(
+          `UPDATE spaces SET is_active = FALSE
+           WHERE id IN (?) AND id NOT IN (SELECT space_id FROM space_members WHERE space_id IN (?))`,
+          [spaceIds, spaceIds]
+        );
+      }
+      await conn.commit();
+      return { ok: true };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
     }
-    await conn.commit();
-    return { ok: true };
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+  });
 }
 
 module.exports = { UserRepo: { findByGoogleSub, findById, create, upsertFromGoogle, markOnboarded, updatePreferences, deleteAccount } };

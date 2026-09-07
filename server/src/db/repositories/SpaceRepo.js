@@ -1,4 +1,4 @@
-const { getPool } = require('../pool');
+const { getPool, withDeadlockRetry } = require('../pool');
 
 // Uppercase letters + digits, excluding 0/O/1/I/L — those five are the ones
 // people misread from each other when a join code gets read aloud or handwritten.
@@ -34,35 +34,37 @@ async function getMembership(spaceId, userId) {
 // inserting — avoids a check-then-insert race between two Spaces created at
 // the same moment.
 async function createSpace({ name, creatorUserId }) {
-  const conn = await getPool().getConnection();
-  try {
-    await conn.beginTransaction();
-    let spaceId;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        const [result] = await conn.query(
-          'INSERT INTO spaces (name, join_code, creator_user_id) VALUES (?, ?, ?)',
-          [name, generateJoinCode(), creatorUserId]
-        );
-        spaceId = result.insertId;
-        break;
-      } catch (err) {
-        if (err.code === 'ER_DUP_ENTRY' && attempt < 4) continue;
-        throw err;
+  return withDeadlockRetry(async () => {
+    const conn = await getPool().getConnection();
+    try {
+      await conn.beginTransaction();
+      let spaceId;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          const [result] = await conn.query(
+            'INSERT INTO spaces (name, join_code, creator_user_id) VALUES (?, ?, ?)',
+            [name, generateJoinCode(), creatorUserId]
+          );
+          spaceId = result.insertId;
+          break;
+        } catch (err) {
+          if (err.code === 'ER_DUP_ENTRY' && attempt < 4) continue;
+          throw err;
+        }
       }
+      await conn.query(
+        "INSERT INTO space_members (space_id, user_id, role) VALUES (?, ?, 'organizer')",
+        [spaceId, creatorUserId]
+      );
+      await conn.commit();
+      return findById(spaceId);
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
     }
-    await conn.query(
-      "INSERT INTO space_members (space_id, user_id, role) VALUES (?, ?, 'organizer')",
-      [spaceId, creatorUserId]
-    );
-    await conn.commit();
-    return findById(spaceId);
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+  });
 }
 
 // Returns a tagged result instead of throwing, since "already a member" and
@@ -88,25 +90,27 @@ async function joinSpace({ joinCode, userId }) {
   if (existing) {
     return { error: 'already_member', space };
   }
-  const conn = await getPool().getConnection();
-  try {
-    await conn.beginTransaction();
-    await conn.query(
-      "INSERT INTO space_members (space_id, user_id, role) VALUES (?, ?, 'member')",
-      [space.id, userId]
-    );
-    await conn.query(
-      `INSERT IGNORE INTO item_assignments (item_id, user_id, status)
-       SELECT id, ?, 'pending' FROM items WHERE space_id = ? AND is_open_to_all = TRUE`,
-      [userId, space.id]
-    );
-    await conn.commit();
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+  await withDeadlockRetry(async () => {
+    const conn = await getPool().getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query(
+        "INSERT INTO space_members (space_id, user_id, role) VALUES (?, ?, 'member')",
+        [space.id, userId]
+      );
+      await conn.query(
+        `INSERT IGNORE INTO item_assignments (item_id, user_id, status)
+         SELECT id, ?, 'pending' FROM items WHERE space_id = ? AND is_open_to_all = TRUE`,
+        [userId, space.id]
+      );
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  });
   return { space };
 }
 
@@ -179,45 +183,47 @@ async function demoteMember({ spaceId, actingUserId, targetUserId }) {
   if (targetUserId === actingUserId) {
     return { error: 'cannot_target_self' };
   }
-  const conn = await getPool().getConnection();
-  try {
-    await conn.beginTransaction();
-    await conn.query('SELECT 1 FROM space_members WHERE space_id = ? FOR UPDATE', [spaceId]);
+  return withDeadlockRetry(async () => {
+    const conn = await getPool().getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query('SELECT 1 FROM space_members WHERE space_id = ? FOR UPDATE', [spaceId]);
 
-    const [actingRows] = await conn.query(
-      'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
-      [spaceId, actingUserId]
-    );
-    const acting = actingRows[0];
-    if (!acting || acting.role !== 'organizer') {
+      const [actingRows] = await conn.query(
+        'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
+        [spaceId, actingUserId]
+      );
+      const acting = actingRows[0];
+      if (!acting || acting.role !== 'organizer') {
+        await conn.rollback();
+        return { error: 'forbidden' };
+      }
+      const [targetRows] = await conn.query(
+        'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
+        [spaceId, targetUserId]
+      );
+      const target = targetRows[0];
+      if (!target) {
+        await conn.rollback();
+        return { error: 'not_found' };
+      }
+      if (target.role !== 'organizer') {
+        await conn.rollback();
+        return { error: 'not_organizer' };
+      }
+      await conn.query(
+        "UPDATE space_members SET role = 'member' WHERE space_id = ? AND user_id = ?",
+        [spaceId, targetUserId]
+      );
+      await conn.commit();
+      return { ok: true };
+    } catch (err) {
       await conn.rollback();
-      return { error: 'forbidden' };
+      throw err;
+    } finally {
+      conn.release();
     }
-    const [targetRows] = await conn.query(
-      'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
-      [spaceId, targetUserId]
-    );
-    const target = targetRows[0];
-    if (!target) {
-      await conn.rollback();
-      return { error: 'not_found' };
-    }
-    if (target.role !== 'organizer') {
-      await conn.rollback();
-      return { error: 'not_organizer' };
-    }
-    await conn.query(
-      "UPDATE space_members SET role = 'member' WHERE space_id = ? AND user_id = ?",
-      [spaceId, targetUserId]
-    );
-    await conn.commit();
-    return { ok: true };
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+  });
 }
 
 // Same race as demoteMember, just worse: two Organizers concurrently
@@ -229,51 +235,53 @@ async function removeMember({ spaceId, actingUserId, targetUserId }) {
   if (targetUserId === actingUserId) {
     return { error: 'use_leave_instead' };
   }
-  const conn = await getPool().getConnection();
-  try {
-    await conn.beginTransaction();
-    await conn.query('SELECT 1 FROM space_members WHERE space_id = ? FOR UPDATE', [spaceId]);
+  return withDeadlockRetry(async () => {
+    const conn = await getPool().getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query('SELECT 1 FROM space_members WHERE space_id = ? FOR UPDATE', [spaceId]);
 
-    const [actingRows] = await conn.query(
-      'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
-      [spaceId, actingUserId]
-    );
-    const acting = actingRows[0];
-    if (!acting || acting.role !== 'organizer') {
+      const [actingRows] = await conn.query(
+        'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
+        [spaceId, actingUserId]
+      );
+      const acting = actingRows[0];
+      if (!acting || acting.role !== 'organizer') {
+        await conn.rollback();
+        return { error: 'forbidden' };
+      }
+      const [targetRows] = await conn.query(
+        'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
+        [spaceId, targetUserId]
+      );
+      const target = targetRows[0];
+      if (!target) {
+        await conn.rollback();
+        return { error: 'not_found' };
+      }
+      await conn.query(
+        'DELETE FROM space_members WHERE space_id = ? AND user_id = ?',
+        [spaceId, targetUserId]
+      );
+      // Without this, a removed member keeps a stale assignment row on this
+      // Space's items forever — invisible everywhere today, but exactly what
+      // the unified All-calendar (listAllScoped) would otherwise surface as a
+      // ghost item from a Space they no longer belong to.
+      await conn.query(
+        `DELETE item_assignments FROM item_assignments
+         JOIN items ON items.id = item_assignments.item_id
+         WHERE items.space_id = ? AND item_assignments.user_id = ?`,
+        [spaceId, targetUserId]
+      );
+      await conn.commit();
+      return { ok: true };
+    } catch (err) {
       await conn.rollback();
-      return { error: 'forbidden' };
+      throw err;
+    } finally {
+      conn.release();
     }
-    const [targetRows] = await conn.query(
-      'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
-      [spaceId, targetUserId]
-    );
-    const target = targetRows[0];
-    if (!target) {
-      await conn.rollback();
-      return { error: 'not_found' };
-    }
-    await conn.query(
-      'DELETE FROM space_members WHERE space_id = ? AND user_id = ?',
-      [spaceId, targetUserId]
-    );
-    // Without this, a removed member keeps a stale assignment row on this
-    // Space's items forever — invisible everywhere today, but exactly what
-    // the unified All-calendar (listAllScoped) would otherwise surface as a
-    // ghost item from a Space they no longer belong to.
-    await conn.query(
-      `DELETE item_assignments FROM item_assignments
-       JOIN items ON items.id = item_assignments.item_id
-       WHERE items.space_id = ? AND item_assignments.user_id = ?`,
-      [spaceId, targetUserId]
-    );
-    await conn.commit();
-    return { ok: true };
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+  });
 }
 
 // FR-O5: a sole Organizer can't leave while other Members remain — they have
@@ -294,62 +302,64 @@ async function removeMember({ spaceId, actingUserId, targetUserId }) {
 // caller's already-committed change, matching the transactional pattern
 // ItemRepo.create() already uses for its own insert+fan-out.
 async function leaveSpace({ spaceId, userId }) {
-  const conn = await getPool().getConnection();
-  try {
-    await conn.beginTransaction();
-    await conn.query('SELECT 1 FROM space_members WHERE space_id = ? FOR UPDATE', [spaceId]);
+  return withDeadlockRetry(async () => {
+    const conn = await getPool().getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query('SELECT 1 FROM space_members WHERE space_id = ? FOR UPDATE', [spaceId]);
 
-    const [membershipRows] = await conn.query(
-      'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
-      [spaceId, userId]
-    );
-    const membership = membershipRows[0];
-    if (!membership) {
-      await conn.rollback();
-      return { error: 'not_a_member' };
-    }
-    if (membership.role === 'organizer') {
-      const [[{ otherOrganizers }]] = await conn.query(
-        "SELECT COUNT(*) AS otherOrganizers FROM space_members WHERE space_id = ? AND role = 'organizer' AND user_id != ?",
+      const [membershipRows] = await conn.query(
+        'SELECT * FROM space_members WHERE space_id = ? AND user_id = ?',
         [spaceId, userId]
       );
-      const [[{ otherMembers }]] = await conn.query(
-        'SELECT COUNT(*) AS otherMembers FROM space_members WHERE space_id = ? AND user_id != ?',
-        [spaceId, userId]
-      );
-      if (otherOrganizers === 0 && otherMembers > 0) {
+      const membership = membershipRows[0];
+      if (!membership) {
         await conn.rollback();
-        return { error: 'sole_organizer' };
+        return { error: 'not_a_member' };
       }
+      if (membership.role === 'organizer') {
+        const [[{ otherOrganizers }]] = await conn.query(
+          "SELECT COUNT(*) AS otherOrganizers FROM space_members WHERE space_id = ? AND role = 'organizer' AND user_id != ?",
+          [spaceId, userId]
+        );
+        const [[{ otherMembers }]] = await conn.query(
+          'SELECT COUNT(*) AS otherMembers FROM space_members WHERE space_id = ? AND user_id != ?',
+          [spaceId, userId]
+        );
+        if (otherOrganizers === 0 && otherMembers > 0) {
+          await conn.rollback();
+          return { error: 'sole_organizer' };
+        }
+      }
+      await conn.query(
+        'DELETE FROM space_members WHERE space_id = ? AND user_id = ?',
+        [spaceId, userId]
+      );
+      // Same reason removeMember does this: a stale assignment row would
+      // otherwise outlive the membership and show up as a ghost item in the
+      // unified All-calendar.
+      await conn.query(
+        `DELETE item_assignments FROM item_assignments
+         JOIN items ON items.id = item_assignments.item_id
+         WHERE items.space_id = ? AND item_assignments.user_id = ?`,
+        [spaceId, userId]
+      );
+      const [[{ remaining }]] = await conn.query(
+        'SELECT COUNT(*) AS remaining FROM space_members WHERE space_id = ?',
+        [spaceId]
+      );
+      if (remaining === 0) {
+        await conn.query('UPDATE spaces SET is_active = FALSE WHERE id = ?', [spaceId]);
+      }
+      await conn.commit();
+      return { ok: true };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
     }
-    await conn.query(
-      'DELETE FROM space_members WHERE space_id = ? AND user_id = ?',
-      [spaceId, userId]
-    );
-    // Same reason removeMember does this: a stale assignment row would
-    // otherwise outlive the membership and show up as a ghost item in the
-    // unified All-calendar.
-    await conn.query(
-      `DELETE item_assignments FROM item_assignments
-       JOIN items ON items.id = item_assignments.item_id
-       WHERE items.space_id = ? AND item_assignments.user_id = ?`,
-      [spaceId, userId]
-    );
-    const [[{ remaining }]] = await conn.query(
-      'SELECT COUNT(*) AS remaining FROM space_members WHERE space_id = ?',
-      [spaceId]
-    );
-    if (remaining === 0) {
-      await conn.query('UPDATE spaces SET is_active = FALSE WHERE id = ?', [spaceId]);
-    }
-    await conn.commit();
-    return { ok: true };
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+  });
 }
 
 module.exports = {

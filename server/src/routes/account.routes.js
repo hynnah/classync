@@ -21,6 +21,7 @@ router.get('/api/account', requireLogin, async (req, res, next) => {
       email: req.user.email,
       firstName: req.user.first_name,
       lastName: req.user.last_name,
+      isAdmin: !!req.user.is_admin,
       createdAt: req.user.created_at,
       weekStartsOn: req.user.week_starts_on,
       openingView: req.user.opening_view,

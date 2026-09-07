@@ -121,6 +121,11 @@
           <span id="user-name">Loading…</span>
           <span class="rail-user-role">Solo</span>
         </span>
+        <button id="rail-admin-btn" class="rail-settings-btn" type="button" aria-label="Admin" hidden>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 1.5l5 2v3.8c0 3.4-2.1 5.9-5 7.2-2.9-1.3-5-3.8-5-7.2V3.5l5-2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+          </svg>
+        </button>
         <button id="rail-settings-btn" class="rail-settings-btn" type="button" aria-label="Settings">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M2 4h6M11 4h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
@@ -483,7 +488,7 @@
               <div class="settings-row-text">
                 <span class="settings-row-label">Google Calendar <span id="calendar-status-label" class="settings-status-pill">Not connected</span></span>
                 <span class="settings-row-hint">Sync your Personal to-dos and Space items to your own Google Calendar. Opt-in, per-item, revocable any time.</span>
-                <span class="settings-row-finehint">Full sync is on its way — connecting now saves your preference for when it lands.</span>
+                <span class="settings-row-finehint">Connecting pushes your existing dated items right away, then keeps every change in sync. Disconnecting removes everything Classync added.</span>
               </div>
               <button id="calendar-toggle-btn" class="settings-toggle-btn" type="button">Connect</button>
             </div>
@@ -509,6 +514,77 @@
               <button id="delete-account-btn" class="space-leave-btn" type="button">Delete my account</button>
             </div>
             <p id="delete-account-error" class="form-error" hidden></p>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="admin-view" hidden>
+      <div class="cal-toolbar">
+        <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
+        <div class="cal-toolbar-left">
+          <div class="cal-kicker">Admin · console</div>
+          <div class="toolbar-heading">Admin</div>
+        </div>
+        <div class="cal-toolbar-right">
+          <div id="admin-tab-switch" class="todo-switch">
+            <button id="admin-tab-dashboard" class="todo-switch-btn is-active" type="button">Dashboard</button>
+            <button id="admin-tab-users" class="todo-switch-btn" type="button">Users</button>
+            <button id="admin-tab-spaces" class="todo-switch-btn" type="button">Spaces</button>
+            <button id="admin-tab-activity" class="todo-switch-btn" type="button">Activity</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-body">
+        <section id="admin-panel-dashboard" class="settings-row-section">
+          <div class="settings-row-section-label">Overview</div>
+          <div class="settings-row-section-body">
+            <div class="settings-stats">
+              <div class="settings-stat">
+                <span class="field-label">Users</span>
+                <span id="admin-stat-users-total" class="settings-stat-value">00</span>
+              </div>
+              <div class="settings-stat">
+                <span class="field-label">Active users</span>
+                <span id="admin-stat-users-active" class="settings-stat-value">00</span>
+              </div>
+              <div class="settings-stat">
+                <span class="field-label">Spaces</span>
+                <span id="admin-stat-spaces-total" class="settings-stat-value">00</span>
+              </div>
+              <div class="settings-stat">
+                <span class="field-label">Active Spaces</span>
+                <span id="admin-stat-spaces-active" class="settings-stat-value">00</span>
+              </div>
+              <div class="settings-stat">
+                <span class="field-label">Items</span>
+                <span id="admin-stat-items-total" class="settings-stat-value">00</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="admin-panel-users" class="settings-row-section" hidden>
+          <div class="settings-row-section-label">Manage Users</div>
+          <div class="settings-row-section-body">
+            <input id="admin-users-search" class="admin-search-input" type="text" placeholder="Search by name or email…">
+            <div id="admin-users-list" class="admin-list"></div>
+          </div>
+        </section>
+
+        <section id="admin-panel-spaces" class="settings-row-section" hidden>
+          <div class="settings-row-section-label">Manage Spaces</div>
+          <div class="settings-row-section-body">
+            <input id="admin-spaces-search" class="admin-search-input" type="text" placeholder="Search by name or join code…">
+            <div id="admin-spaces-list" class="admin-list"></div>
+          </div>
+        </section>
+
+        <section id="admin-panel-activity" class="settings-row-section" hidden>
+          <div class="settings-row-section-label">Activity Log</div>
+          <div class="settings-row-section-body">
+            <div id="admin-activity-list" class="admin-list"></div>
           </div>
         </section>
       </div>
@@ -754,6 +830,7 @@
 
 <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
+<script src="/js/csrf.js"></script>
 <script src="/js/lib/escape.js" type="module"></script>
 <script src="/js/calendar.js"></script>
 <script type="module">
@@ -855,14 +932,17 @@
     try { return JSON.parse(localStorage.getItem(VIEW_STATE_KEY)); } catch { return null; }
   }
 
-  // Settings is account-level, orthogonal to whichever scope (Personal/a
-  // Space/All) is selected — opening it doesn't touch the scope switcher or
-  // its rail-nav section at all, it just swaps what's showing in <main>.
-  // Every other view-show function calls this first so Settings never stays
-  // visible underneath whatever the user picks next.
+  // Settings (and Admin, same treatment) are account-level, orthogonal to
+  // whichever scope (Personal/a Space/All) is selected — opening either
+  // doesn't touch the scope switcher or its rail-nav section at all, it just
+  // swaps what's showing in <main>. Every other view-show function calls
+  // this first so neither stays visible underneath whatever the user picks
+  // next.
   function leaveSettingsView() {
     document.getElementById('settings-view').hidden = true;
     document.getElementById('rail-settings-btn').classList.remove('is-active');
+    document.getElementById('admin-view').hidden = true;
+    document.getElementById('rail-admin-btn').classList.remove('is-active');
   }
 
   // initApp() and initSpaceSwitcher() are separate closures, each owning
@@ -982,6 +1062,8 @@
       document.getElementById('space-members-view').hidden = true;
       document.getElementById('all-view').hidden = true;
       document.getElementById('all-todo-view').hidden = true;
+      document.getElementById('admin-view').hidden = true;
+      document.getElementById('rail-admin-btn').classList.remove('is-active');
       document.getElementById('settings-view').hidden = false;
       railSettingsBtn.classList.add('is-active');
       saveViewState({ scope: 'settings' });
@@ -989,7 +1071,193 @@
     }
 
     railSettingsBtn.addEventListener('click', showSettings);
-    return { showSettings };
+
+    // Admin — a second account-level view, same treatment as Settings, only
+    // ever shown to is_admin users (the rail button itself stays hidden for
+    // everyone else; bootstrap unhides it once /api/account's isAdmin comes
+    // back true).
+    const railAdminBtn = document.getElementById('rail-admin-btn');
+    const adminTabs = {
+      dashboard: { tabBtn: document.getElementById('admin-tab-dashboard'), panel: document.getElementById('admin-panel-dashboard') },
+      users: { tabBtn: document.getElementById('admin-tab-users'), panel: document.getElementById('admin-panel-users') },
+      spaces: { tabBtn: document.getElementById('admin-tab-spaces'), panel: document.getElementById('admin-panel-spaces') },
+      activity: { tabBtn: document.getElementById('admin-tab-activity'), panel: document.getElementById('admin-panel-activity') },
+    };
+    let adminActiveTab = 'dashboard';
+    const adminUsersSearch = document.getElementById('admin-users-search');
+    const adminSpacesSearch = document.getElementById('admin-spaces-search');
+    const adminUsersList = document.getElementById('admin-users-list');
+    const adminSpacesList = document.getElementById('admin-spaces-list');
+    const adminActivityList = document.getElementById('admin-activity-list');
+
+    function formatAdminDate(raw) {
+      if (!raw) return '—';
+      const d = new Date(raw.replace(' ', 'T'));
+      return `${MONTHS[d.getMonth()].slice(0, 3)} ${d.getDate()}, ${d.getFullYear()}`;
+    }
+
+    async function refreshAdminDashboard() {
+      const res = await fetch('/api/admin/stats');
+      if (!res.ok) return;
+      const stats = await res.json();
+      document.getElementById('admin-stat-users-total').textContent = String(stats.users.total).padStart(2, '0');
+      document.getElementById('admin-stat-users-active').textContent = String(stats.users.active).padStart(2, '0');
+      document.getElementById('admin-stat-spaces-total').textContent = String(stats.spaces.total).padStart(2, '0');
+      document.getElementById('admin-stat-spaces-active').textContent = String(stats.spaces.active).padStart(2, '0');
+      document.getElementById('admin-stat-items-total').textContent = String(stats.items.total).padStart(2, '0');
+    }
+
+    async function refreshAdminUsers() {
+      const search = adminUsersSearch.value.trim();
+      const res = await fetch(`/api/admin/users?search=${encodeURIComponent(search)}`);
+      if (!res.ok) return;
+      const { users } = await res.json();
+      if (!users.length) {
+        adminUsersList.innerHTML = '<p class="admin-empty">No users match.</p>';
+        return;
+      }
+      adminUsersList.innerHTML = users.map((u) => `
+        <div class="admin-row" data-user-id="${u.id}">
+          <div class="admin-row-text">
+            <span class="admin-row-title">
+              ${escapeHtml(`${u.firstName} ${u.lastName}`.trim() || u.email)}
+              <span class="admin-status-pill ${u.isActive ? 'is-active' : ''}">${u.isActive ? 'Active' : 'Deactivated'}</span>
+              ${u.isAdmin ? '<span class="admin-badge-admin">Admin</span>' : ''}
+            </span>
+            <span class="admin-row-meta">${escapeHtml(u.email)} · joined ${formatAdminDate(u.createdAt)}</span>
+          </div>
+          <button class="settings-toggle-btn admin-user-toggle-btn ${u.isActive ? 'settings-toggle-btn--danger' : ''}" type="button">${u.isActive ? 'Deactivate' : 'Activate'}</button>
+        </div>
+      `).join('');
+    }
+
+    async function refreshAdminSpaces() {
+      const search = adminSpacesSearch.value.trim();
+      const res = await fetch(`/api/admin/spaces?search=${encodeURIComponent(search)}`);
+      if (!res.ok) return;
+      const { spaces } = await res.json();
+      if (!spaces.length) {
+        adminSpacesList.innerHTML = '<p class="admin-empty">No Spaces match.</p>';
+        return;
+      }
+      adminSpacesList.innerHTML = spaces.map((s) => `
+        <div class="admin-row" data-space-id="${s.id}">
+          <div class="admin-row-text">
+            <span class="admin-row-title">
+              ${escapeHtml(s.name)}
+              <span class="admin-status-pill ${s.isActive ? 'is-active' : ''}">${s.isActive ? 'Active' : 'Deactivated'}</span>
+            </span>
+            <span class="admin-row-meta">${s.memberCount} member${s.memberCount === 1 ? '' : 's'} · code ${escapeHtml(s.joinCode)} · created ${formatAdminDate(s.createdAt)}</span>
+          </div>
+          <button class="settings-toggle-btn admin-space-toggle-btn ${s.isActive ? 'settings-toggle-btn--danger' : ''}" type="button">${s.isActive ? 'Deactivate' : 'Activate'}</button>
+        </div>
+      `).join('');
+    }
+
+    async function refreshAdminActivity() {
+      const res = await fetch('/api/admin/activity?limit=100');
+      if (!res.ok) return;
+      const { activity } = await res.json();
+      if (!activity.length) {
+        adminActivityList.innerHTML = '<p class="admin-empty">Nothing logged yet.</p>';
+        return;
+      }
+      adminActivityList.innerHTML = activity.map((a) => `
+        <div class="admin-row">
+          <div class="admin-row-text">
+            <span class="admin-row-title">${escapeHtml(a.actorName || 'Someone')} — ${escapeHtml(a.actionType.replace(/_/g, ' '))}</span>
+            <span class="admin-row-meta">${escapeHtml(a.targetLabel || '')} · ${formatAdminDate(a.createdAt)}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    const adminTabRefreshers = {
+      dashboard: refreshAdminDashboard,
+      users: refreshAdminUsers,
+      spaces: refreshAdminSpaces,
+      activity: refreshAdminActivity,
+    };
+
+    function showAdminTab(tab) {
+      adminActiveTab = tab;
+      Object.entries(adminTabs).forEach(([key, { tabBtn, panel }]) => {
+        tabBtn.classList.toggle('is-active', key === tab);
+        panel.hidden = key !== tab;
+      });
+      adminTabRefreshers[tab]();
+    }
+
+    adminTabs.dashboard.tabBtn.addEventListener('click', () => showAdminTab('dashboard'));
+    adminTabs.users.tabBtn.addEventListener('click', () => showAdminTab('users'));
+    adminTabs.spaces.tabBtn.addEventListener('click', () => showAdminTab('spaces'));
+    adminTabs.activity.tabBtn.addEventListener('click', () => showAdminTab('activity'));
+
+    let adminUsersSearchTimer;
+    adminUsersSearch.addEventListener('input', () => {
+      clearTimeout(adminUsersSearchTimer);
+      adminUsersSearchTimer = setTimeout(refreshAdminUsers, 250);
+    });
+    let adminSpacesSearchTimer;
+    adminSpacesSearch.addEventListener('input', () => {
+      clearTimeout(adminSpacesSearchTimer);
+      adminSpacesSearchTimer = setTimeout(refreshAdminSpaces, 250);
+    });
+
+    adminUsersList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.admin-user-toggle-btn');
+      if (!btn) return;
+      const row = btn.closest('.admin-row');
+      const userId = row.dataset.userId;
+      const activating = btn.textContent.trim() === 'Activate';
+      btn.disabled = true;
+      const res = await fetch(`/api/admin/users/${userId}/${activating ? 'activate' : 'deactivate'}`, { method: 'POST' });
+      if (res.ok) {
+        await refreshAdminUsers();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        showToast(body.error || 'Could not update that user.');
+        btn.disabled = false;
+      }
+    });
+
+    adminSpacesList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.admin-space-toggle-btn');
+      if (!btn) return;
+      const row = btn.closest('.admin-row');
+      const spaceId = row.dataset.spaceId;
+      const activating = btn.textContent.trim() === 'Activate';
+      btn.disabled = true;
+      const res = await fetch(`/api/admin/spaces/${spaceId}/${activating ? 'activate' : 'deactivate'}`, { method: 'POST' });
+      if (res.ok) {
+        await refreshAdminSpaces();
+      } else {
+        const body = await res.json().catch(() => ({}));
+        showToast(body.error || 'Could not update that Space.');
+        btn.disabled = false;
+      }
+    });
+
+    function showAdmin() {
+      document.getElementById('personal-view').hidden = true;
+      document.getElementById('todo-view').hidden = true;
+      document.getElementById('notes-view').hidden = true;
+      document.getElementById('space-view').hidden = true;
+      document.getElementById('space-todo-view').hidden = true;
+      document.getElementById('space-members-view').hidden = true;
+      document.getElementById('all-view').hidden = true;
+      document.getElementById('all-todo-view').hidden = true;
+      document.getElementById('settings-view').hidden = true;
+      railSettingsBtn.classList.remove('is-active');
+      document.getElementById('admin-view').hidden = false;
+      railAdminBtn.classList.add('is-active');
+      saveViewState({ scope: 'admin' });
+      showAdminTab(adminActiveTab);
+    }
+
+    railAdminBtn.addEventListener('click', showAdmin);
+
+    return { showSettings, showAdmin, setIsAdmin: (isAdmin) => { railAdminBtn.hidden = !isAdmin; } };
   }
 
   async function initApp(weekStartsOn = 0) {
@@ -3383,11 +3651,13 @@
     document.getElementById('user-initials').textContent = initials;
     document.getElementById('user-initials-2').textContent = initials;
     const weekStartsOn = me.weekStartsOn === 'monday' ? 1 : 0;
-    const { showSettings } = initSettings();
+    const { showSettings, showAdmin, setIsAdmin } = initSettings();
+    setIsAdmin(!!me.isAdmin);
     await initApp(weekStartsOn);
     await initSpaceSwitcher(me.id, weekStartsOn, me.openingView);
     const savedView = loadViewState();
     if (savedView && savedView.scope === 'settings') showSettings();
+    if (savedView && savedView.scope === 'admin' && me.isAdmin) showAdmin();
 
     // Landing back here straight off the Google Calendar consent redirect —
     // surface the result and drop the visitor back on Settings regardless of

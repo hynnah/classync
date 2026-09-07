@@ -1,4 +1,4 @@
-const { getPool } = require('../pool');
+const { getPool, withDeadlockRetry } = require('../pool');
 
 const SELECT_WITH_STATUS = `
   SELECT items.*, item_assignments.status
@@ -46,41 +46,43 @@ async function findForUser(itemId, userId) {
 // find, edit, and delete it afterward through the same assignment-gated
 // findForUser() every other read/write already goes through.
 async function create({ createdBy, spaceId, kind, title, description, category, dueDate, dueTime, color, isOpenToAll, assigneeUserIds }) {
-  const conn = await getPool().getConnection();
-  try {
-    await conn.beginTransaction();
-    const [result] = await conn.query(
-      `INSERT INTO items (space_id, kind, title, description, category, due_date, due_time, color, is_open_to_all, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [spaceId || null, kind, title, description || null, category || null, dueDate || null, dueTime || null, color || null, !!isOpenToAll, createdBy]
-    );
+  return withDeadlockRetry(async () => {
+    const conn = await getPool().getConnection();
+    try {
+      await conn.beginTransaction();
+      const [result] = await conn.query(
+        `INSERT INTO items (space_id, kind, title, description, category, due_date, due_time, color, is_open_to_all, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [spaceId || null, kind, title, description || null, category || null, dueDate || null, dueTime || null, color || null, !!isOpenToAll, createdBy]
+      );
 
-    let assignees;
-    if (spaceId) {
-      if (isOpenToAll) {
-        const [memberRows] = await conn.query('SELECT user_id FROM space_members WHERE space_id = ?', [spaceId]);
-        assignees = memberRows.map((r) => r.user_id);
+      let assignees;
+      if (spaceId) {
+        if (isOpenToAll) {
+          const [memberRows] = await conn.query('SELECT user_id FROM space_members WHERE space_id = ?', [spaceId]);
+          assignees = memberRows.map((r) => r.user_id);
+        } else {
+          assignees = [...(assigneeUserIds || [])];
+        }
+        if (!assignees.includes(createdBy)) assignees.push(createdBy);
       } else {
-        assignees = [...(assigneeUserIds || [])];
+        assignees = [createdBy];
       }
-      if (!assignees.includes(createdBy)) assignees.push(createdBy);
-    } else {
-      assignees = [createdBy];
+
+      await conn.query(
+        'INSERT INTO item_assignments (item_id, user_id, status) VALUES ?',
+        [assignees.map((userId) => [result.insertId, userId, 'pending'])]
+      );
+
+      await conn.commit();
+      return findForUser(result.insertId, createdBy);
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
     }
-
-    await conn.query(
-      'INSERT INTO item_assignments (item_id, user_id, status) VALUES ?',
-      [assignees.map((userId) => [result.insertId, userId, 'pending'])]
-    );
-
-    await conn.commit();
-    return findForUser(result.insertId, createdBy);
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+  });
 }
 
 async function listForUser({ userId, from, to }) {

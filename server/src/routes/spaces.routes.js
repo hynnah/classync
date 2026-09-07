@@ -3,6 +3,7 @@ const { requireLogin } = require('../auth/guard');
 const { SpaceRepo } = require('../db/repositories/SpaceRepo');
 const { UserRepo } = require('../db/repositories/UserRepo');
 const sseHub = require('../realtime/sseHub');
+const { joinCodeLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -44,7 +45,7 @@ router.post('/api/spaces', requireLogin, async (req, res, next) => {
   }
 });
 
-router.post('/api/spaces/join', requireLogin, async (req, res, next) => {
+router.post('/api/spaces/join', requireLogin, joinCodeLimiter, async (req, res, next) => {
   try {
     const raw = (req.body && req.body.joinCode) || '';
     const joinCode = raw.trim().toUpperCase();

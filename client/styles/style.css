@@ -1093,6 +1093,12 @@ a.btn-secondary:hover {
   border-right: 1px solid #d8cfbc;
   box-shadow: 4px 0 16px -12px rgba(38,37,33,0.1);
   background-color: var(--color-bg-landing);
+  background-image:
+    linear-gradient(to top, rgba(246,241,230,0) 0%, rgba(246,241,230,0.55) 62%, var(--color-bg-landing) 92%),
+    url('/assets/texture-floral.png');
+  background-repeat: no-repeat, repeat;
+  background-size: cover, 300px auto;
+  background-position: 0 0, 0 0;
   display: flex;
   flex-direction: column;
   transition: width 220ms ease, opacity 220ms ease;
@@ -1842,6 +1848,105 @@ a.btn-secondary:hover {
 }
 .page-app .settings-toggle-btn:hover {
   background: var(--color-accent-hover-bg);
+}
+.page-app .settings-toggle-btn.settings-toggle-btn--danger {
+  border-color: var(--color-danger-border);
+  color: var(--color-danger-text);
+}
+.page-app .settings-toggle-btn.settings-toggle-btn--danger:hover {
+  background: rgba(176, 48, 40, 0.08);
+}
+.page-app .settings-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+
+.page-app .admin-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--color-text);
+  background: var(--color-bg-landing);
+  border: 1px solid var(--color-divider);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+.page-app .admin-search-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+.page-app .admin-list {
+  display: flex;
+  flex-direction: column;
+}
+.page-app .admin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-divider-soft);
+}
+.page-app .admin-row:last-child {
+  border-bottom: 0;
+}
+.page-app .admin-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.page-app .admin-row-title {
+  font-size: 14px;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.page-app .admin-row-meta {
+  font-size: 12px;
+  color: var(--color-text-faint);
+}
+.page-app .admin-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-danger-text);
+}
+.page-app .admin-status-pill::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-danger-border);
+}
+.page-app .admin-status-pill.is-active {
+  color: var(--color-personal-border);
+}
+.page-app .admin-status-pill.is-active::before {
+  background: var(--color-personal);
+  border: 1px solid var(--color-personal-border);
+}
+.page-app .admin-badge-admin {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-accent-link);
+  border: 1px solid var(--color-accent-link);
+  padding: 1px 6px;
+}
+.page-app .admin-empty {
+  font-size: 13px;
+  color: var(--color-text-faint);
+  padding: 20px 0;
 }
 
 .page-app .settings-privacy-body {
