@@ -1239,6 +1239,8 @@
     let adminSpacesFilter = 'all';
     let adminSpacesSort = 'name';
     let adminActivityFilter = 'all';
+    let adminDashboardRange = '30';
+    let adminActivityRange = '30';
     const adminSelectedUserIds = new Set();
     const adminSelectedSpaceIds = new Set();
     let adminCopiedSpaceId = null;
@@ -1286,7 +1288,7 @@
       tinyRow.hidden = !tinySpaceCount;
       if (tinySpaceCount) tinyRow.querySelector('.dash-attention-text').innerHTML = `<b>${tinySpaceCount}</b> active Space${tinySpaceCount === 1 ? '' : 's'} with just 1 member — likely test or abandoned Spaces`;
 
-      const recentRes = await fetch('/api/admin/activity?limit=4');
+      const recentRes = await fetch(`/api/admin/activity?limit=4&range=${adminDashboardRange}`);
       const recentEl = document.getElementById('dash-recent-activity');
       if (recentRes.ok) {
         const { activity } = await recentRes.json();
@@ -1480,7 +1482,7 @@
     }
 
     async function refreshAdminActivity() {
-      const res = await fetch('/api/admin/activity?limit=100');
+      const res = await fetch(`/api/admin/activity?limit=100&range=${adminActivityRange}`);
       if (!res.ok) return;
       const { activity } = await res.json();
       const filtered = activity.filter((a) => {
@@ -1537,14 +1539,19 @@
       adminTabRefreshers[tab]();
     }
 
-    // Visual-only for now — a working range filter is a later pass; this
-    // just makes each segmented control feel alive.
-    [adminRangeControlEl, adminActivityRangeControlEl].forEach((control) => {
-      control.addEventListener('click', (e) => {
-        const btn = e.target.closest('.admin-range-btn');
-        if (!btn) return;
-        [...control.children].forEach((b) => b.classList.toggle('is-active', b === btn));
-      });
+    adminRangeControlEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.admin-range-btn');
+      if (!btn) return;
+      [...adminRangeControlEl.children].forEach((b) => b.classList.toggle('is-active', b === btn));
+      adminDashboardRange = btn.dataset.range;
+      refreshAdminDashboard();
+    });
+    adminActivityRangeControlEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.admin-range-btn');
+      if (!btn) return;
+      [...adminActivityRangeControlEl.children].forEach((b) => b.classList.toggle('is-active', b === btn));
+      adminActivityRange = btn.dataset.range;
+      refreshAdminActivity();
     });
 
     adminTabs.dashboard.tabBtn.addEventListener('click', () => showAdminTab('dashboard'));

@@ -142,4 +142,21 @@ describe('/api/admin', () => {
     expect(mostRecent.actorName).toBeTruthy();
     expect(mostRecent.targetType).toBe('user');
   });
+
+  // A round-trip against this long-lived dev DB can't reliably prove an old
+  // row is *excluded*, or that a narrow range returns fewer rows than a
+  // wide one — hundreds of rows of accumulated manual-testing activity
+  // already exceed the list's own 200-row cap on any range from "today"
+  // upward, so both sides of that comparison saturate at 200 regardless of
+  // whether filtering actually runs. The range→SQL mapping itself is
+  // covered deterministically in AdminRepo.test.js; this just proves the
+  // route accepts and threads every valid ?range= value through without
+  // erroring (a typo'd query-param name, for instance, would 500 here).
+  test.each(['today', '7', '30', '90', 'all', undefined])('GET /api/admin/activity accepts range=%s', async (range) => {
+    const { agent: adminAgent } = await loggedInAgent(`activity-range-${range}`, { admin: true });
+    const qs = range === undefined ? '' : `&range=${range}`;
+    const res = await adminAgent.get(`/api/admin/activity?limit=5${qs}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.activity)).toBe(true);
+  });
 });

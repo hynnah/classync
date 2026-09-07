@@ -98,14 +98,27 @@ async function logActivity({ actorUserId, actionType, targetType, targetId, targ
   );
 }
 
-async function listActivity({ limit = 100 } = {}) {
+// `range` is either 'today' (since local midnight), a bare number of days
+// back ('7', '30', '90' — as sent by either the Dashboard's or Activity's
+// segmented range control), or 'all'/absent for no filter.
+function activityRangeClause(range) {
+  if (range === 'today') return { clause: 'AND activity_log.created_at >= CURDATE()', param: null };
+  const days = Number(range);
+  if (Number.isFinite(days) && days > 0) return { clause: 'AND activity_log.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)', param: days };
+  return { clause: '', param: null };
+}
+
+async function listActivity({ limit = 100, range } = {}) {
+  const { clause, param } = activityRangeClause(range);
+  const params = [...(param !== null ? [param] : []), Math.min(Number(limit) || 100, LIST_CAP)];
   const [rows] = await getPool().query(
     `SELECT activity_log.*, users.first_name AS actor_first_name, users.last_name AS actor_last_name, users.email AS actor_email
      FROM activity_log
      LEFT JOIN users ON users.id = activity_log.actor_user_id
+     WHERE 1=1 ${clause}
      ORDER BY activity_log.created_at DESC, activity_log.id DESC
      LIMIT ?`,
-    [Math.min(Number(limit) || 100, LIST_CAP)]
+    params
   );
   return rows;
 }
@@ -120,4 +133,9 @@ module.exports = {
     logActivity,
     listActivity,
   },
+  // Exported separately (not part of the AdminRepo surface routes use) so
+  // its range→SQL mapping can be unit-tested directly — a DB round-trip
+  // test can't reliably prove an old row is excluded once the table holds
+  // more real rows than the list's own LIST_CAP.
+  activityRangeClause,
 };

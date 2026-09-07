@@ -158,7 +158,7 @@ router.post('/api/admin/spaces/:id/activate', ...adminOnly, async (req, res, nex
 
 router.get('/api/admin/activity', ...adminOnly, async (req, res, next) => {
   try {
-    const activity = await AdminRepo.listActivity({ limit: req.query.limit });
+    const activity = await AdminRepo.listActivity({ limit: req.query.limit, range: req.query.range });
     res.json({ activity: activity.map(serializeActivity) });
   } catch (err) {
     next(err);
