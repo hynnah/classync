@@ -528,63 +528,177 @@
         </div>
         <div class="cal-toolbar-right">
           <div id="admin-tab-switch" class="todo-switch">
-            <button id="admin-tab-dashboard" class="todo-switch-btn is-active" type="button">Dashboard</button>
-            <button id="admin-tab-users" class="todo-switch-btn" type="button">Users</button>
-            <button id="admin-tab-spaces" class="todo-switch-btn" type="button">Spaces</button>
-            <button id="admin-tab-activity" class="todo-switch-btn" type="button">Activity</button>
+            <button id="admin-tab-dashboard" class="todo-switch-btn is-active" type="button">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="9" width="3" height="5" stroke="currentColor" stroke-width="1.2"/><rect x="6.5" y="5.5" width="3" height="8.5" stroke="currentColor" stroke-width="1.2"/><rect x="11" y="2" width="3" height="12" stroke="currentColor" stroke-width="1.2"/></svg>
+              Dashboard
+            </button>
+            <button id="admin-tab-users" class="todo-switch-btn" type="button">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="6" cy="5.5" r="2.3" stroke="currentColor" stroke-width="1.2"/><path d="M1.8 13.5c.5-2.6 2.2-4 4.2-4s3.7 1.4 4.2 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="11.5" cy="5" r="1.8" stroke="currentColor" stroke-width="1.1"/><path d="M10.3 8.1c1.6.2 2.8 1.4 3.2 3.6" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+              Users <span id="admin-tab-users-count" class="todo-switch-count"></span>
+            </button>
+            <button id="admin-tab-spaces" class="todo-switch-btn" type="button">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5l6 3.2-6 3.2-6-3.2 6-3.2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M2 8l6 3.2 6-3.2M2 11.2l6 3.2 6-3.2" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+              Spaces <span id="admin-tab-spaces-count" class="todo-switch-count"></span>
+            </button>
+            <button id="admin-tab-activity" class="todo-switch-btn" type="button">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M1.5 8.5h3l1.5-4 2.5 7 1.5-4.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Activity
+            </button>
           </div>
         </div>
       </div>
 
-      <div class="settings-body">
-        <section id="admin-panel-dashboard" class="settings-row-section">
-          <div class="settings-row-section-label">Overview</div>
-          <div class="settings-row-section-body">
-            <div class="settings-stats">
-              <div class="settings-stat">
-                <span class="field-label">Users</span>
-                <span id="admin-stat-users-total" class="settings-stat-value">00</span>
+      <div class="admin-toolbar-strip">
+        <div class="admin-toolbar-strip-left">
+          <span id="admin-toolbar-label" class="admin-toolbar-strip-label">Overview</span>
+          <span class="admin-toolbar-strip-divider"></span>
+        </div>
+        <div class="admin-toolbar-strip-right">
+          <div id="admin-range-control" class="admin-range-control">
+            <button class="admin-range-btn is-active" type="button" data-range="30">30 days</button>
+            <button class="admin-range-btn" type="button" data-range="90">90 days</button>
+            <button class="admin-range-btn" type="button" data-range="all">All time</button>
+          </div>
+          <div id="admin-activity-range-control" class="admin-range-control" hidden>
+            <button class="admin-range-btn" type="button" data-range="today">Today</button>
+            <button class="admin-range-btn" type="button" data-range="7">7 days</button>
+            <button class="admin-range-btn is-active" type="button" data-range="30">30 days</button>
+            <button class="admin-range-btn" type="button" data-range="all">All time</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-body admin-console-body">
+        <section id="admin-panel-dashboard">
+          <div class="admin-panel-body">
+            <div class="dash-grid">
+              <div class="dash-card">
+                <div class="dash-card-head">
+                  <span class="dash-card-label">Users</span>
+                  <svg class="dash-card-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="6" cy="5.5" r="2.3" stroke="currentColor" stroke-width="1.2"/><path d="M1.8 13.5c.5-2.6 2.2-4 4.2-4s3.7 1.4 4.2 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                </div>
+                <div class="dash-card-value-row"><span id="admin-stat-users-total" class="dash-card-value">00</span></div>
+                <span class="dash-card-sub"><span class="dot"></span><span id="admin-stat-users-active">00</span> active</span>
               </div>
-              <div class="settings-stat">
-                <span class="field-label">Active users</span>
-                <span id="admin-stat-users-active" class="settings-stat-value">00</span>
+              <div class="dash-card">
+                <div class="dash-card-head">
+                  <span class="dash-card-label">Spaces</span>
+                  <svg class="dash-card-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5l6 3.2-6 3.2-6-3.2 6-3.2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M2 8l6 3.2 6-3.2" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+                </div>
+                <div class="dash-card-value-row"><span id="admin-stat-spaces-total" class="dash-card-value">00</span></div>
+                <span class="dash-card-sub"><span class="dot"></span><span id="admin-stat-spaces-active">00</span> active</span>
               </div>
-              <div class="settings-stat">
-                <span class="field-label">Spaces</span>
-                <span id="admin-stat-spaces-total" class="settings-stat-value">00</span>
-              </div>
-              <div class="settings-stat">
-                <span class="field-label">Active Spaces</span>
-                <span id="admin-stat-spaces-active" class="settings-stat-value">00</span>
-              </div>
-              <div class="settings-stat">
-                <span class="field-label">Items</span>
-                <span id="admin-stat-items-total" class="settings-stat-value">00</span>
+              <div class="dash-card">
+                <div class="dash-card-head">
+                  <span class="dash-card-label">Items</span>
+                  <svg class="dash-card-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3" y="2.5" width="10" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 6.5h5M5.5 9.5h5M5.5 12h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                </div>
+                <div class="dash-card-value-row"><span id="admin-stat-items-total" class="dash-card-value">00</span></div>
+                <span class="dash-card-sub">across every Space and Personal list</span>
               </div>
             </div>
+
+            <div id="dash-attention" class="dash-attention" hidden>
+              <div class="dash-attention-head">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5l7 12.5H1L8 1.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 6.5v3.2M8 11.7v.3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                Needs attention
+              </div>
+              <button id="dash-attention-users" class="dash-attention-row" type="button" hidden>
+                <span class="dash-attention-text"></span>
+                <svg class="chev" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button id="dash-attention-spaces" class="dash-attention-row" type="button" hidden>
+                <span class="dash-attention-text"></span>
+                <svg class="chev" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button id="dash-attention-tiny" class="dash-attention-row" type="button" hidden>
+                <span class="dash-attention-text"></span>
+                <svg class="chev" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+
+            <div class="dash-section-label">
+              Recent activity
+              <button id="dash-view-all-activity" class="dash-section-link" type="button">View all →</button>
+            </div>
+            <div id="dash-recent-activity" class="admin-list"></div>
           </div>
         </section>
 
-        <section id="admin-panel-users" class="settings-row-section" hidden>
-          <div class="settings-row-section-label">Manage Users</div>
-          <div class="settings-row-section-body">
-            <input id="admin-users-search" class="admin-search-input" type="text" placeholder="Search by name or email…">
-            <div id="admin-users-list" class="admin-list"></div>
+        <section id="admin-panel-users" hidden>
+          <div class="admin-panel-body">
+            <div class="admin-toolbar-row">
+              <div class="admin-search">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M13 13l-2.5-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                <input id="admin-users-search" class="admin-search-input" type="text" placeholder="Search by name or email…">
+                <button id="admin-users-search-clear" class="admin-search-clear" type="button" hidden aria-label="Clear search">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                </button>
+              </div>
+              <div class="admin-filter-chips" id="admin-users-filter-chips">
+                <button class="admin-filter-chip is-active" type="button" data-value="all">All</button>
+                <button class="admin-filter-chip" type="button" data-value="active">Active</button>
+                <button class="admin-filter-chip" type="button" data-value="inactive">Deactivated</button>
+              </div>
+              <span id="admin-users-result-count" class="admin-result-count"></span>
+              <div class="admin-sort-group" id="admin-users-sort-chips">
+                <button class="admin-filter-chip is-active" type="button" data-value="name">Name</button>
+                <button class="admin-filter-chip" type="button" data-value="recent">Recent</button>
+              </div>
+            </div>
+            <div id="admin-users-bulk-bar"></div>
+            <div id="admin-users-select-all" class="admin-select-all-wrap" hidden>
+              <button class="admin-select-box" type="button">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <span class="admin-row-meta"><span id="admin-users-select-all-count"></span></span>
+            </div>
+            <div id="admin-users-list" class="admin-list admin-list--columns"></div>
           </div>
         </section>
 
-        <section id="admin-panel-spaces" class="settings-row-section" hidden>
-          <div class="settings-row-section-label">Manage Spaces</div>
-          <div class="settings-row-section-body">
-            <input id="admin-spaces-search" class="admin-search-input" type="text" placeholder="Search by name or join code…">
-            <div id="admin-spaces-list" class="admin-list"></div>
+        <section id="admin-panel-spaces" hidden>
+          <div class="admin-panel-body">
+            <div class="admin-toolbar-row">
+              <div class="admin-search">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M13 13l-2.5-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                <input id="admin-spaces-search" class="admin-search-input" type="text" placeholder="Search by name or join code…">
+                <button id="admin-spaces-search-clear" class="admin-search-clear" type="button" hidden aria-label="Clear search">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                </button>
+              </div>
+              <div class="admin-filter-chips" id="admin-spaces-filter-chips">
+                <button class="admin-filter-chip is-active" type="button" data-value="all">All</button>
+                <button class="admin-filter-chip" type="button" data-value="active">Active</button>
+                <button class="admin-filter-chip" type="button" data-value="inactive">Deactivated</button>
+              </div>
+              <span id="admin-spaces-result-count" class="admin-result-count"></span>
+              <div class="admin-sort-group" id="admin-spaces-sort-chips">
+                <button class="admin-filter-chip is-active" type="button" data-value="name">Name</button>
+                <button class="admin-filter-chip" type="button" data-value="members">Members</button>
+              </div>
+            </div>
+            <div id="admin-spaces-bulk-bar"></div>
+            <div id="admin-spaces-select-all" class="admin-select-all-wrap" hidden>
+              <button class="admin-select-box" type="button">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <span class="admin-row-meta"><span id="admin-spaces-select-all-count"></span></span>
+            </div>
+            <div id="admin-spaces-list" class="admin-list admin-list--columns"></div>
           </div>
         </section>
 
-        <section id="admin-panel-activity" class="settings-row-section" hidden>
-          <div class="settings-row-section-label">Activity Log</div>
-          <div class="settings-row-section-body">
-            <div id="admin-activity-list" class="admin-list"></div>
+        <section id="admin-panel-activity" hidden>
+          <div class="admin-panel-body">
+            <div class="admin-toolbar-row">
+              <div class="admin-filter-chips" id="admin-activity-filter-chips">
+                <button class="admin-filter-chip is-active" type="button" data-value="all">All</button>
+                <button class="admin-filter-chip" type="button" data-value="users">Users</button>
+                <button class="admin-filter-chip" type="button" data-value="spaces">Spaces</button>
+              </div>
+            </div>
+            <div id="admin-activity-list"></div>
           </div>
         </section>
       </div>
@@ -823,7 +937,7 @@
     <p id="confirm-dialog-message" class="confirm-dialog-message"></p>
     <div class="confirm-dialog-actions">
       <button type="button" id="confirm-dialog-cancel" class="modal-cancel">Cancel</button>
-      <button type="button" id="confirm-dialog-ok" class="confirm-dialog-danger">Delete</button>
+      <button type="button" id="confirm-dialog-ok" class="confirm-dialog-ok confirm-dialog-danger">Delete</button>
     </div>
   </div>
 </div>
@@ -877,8 +991,14 @@
   const confirmCancelBtn = document.getElementById('confirm-dialog-cancel');
   let confirmResolve = null;
 
-  function confirmDialog(message) {
+  // okLabel/positive default to the original delete-confirmation look
+  // (red "Delete") so every existing call site is unaffected — admin
+  // activate/deactivate is the only caller that passes either.
+  function confirmDialog(message, { okLabel = 'Delete', positive = false } = {}) {
     confirmMessageEl.textContent = message;
+    confirmOkBtn.textContent = okLabel;
+    confirmOkBtn.classList.toggle('confirm-dialog-positive', positive);
+    confirmOkBtn.classList.toggle('confirm-dialog-danger', !positive);
     confirmDialogEl.hidden = false;
     confirmCancelBtn.focus();
     return new Promise((resolve) => { confirmResolve = resolve; });
@@ -900,21 +1020,33 @@
   // pushed over SSE, so far) can arrive regardless of which scope/view is
   // currently open, so it doesn't belong inside either closure.
   const toastContainer = document.getElementById('toast-container');
-  function showToast(message, duration = 6000) {
+  // action: optional { label, onClick } — e.g. an Undo button on an admin
+  // deactivate/activate toast. Clicking it both runs the callback and
+  // dismisses the toast immediately.
+  function showToast(message, duration = 6000, action) {
     const toast = document.createElement('div');
     toast.className = 'toast';
     toast.setAttribute('role', 'status');
     const body = document.createElement('span');
     body.className = 'toast-body';
     body.textContent = message;
+    const remove = () => toast.remove();
+    toast.append(body);
+    if (action) {
+      const actionBtn = document.createElement('button');
+      actionBtn.type = 'button';
+      actionBtn.className = 'toast-action';
+      actionBtn.textContent = action.label;
+      actionBtn.addEventListener('click', () => { action.onClick(); remove(); });
+      toast.append(actionBtn);
+    }
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
     closeBtn.className = 'toast-close';
     closeBtn.setAttribute('aria-label', 'Dismiss');
     closeBtn.textContent = '×';
-    const remove = () => toast.remove();
     closeBtn.addEventListener('click', remove);
-    toast.append(body, closeBtn);
+    toast.append(closeBtn);
     toastContainer.appendChild(toast);
     setTimeout(remove, duration);
   }
@@ -1085,10 +1217,32 @@
     };
     let adminActiveTab = 'dashboard';
     const adminUsersSearch = document.getElementById('admin-users-search');
+    const adminUsersSearchClear = document.getElementById('admin-users-search-clear');
     const adminSpacesSearch = document.getElementById('admin-spaces-search');
+    const adminSpacesSearchClear = document.getElementById('admin-spaces-search-clear');
     const adminUsersList = document.getElementById('admin-users-list');
     const adminSpacesList = document.getElementById('admin-spaces-list');
     const adminActivityList = document.getElementById('admin-activity-list');
+    const adminUsersBulkBar = document.getElementById('admin-users-bulk-bar');
+    const adminSpacesBulkBar = document.getElementById('admin-spaces-bulk-bar');
+    const adminUsersSelectAll = document.getElementById('admin-users-select-all');
+    const adminSpacesSelectAll = document.getElementById('admin-spaces-select-all');
+
+    // Server-side search (via ?search=), client-side filter/sort over that
+    // result set — the backend already returns every match (capped at 200,
+    // plenty for this scale), so filtering/sorting again on every chip click
+    // doesn't need a round trip.
+    let adminUsers = [];
+    let adminSpaces = [];
+    let adminUsersFilter = 'all';
+    let adminUsersSort = 'name';
+    let adminSpacesFilter = 'all';
+    let adminSpacesSort = 'name';
+    let adminActivityFilter = 'all';
+    const adminSelectedUserIds = new Set();
+    const adminSelectedSpaceIds = new Set();
+    let adminCopiedSpaceId = null;
+    let adminLastAction = null; // { kind: 'user'|'space', ids, activating } — undo replays the opposite call
 
     function formatAdminDate(raw) {
       if (!raw) return '—';
@@ -1096,15 +1250,185 @@
       return `${MONTHS[d.getMonth()].slice(0, 3)} ${d.getDate()}, ${d.getFullYear()}`;
     }
 
+    function userDisplayName(u) {
+      return `${u.firstName} ${u.lastName}`.trim() || u.email;
+    }
+
     async function refreshAdminDashboard() {
-      const res = await fetch('/api/admin/stats');
-      if (!res.ok) return;
-      const stats = await res.json();
+      const [statsRes, spacesRes] = await Promise.all([
+        fetch('/api/admin/stats'),
+        fetch('/api/admin/spaces'),
+      ]);
+      if (!statsRes.ok) return;
+      const stats = await statsRes.json();
       document.getElementById('admin-stat-users-total').textContent = String(stats.users.total).padStart(2, '0');
       document.getElementById('admin-stat-users-active').textContent = String(stats.users.active).padStart(2, '0');
       document.getElementById('admin-stat-spaces-total').textContent = String(stats.spaces.total).padStart(2, '0');
       document.getElementById('admin-stat-spaces-active').textContent = String(stats.spaces.active).padStart(2, '0');
       document.getElementById('admin-stat-items-total').textContent = String(stats.items.total).padStart(2, '0');
+      document.getElementById('admin-tab-users-count').textContent = stats.users.total;
+      document.getElementById('admin-tab-spaces-count').textContent = stats.spaces.total;
+
+      const inactiveUserCount = stats.users.total - stats.users.active;
+      const inactiveSpaceCount = stats.spaces.total - stats.spaces.active;
+      const allSpaces = spacesRes.ok ? (await spacesRes.json()).spaces : [];
+      const tinySpaceCount = allSpaces.filter((s) => s.isActive && s.memberCount === 1).length;
+
+      const attentionEl = document.getElementById('dash-attention');
+      const usersRow = document.getElementById('dash-attention-users');
+      const spacesRow = document.getElementById('dash-attention-spaces');
+      const tinyRow = document.getElementById('dash-attention-tiny');
+      attentionEl.hidden = !(inactiveUserCount || inactiveSpaceCount || tinySpaceCount);
+      usersRow.hidden = !inactiveUserCount;
+      if (inactiveUserCount) usersRow.querySelector('.dash-attention-text').innerHTML = `<b>${inactiveUserCount}</b> deactivated user${inactiveUserCount === 1 ? '' : 's'} — review and reactivate if this was a mistake`;
+      spacesRow.hidden = !inactiveSpaceCount;
+      if (inactiveSpaceCount) spacesRow.querySelector('.dash-attention-text').innerHTML = `<b>${inactiveSpaceCount}</b> deactivated Space${inactiveSpaceCount === 1 ? '' : 's'} — their members can no longer see them`;
+      tinyRow.hidden = !tinySpaceCount;
+      if (tinySpaceCount) tinyRow.querySelector('.dash-attention-text').innerHTML = `<b>${tinySpaceCount}</b> active Space${tinySpaceCount === 1 ? '' : 's'} with just 1 member — likely test or abandoned Spaces`;
+
+      const recentRes = await fetch('/api/admin/activity?limit=4');
+      const recentEl = document.getElementById('dash-recent-activity');
+      if (recentRes.ok) {
+        const { activity } = await recentRes.json();
+        recentEl.innerHTML = activity.length ? activity.map(renderActivityRow).join('') : '<div class="admin-empty">Nothing logged yet.</div>';
+      }
+    }
+
+    function computeVisibleUsers() {
+      let list = adminUsers.slice();
+      if (adminUsersFilter === 'active') list = list.filter((u) => u.isActive);
+      if (adminUsersFilter === 'inactive') list = list.filter((u) => !u.isActive);
+      list.sort((a, b) => (
+        adminUsersSort === 'recent'
+          ? new Date(b.createdAt) - new Date(a.createdAt)
+          : userDisplayName(a).localeCompare(userDisplayName(b))
+      ));
+      return list;
+    }
+
+    function computeVisibleSpaces() {
+      let list = adminSpaces.slice();
+      if (adminSpacesFilter === 'active') list = list.filter((s) => s.isActive);
+      if (adminSpacesFilter === 'inactive') list = list.filter((s) => !s.isActive);
+      list.sort((a, b) => (
+        adminSpacesSort === 'members' ? b.memberCount - a.memberCount : a.name.localeCompare(b.name)
+      ));
+      return list;
+    }
+
+    function renderAdminUsersBulkBar() {
+      if (!adminSelectedUserIds.size) { adminUsersBulkBar.innerHTML = ''; return; }
+      const selected = adminUsers.filter((u) => adminSelectedUserIds.has(u.id));
+      const activeCount = selected.filter((u) => u.isActive).length;
+      const inactiveCount = selected.length - activeCount;
+      adminUsersBulkBar.innerHTML = `
+        <div class="admin-bulk-bar">
+          <span class="admin-bulk-count">${selected.length} selected</span>
+          <div class="admin-bulk-actions">
+            ${activeCount ? `<button class="settings-toggle-btn settings-toggle-btn--danger" type="button" data-action="bulk-deactivate">Deactivate ${activeCount}</button>` : ''}
+            ${inactiveCount ? `<button class="settings-toggle-btn" type="button" data-action="bulk-activate">Activate ${inactiveCount}</button>` : ''}
+          </div>
+          <button class="admin-bulk-clear" type="button" data-action="clear">Clear</button>
+        </div>
+      `;
+    }
+
+    function renderAdminSpacesBulkBar() {
+      if (!adminSelectedSpaceIds.size) { adminSpacesBulkBar.innerHTML = ''; return; }
+      const selected = adminSpaces.filter((s) => adminSelectedSpaceIds.has(s.id));
+      const activeCount = selected.filter((s) => s.isActive).length;
+      const inactiveCount = selected.length - activeCount;
+      adminSpacesBulkBar.innerHTML = `
+        <div class="admin-bulk-bar">
+          <span class="admin-bulk-count">${selected.length} selected</span>
+          <div class="admin-bulk-actions">
+            ${activeCount ? `<button class="settings-toggle-btn settings-toggle-btn--danger" type="button" data-action="bulk-deactivate">Deactivate ${activeCount}</button>` : ''}
+            ${inactiveCount ? `<button class="settings-toggle-btn" type="button" data-action="bulk-activate">Activate ${inactiveCount}</button>` : ''}
+          </div>
+          <button class="admin-bulk-clear" type="button" data-action="clear">Clear</button>
+        </div>
+      `;
+    }
+
+    const checkboxSvg = '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    function renderAdminUsers() {
+      const visible = computeVisibleUsers();
+      document.getElementById('admin-users-result-count').textContent = `${visible.length} of ${adminUsers.length}`;
+      renderAdminUsersBulkBar();
+
+      const visibleIds = visible.map((u) => u.id);
+      adminUsersSelectAll.hidden = visible.length === 0;
+      const allSelected = visibleIds.length > 0 && visibleIds.every((id) => adminSelectedUserIds.has(id));
+      adminUsersSelectAll.querySelector('.admin-select-box').classList.toggle('is-checked', allSelected);
+      document.getElementById('admin-users-select-all-count').textContent = `Select all ${visible.length} shown`;
+
+      if (!visible.length) {
+        adminUsersList.innerHTML = `
+          <div class="admin-empty">
+            <svg width="28" height="28" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M13 13l-2.5-2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+            <span>No one matches that search.</span>
+          </div>`;
+        return;
+      }
+      const headRow = `<div class="admin-row admin-row-head"><span></span><span></span><span class="admin-col-label">Name</span><span class="admin-col-label">Status</span><span></span></div>`;
+      adminUsersList.innerHTML = headRow + visible.map((u) => `
+        <div class="admin-row" data-user-id="${u.id}">
+          <button class="admin-select-box ${adminSelectedUserIds.has(u.id) ? 'is-checked' : ''}" type="button" data-action="select">${checkboxSvg}</button>
+          <div class="admin-row-avatar ${u.isActive ? '' : 'is-inactive'}">${escapeHtml(userDisplayName(u).charAt(0).toUpperCase())}</div>
+          <div class="admin-row-text">
+            <span class="admin-row-title">
+              ${escapeHtml(userDisplayName(u))}
+              ${u.isAdmin ? '<span class="admin-badge-admin">Admin</span>' : ''}
+            </span>
+            <span class="admin-row-meta">${escapeHtml(u.email)} · joined ${formatAdminDate(u.createdAt)}</span>
+          </div>
+          <div class="admin-row-status-cell"><span class="admin-status-pill ${u.isActive ? 'is-active' : ''}">${u.isActive ? 'Active' : 'Deactivated'}</span></div>
+          <button class="settings-toggle-btn admin-user-toggle-btn ${u.isActive ? 'settings-toggle-btn--danger' : ''}" type="button" data-action="toggle">${u.isActive ? 'Deactivate' : 'Activate'}</button>
+        </div>
+      `).join('');
+    }
+
+    function renderAdminSpaces() {
+      const visible = computeVisibleSpaces();
+      document.getElementById('admin-spaces-result-count').textContent = `${visible.length} of ${adminSpaces.length}`;
+      renderAdminSpacesBulkBar();
+
+      const visibleIds = visible.map((s) => s.id);
+      adminSpacesSelectAll.hidden = visible.length === 0;
+      const allSelected = visibleIds.length > 0 && visibleIds.every((id) => adminSelectedSpaceIds.has(id));
+      adminSpacesSelectAll.querySelector('.admin-select-box').classList.toggle('is-checked', allSelected);
+      document.getElementById('admin-spaces-select-all-count').textContent = `Select all ${visible.length} shown`;
+
+      if (!visible.length) {
+        adminSpacesList.innerHTML = `
+          <div class="admin-empty">
+            <svg width="28" height="28" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M13 13l-2.5-2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+            <span>No Space matches that search.</span>
+          </div>`;
+        return;
+      }
+      const headRow = `<div class="admin-row admin-row-head"><span></span><span></span><span class="admin-col-label">Name</span><span class="admin-col-label">Status</span><span></span></div>`;
+      adminSpacesList.innerHTML = headRow + visible.map((s) => `
+        <div class="admin-row" data-space-id="${s.id}">
+          <button class="admin-select-box ${adminSelectedSpaceIds.has(s.id) ? 'is-checked' : ''}" type="button" data-action="select">${checkboxSvg}</button>
+          <div class="admin-row-icon">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5l6 3.2-6 3.2-6-3.2 6-3.2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M2 8l6 3.2 6-3.2" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+          </div>
+          <div class="admin-row-text">
+            <span class="admin-row-title">${escapeHtml(s.name)}</span>
+            <span class="admin-row-meta">
+              ${s.memberCount} member${s.memberCount === 1 ? '' : 's'} · code ${escapeHtml(s.joinCode)} · created ${formatAdminDate(s.createdAt)}
+              <button class="admin-copy-btn ${adminCopiedSpaceId === s.id ? 'is-copied' : ''}" type="button" data-action="copy" data-code="${escapeHtml(s.joinCode)}" data-space-id="${s.id}" title="Copy join code">
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="9" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M2.5 10.5V3a1 1 0 0 1 1-1H10" stroke="currentColor" stroke-width="1.2"/></svg>
+              </button>
+              ${adminCopiedSpaceId === s.id ? '<span>Copied</span>' : ''}
+            </span>
+          </div>
+          <div class="admin-row-status-cell"><span class="admin-status-pill ${s.isActive ? 'is-active' : ''}">${s.isActive ? 'Active' : 'Deactivated'}</span></div>
+          <button class="settings-toggle-btn admin-space-toggle-btn ${s.isActive ? 'settings-toggle-btn--danger' : ''}" type="button" data-action="toggle">${s.isActive ? 'Deactivate' : 'Activate'}</button>
+        </div>
+      `).join('');
     }
 
     async function refreshAdminUsers() {
@@ -1112,23 +1436,11 @@
       const res = await fetch(`/api/admin/users?search=${encodeURIComponent(search)}`);
       if (!res.ok) return;
       const { users } = await res.json();
-      if (!users.length) {
-        adminUsersList.innerHTML = '<p class="admin-empty">No users match.</p>';
-        return;
+      adminUsers = users;
+      for (const id of [...adminSelectedUserIds]) {
+        if (!adminUsers.some((u) => u.id === id)) adminSelectedUserIds.delete(id);
       }
-      adminUsersList.innerHTML = users.map((u) => `
-        <div class="admin-row" data-user-id="${u.id}">
-          <div class="admin-row-text">
-            <span class="admin-row-title">
-              ${escapeHtml(`${u.firstName} ${u.lastName}`.trim() || u.email)}
-              <span class="admin-status-pill ${u.isActive ? 'is-active' : ''}">${u.isActive ? 'Active' : 'Deactivated'}</span>
-              ${u.isAdmin ? '<span class="admin-badge-admin">Admin</span>' : ''}
-            </span>
-            <span class="admin-row-meta">${escapeHtml(u.email)} · joined ${formatAdminDate(u.createdAt)}</span>
-          </div>
-          <button class="settings-toggle-btn admin-user-toggle-btn ${u.isActive ? 'settings-toggle-btn--danger' : ''}" type="button">${u.isActive ? 'Deactivate' : 'Activate'}</button>
-        </div>
-      `).join('');
+      renderAdminUsers();
     }
 
     async function refreshAdminSpaces() {
@@ -1136,39 +1448,63 @@
       const res = await fetch(`/api/admin/spaces?search=${encodeURIComponent(search)}`);
       if (!res.ok) return;
       const { spaces } = await res.json();
-      if (!spaces.length) {
-        adminSpacesList.innerHTML = '<p class="admin-empty">No Spaces match.</p>';
-        return;
+      adminSpaces = spaces;
+      for (const id of [...adminSelectedSpaceIds]) {
+        if (!adminSpaces.some((s) => s.id === id)) adminSelectedSpaceIds.delete(id);
       }
-      adminSpacesList.innerHTML = spaces.map((s) => `
-        <div class="admin-row" data-space-id="${s.id}">
-          <div class="admin-row-text">
-            <span class="admin-row-title">
-              ${escapeHtml(s.name)}
-              <span class="admin-status-pill ${s.isActive ? 'is-active' : ''}">${s.isActive ? 'Active' : 'Deactivated'}</span>
-            </span>
-            <span class="admin-row-meta">${s.memberCount} member${s.memberCount === 1 ? '' : 's'} · code ${escapeHtml(s.joinCode)} · created ${formatAdminDate(s.createdAt)}</span>
+      renderAdminSpaces();
+    }
+
+    function renderActivityRow(a) {
+      const isPositive = a.actionType === 'user_activated' || a.actionType === 'space_activated';
+      return `
+        <div class="admin-row">
+          <div class="activity-icon ${isPositive ? 'is-positive' : 'is-negative'}">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true">${isPositive ? '<path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' : '<path d="M2.5 8h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>'}</svg>
           </div>
-          <button class="settings-toggle-btn admin-space-toggle-btn ${s.isActive ? 'settings-toggle-btn--danger' : ''}" type="button">${s.isActive ? 'Deactivate' : 'Activate'}</button>
+          <div class="admin-row-text">
+            <span class="admin-row-title">${escapeHtml(a.actorName || 'Someone')} — ${escapeHtml(a.actionType.replace(/_/g, ' '))}</span>
+            <span class="admin-row-meta">${escapeHtml(a.targetLabel || '')} · ${formatAdminDate(a.createdAt)}</span>
+          </div>
         </div>
-      `).join('');
+      `;
+    }
+
+    function formatActivityDay(raw) {
+      const d = new Date(raw.replace(' ', 'T'));
+      const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const diffDays = Math.round((startOfDay(new Date()) - startOfDay(d)) / 86400000);
+      if (diffDays === 0) return 'Today';
+      if (diffDays === 1) return 'Yesterday';
+      return formatAdminDate(raw);
     }
 
     async function refreshAdminActivity() {
       const res = await fetch('/api/admin/activity?limit=100');
       if (!res.ok) return;
       const { activity } = await res.json();
-      if (!activity.length) {
-        adminActivityList.innerHTML = '<p class="admin-empty">Nothing logged yet.</p>';
+      const filtered = activity.filter((a) => {
+        if (adminActivityFilter === 'users') return a.targetType === 'user';
+        if (adminActivityFilter === 'spaces') return a.targetType === 'space';
+        return true;
+      });
+      if (!filtered.length) {
+        adminActivityList.innerHTML = '<div class="admin-empty">Nothing logged in this category yet.</div>';
         return;
       }
-      adminActivityList.innerHTML = activity.map((a) => `
-        <div class="admin-row">
-          <div class="admin-row-text">
-            <span class="admin-row-title">${escapeHtml(a.actorName || 'Someone')} — ${escapeHtml(a.actionType.replace(/_/g, ' '))}</span>
-            <span class="admin-row-meta">${escapeHtml(a.targetLabel || '')} · ${formatAdminDate(a.createdAt)}</span>
-          </div>
-        </div>
+      // Already chronological (newest first) from the API, so grouping in
+      // order — rather than re-sorting — keeps each day's own entries
+      // together correctly.
+      const groups = [];
+      let currentLabel = null;
+      filtered.forEach((a) => {
+        const label = formatActivityDay(a.createdAt);
+        if (label !== currentLabel) { groups.push({ label, entries: [] }); currentLabel = label; }
+        groups[groups.length - 1].entries.push(a);
+      });
+      adminActivityList.innerHTML = groups.map((g) => `
+        <div class="activity-day-label">${escapeHtml(g.label)}</div>
+        <div class="admin-list">${g.entries.map(renderActivityRow).join('')}</div>
       `).join('');
     }
 
@@ -1179,62 +1515,251 @@
       activity: refreshAdminActivity,
     };
 
+    const adminToolbarLabels = {
+      dashboard: 'Overview',
+      users: 'Manage Users',
+      spaces: 'Manage Spaces',
+      activity: 'Activity Log',
+    };
+    const adminToolbarLabelEl = document.getElementById('admin-toolbar-label');
+    const adminRangeControlEl = document.getElementById('admin-range-control');
+    const adminActivityRangeControlEl = document.getElementById('admin-activity-range-control');
+
     function showAdminTab(tab) {
       adminActiveTab = tab;
       Object.entries(adminTabs).forEach(([key, { tabBtn, panel }]) => {
         tabBtn.classList.toggle('is-active', key === tab);
         panel.hidden = key !== tab;
       });
+      adminToolbarLabelEl.textContent = adminToolbarLabels[tab];
+      adminRangeControlEl.hidden = tab !== 'dashboard';
+      adminActivityRangeControlEl.hidden = tab !== 'activity';
       adminTabRefreshers[tab]();
     }
+
+    // Visual-only for now — a working range filter is a later pass; this
+    // just makes each segmented control feel alive.
+    [adminRangeControlEl, adminActivityRangeControlEl].forEach((control) => {
+      control.addEventListener('click', (e) => {
+        const btn = e.target.closest('.admin-range-btn');
+        if (!btn) return;
+        [...control.children].forEach((b) => b.classList.toggle('is-active', b === btn));
+      });
+    });
 
     adminTabs.dashboard.tabBtn.addEventListener('click', () => showAdminTab('dashboard'));
     adminTabs.users.tabBtn.addEventListener('click', () => showAdminTab('users'));
     adminTabs.spaces.tabBtn.addEventListener('click', () => showAdminTab('spaces'));
     adminTabs.activity.tabBtn.addEventListener('click', () => showAdminTab('activity'));
+    document.getElementById('dash-view-all-activity').addEventListener('click', () => showAdminTab('activity'));
+
+    document.getElementById('dash-attention-users').addEventListener('click', () => {
+      showAdminTab('users');
+      adminUsersFilter = 'inactive';
+      [...document.getElementById('admin-users-filter-chips').children].forEach((c) => c.classList.toggle('is-active', c.dataset.value === 'inactive'));
+      renderAdminUsers();
+    });
+    document.getElementById('dash-attention-spaces').addEventListener('click', () => {
+      showAdminTab('spaces');
+      adminSpacesFilter = 'inactive';
+      [...document.getElementById('admin-spaces-filter-chips').children].forEach((c) => c.classList.toggle('is-active', c.dataset.value === 'inactive'));
+      renderAdminSpaces();
+    });
+    document.getElementById('dash-attention-tiny').addEventListener('click', () => showAdminTab('spaces'));
 
     let adminUsersSearchTimer;
     adminUsersSearch.addEventListener('input', () => {
+      adminUsersSearchClear.hidden = !adminUsersSearch.value;
       clearTimeout(adminUsersSearchTimer);
       adminUsersSearchTimer = setTimeout(refreshAdminUsers, 250);
     });
+    adminUsersSearchClear.addEventListener('click', () => {
+      adminUsersSearch.value = '';
+      adminUsersSearchClear.hidden = true;
+      refreshAdminUsers();
+    });
     let adminSpacesSearchTimer;
     adminSpacesSearch.addEventListener('input', () => {
+      adminSpacesSearchClear.hidden = !adminSpacesSearch.value;
       clearTimeout(adminSpacesSearchTimer);
       adminSpacesSearchTimer = setTimeout(refreshAdminSpaces, 250);
     });
+    adminSpacesSearchClear.addEventListener('click', () => {
+      adminSpacesSearch.value = '';
+      adminSpacesSearchClear.hidden = true;
+      refreshAdminSpaces();
+    });
 
-    adminUsersList.addEventListener('click', async (e) => {
-      const btn = e.target.closest('.admin-user-toggle-btn');
+    document.getElementById('admin-users-filter-chips').addEventListener('click', (e) => {
+      const btn = e.target.closest('.admin-filter-chip');
       if (!btn) return;
-      const row = btn.closest('.admin-row');
-      const userId = row.dataset.userId;
-      const activating = btn.textContent.trim() === 'Activate';
-      btn.disabled = true;
-      const res = await fetch(`/api/admin/users/${userId}/${activating ? 'activate' : 'deactivate'}`, { method: 'POST' });
-      if (res.ok) {
-        await refreshAdminUsers();
-      } else {
-        const body = await res.json().catch(() => ({}));
-        showToast(body.error || 'Could not update that user.');
-        btn.disabled = false;
+      adminUsersFilter = btn.dataset.value;
+      [...btn.parentElement.children].forEach((c) => c.classList.toggle('is-active', c === btn));
+      renderAdminUsers();
+    });
+    document.getElementById('admin-users-sort-chips').addEventListener('click', (e) => {
+      const btn = e.target.closest('.admin-filter-chip');
+      if (!btn) return;
+      adminUsersSort = btn.dataset.value;
+      [...btn.parentElement.children].forEach((c) => c.classList.toggle('is-active', c === btn));
+      renderAdminUsers();
+    });
+    document.getElementById('admin-spaces-filter-chips').addEventListener('click', (e) => {
+      const btn = e.target.closest('.admin-filter-chip');
+      if (!btn) return;
+      adminSpacesFilter = btn.dataset.value;
+      [...btn.parentElement.children].forEach((c) => c.classList.toggle('is-active', c === btn));
+      renderAdminSpaces();
+    });
+    document.getElementById('admin-spaces-sort-chips').addEventListener('click', (e) => {
+      const btn = e.target.closest('.admin-filter-chip');
+      if (!btn) return;
+      adminSpacesSort = btn.dataset.value;
+      [...btn.parentElement.children].forEach((c) => c.classList.toggle('is-active', c === btn));
+      renderAdminSpaces();
+    });
+    document.getElementById('admin-activity-filter-chips').addEventListener('click', (e) => {
+      const btn = e.target.closest('.admin-filter-chip');
+      if (!btn) return;
+      adminActivityFilter = btn.dataset.value;
+      [...btn.parentElement.children].forEach((c) => c.classList.toggle('is-active', c === btn));
+      refreshAdminActivity();
+    });
+
+    adminUsersSelectAll.querySelector('.admin-select-box').addEventListener('click', () => {
+      const visibleIds = computeVisibleUsers().map((u) => u.id);
+      const allSelected = visibleIds.length > 0 && visibleIds.every((id) => adminSelectedUserIds.has(id));
+      visibleIds.forEach((id) => (allSelected ? adminSelectedUserIds.delete(id) : adminSelectedUserIds.add(id)));
+      renderAdminUsers();
+    });
+    adminSpacesSelectAll.querySelector('.admin-select-box').addEventListener('click', () => {
+      const visibleIds = computeVisibleSpaces().map((s) => s.id);
+      const allSelected = visibleIds.length > 0 && visibleIds.every((id) => adminSelectedSpaceIds.has(id));
+      visibleIds.forEach((id) => (allSelected ? adminSelectedSpaceIds.delete(id) : adminSelectedSpaceIds.add(id)));
+      renderAdminSpaces();
+    });
+
+    // Single- and bulk-toggle share this: confirm, fire the calls, refresh,
+    // then offer Undo (which just replays the opposite call on the same
+    // ids — safe because a bulk batch only ever contains same-state items,
+    // "Deactivate 3" only ever acts on the 3 that were active).
+    async function confirmAndToggleUsers(ids, activating) {
+      if (!ids.length) return;
+      const isBulk = ids.length > 1;
+      const label = isBulk ? `${ids.length} users` : userDisplayName(adminUsers.find((u) => u.id === ids[0]));
+      const message = activating
+        ? `${label} will be able to sign in again right away.`
+        : `${label} will be signed out and blocked from signing back in until reactivated. Their Spaces and items are untouched.`;
+      const ok = await confirmDialog(message, { okLabel: activating ? 'Reactivate' : 'Deactivate', positive: activating });
+      if (!ok) return;
+
+      const results = await Promise.all(ids.map((id) => fetch(`/api/admin/users/${id}/${activating ? 'activate' : 'deactivate'}`, { method: 'POST' })));
+      ids.forEach((id) => adminSelectedUserIds.delete(id));
+      if (!results.every((r) => r.ok)) {
+        showToast('Some users could not be updated.');
+      }
+      adminLastAction = { kind: 'user', ids: ids.slice(), activating };
+      await Promise.all([refreshAdminUsers(), refreshAdminDashboard()]);
+      showToast(`${label} ${activating ? 'reactivated' : 'deactivated'}.`, 4500, { label: 'Undo', onClick: undoAdminAction });
+    }
+
+    async function confirmAndToggleSpaces(ids, activating) {
+      if (!ids.length) return;
+      const isBulk = ids.length > 1;
+      const single = !isBulk ? adminSpaces.find((s) => s.id === ids[0]) : null;
+      const label = isBulk ? `${ids.length} Spaces` : `“${single.name}”`;
+      const message = activating
+        ? `${label} will reappear in every member's sidebar right away.`
+        : (isBulk
+          ? `${label} will disappear from every member's sidebar until reactivated. Members and items stay intact.`
+          : `${label} will disappear from every member's sidebar until reactivated — its ${single.memberCount} member${single.memberCount === 1 ? '' : 's'} and all its items stay intact.`);
+      const ok = await confirmDialog(message, { okLabel: activating ? 'Reactivate' : 'Deactivate', positive: activating });
+      if (!ok) return;
+
+      const results = await Promise.all(ids.map((id) => fetch(`/api/admin/spaces/${id}/${activating ? 'activate' : 'deactivate'}`, { method: 'POST' })));
+      ids.forEach((id) => adminSelectedSpaceIds.delete(id));
+      if (!results.every((r) => r.ok)) {
+        showToast('Some Spaces could not be updated.');
+      }
+      adminLastAction = { kind: 'space', ids: ids.slice(), activating };
+      await Promise.all([refreshAdminSpaces(), refreshAdminDashboard()]);
+      showToast(`${label} ${activating ? 'reactivated' : 'deactivated'}.`, 4500, { label: 'Undo', onClick: undoAdminAction });
+    }
+
+    async function undoAdminAction() {
+      const a = adminLastAction;
+      if (!a) return;
+      adminLastAction = null;
+      const kindPath = a.kind === 'user' ? '/api/admin/users' : '/api/admin/spaces';
+      await Promise.all(a.ids.map((id) => fetch(`${kindPath}/${id}/${a.activating ? 'deactivate' : 'activate'}`, { method: 'POST' })));
+      if (a.kind === 'user') await refreshAdminUsers(); else await refreshAdminSpaces();
+      await refreshAdminDashboard();
+    }
+
+    adminUsersList.addEventListener('click', (e) => {
+      const selectBtn = e.target.closest('[data-action="select"]');
+      if (selectBtn) {
+        const id = Number(selectBtn.closest('.admin-row').dataset.userId);
+        if (adminSelectedUserIds.has(id)) adminSelectedUserIds.delete(id); else adminSelectedUserIds.add(id);
+        renderAdminUsers();
+        return;
+      }
+      const toggleBtn = e.target.closest('[data-action="toggle"]');
+      if (toggleBtn) {
+        const id = Number(toggleBtn.closest('.admin-row').dataset.userId);
+        const user = adminUsers.find((u) => u.id === id);
+        confirmAndToggleUsers([id], !user.isActive);
       }
     });
 
-    adminSpacesList.addEventListener('click', async (e) => {
-      const btn = e.target.closest('.admin-space-toggle-btn');
+    adminUsersBulkBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-action]');
       if (!btn) return;
-      const row = btn.closest('.admin-row');
-      const spaceId = row.dataset.spaceId;
-      const activating = btn.textContent.trim() === 'Activate';
-      btn.disabled = true;
-      const res = await fetch(`/api/admin/spaces/${spaceId}/${activating ? 'activate' : 'deactivate'}`, { method: 'POST' });
-      if (res.ok) {
-        await refreshAdminSpaces();
-      } else {
-        const body = await res.json().catch(() => ({}));
-        showToast(body.error || 'Could not update that Space.');
-        btn.disabled = false;
+      if (btn.dataset.action === 'clear') { adminSelectedUserIds.clear(); renderAdminUsers(); return; }
+      if (btn.dataset.action === 'bulk-deactivate') {
+        confirmAndToggleUsers(adminUsers.filter((u) => adminSelectedUserIds.has(u.id) && u.isActive).map((u) => u.id), false);
+      }
+      if (btn.dataset.action === 'bulk-activate') {
+        confirmAndToggleUsers(adminUsers.filter((u) => adminSelectedUserIds.has(u.id) && !u.isActive).map((u) => u.id), true);
+      }
+    });
+
+    adminSpacesList.addEventListener('click', (e) => {
+      const copyBtn = e.target.closest('[data-action="copy"]');
+      if (copyBtn) {
+        navigator.clipboard.writeText(copyBtn.dataset.code).then(() => {
+          adminCopiedSpaceId = Number(copyBtn.dataset.spaceId);
+          renderAdminSpaces();
+          setTimeout(() => { adminCopiedSpaceId = null; renderAdminSpaces(); }, 1500);
+        }).catch(() => {
+          showToast('Could not copy the join code — copy it manually instead.');
+        });
+        return;
+      }
+      const selectBtn = e.target.closest('[data-action="select"]');
+      if (selectBtn) {
+        const id = Number(selectBtn.closest('.admin-row').dataset.spaceId);
+        if (adminSelectedSpaceIds.has(id)) adminSelectedSpaceIds.delete(id); else adminSelectedSpaceIds.add(id);
+        renderAdminSpaces();
+        return;
+      }
+      const toggleBtn = e.target.closest('[data-action="toggle"]');
+      if (toggleBtn) {
+        const id = Number(toggleBtn.closest('.admin-row').dataset.spaceId);
+        const space = adminSpaces.find((s) => s.id === id);
+        confirmAndToggleSpaces([id], !space.isActive);
+      }
+    });
+
+    adminSpacesBulkBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      if (btn.dataset.action === 'clear') { adminSelectedSpaceIds.clear(); renderAdminSpaces(); return; }
+      if (btn.dataset.action === 'bulk-deactivate') {
+        confirmAndToggleSpaces(adminSpaces.filter((s) => adminSelectedSpaceIds.has(s.id) && s.isActive).map((s) => s.id), false);
+      }
+      if (btn.dataset.action === 'bulk-activate') {
+        confirmAndToggleSpaces(adminSpaces.filter((s) => adminSelectedSpaceIds.has(s.id) && !s.isActive).map((s) => s.id), true);
       }
     });
 

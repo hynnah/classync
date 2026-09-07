@@ -1670,6 +1670,23 @@ a.btn-secondary:hover {
   overflow-y: auto;
   box-sizing: border-box;
 }
+/* Admin reuses .settings-body's base layout but the content is data-dense
+   (tables, cards) rather than Settings' narrow form-like rows, so it gets a
+   meaningfully wider cap — 900px left it looking clumped/empty-on-the-right
+   on any reasonably wide monitor. */
+.page-app .admin-console-body {
+  max-width: 1320px;
+  background: #efe9dc;
+}
+/* .todo-switch-btn sets its own font-family/size but never resets
+   text-transform/letter-spacing, so it silently inherits the global button
+   reset's uppercase mono tracking — invisible reading the rule in isolation,
+   obvious once actually rendered (the exact "verify visually" trap this
+   codebase has hit before). The prototype's tab labels were sentence case. */
+#admin-tab-switch .todo-switch-btn {
+  text-transform: none;
+  letter-spacing: normal;
+}
 .page-app .settings-row-section {
   display: grid;
   grid-template-columns: 140px 1fr;
@@ -1704,6 +1721,92 @@ a.btn-secondary:hover {
   flex-direction: column;
   gap: 24px;
   min-width: 0;
+}
+
+/* Admin panels — only one is ever visible at a time (the others sit behind
+   [hidden]), so unlike Settings' stacked label:body rows they don't need a
+   reserved label column or inter-section dividers. The section title lives
+   in a functional light toolbar strip instead of a decorative banner — it
+   sits as a sibling of .cal-toolbar, outside .settings-body's centered,
+   max-width-capped column, so it can span the same full width as the
+   toolbar above it. Only Dashboard's range control is tab-specific
+   (toggled via [hidden]); Refresh/Export CSV are shared across all four
+   tabs. min-height keeps the strip's height stable whether or not the
+   range control — its tallest possible content — is present. */
+.page-app .admin-panel-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.page-app .admin-toolbar-strip {
+  background: var(--color-bg-card);
+  border-top: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--color-divider);
+  padding: 0 40px;
+  min-height: 53px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.page-app .admin-toolbar-strip-left {
+  display: flex;
+  align-items: center;
+}
+.page-app .admin-toolbar-strip-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #6e675b;
+  white-space: nowrap;
+}
+.page-app .admin-toolbar-strip-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--color-divider-soft);
+  margin: 0 20px;
+}
+.page-app .admin-toolbar-strip-right {
+  display: flex;
+  align-items: center;
+}
+.page-app .admin-range-control {
+  display: flex;
+  border: 1px solid var(--color-divider);
+  border-radius: 4px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+.page-app .admin-range-btn {
+  font-family: var(--font-body);
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: normal;
+  box-shadow: none;
+  padding: 7px 14px;
+  border: 0;
+  border-right: 1px solid var(--color-divider);
+  background: transparent;
+  color: #6e675b;
+}
+.page-app .admin-range-btn:last-child {
+  border-right: 0;
+}
+.page-app .admin-range-btn.is-active {
+  background: var(--color-bg-landing);
+  color: #2c2823;
+}
+.page-app .admin-range-btn:hover:not(.is-active) {
+  box-shadow: none;
+  transform: none;
+  background: var(--color-accent-hover-bg);
+  color: var(--color-accent-link);
+}
+.page-app .admin-range-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 .page-app .settings-card-title {
   font-family: var(--font-heading);
@@ -1862,6 +1965,27 @@ a.btn-secondary:hover {
   pointer-events: none;
 }
 
+.page-app .admin-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.page-app .admin-search {
+  flex: 1;
+  position: relative;
+  max-width: 380px;
+  min-width: 200px;
+}
+.page-app .admin-search svg {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-faint);
+  pointer-events: none;
+}
 .page-app .admin-search-input {
   width: 100%;
   box-sizing: border-box;
@@ -1870,33 +1994,210 @@ a.btn-secondary:hover {
   color: var(--color-text);
   background: var(--color-bg-landing);
   border: 1px solid var(--color-divider);
-  padding: 10px 14px;
-  margin-bottom: 16px;
+  padding: 10px 34px 10px 36px;
 }
 .page-app .admin-search-input:focus {
   outline: none;
   border-color: var(--color-accent);
 }
+.page-app .admin-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 0;
+  color: var(--color-text-faint);
+  padding: 6px;
+  cursor: pointer;
+  box-shadow: none;
+}
+.page-app .admin-search-clear:hover {
+  color: var(--color-accent);
+  box-shadow: none;
+  transform: none;
+}
+.page-app .admin-filter-chips {
+  display: flex;
+  gap: 6px;
+}
+.page-app .admin-filter-chip {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 7px 12px;
+  border: 1px solid var(--color-divider);
+  background: var(--color-bg-card);
+  color: var(--color-text-soft);
+  cursor: pointer;
+  box-shadow: none;
+}
+.page-app .admin-filter-chip:hover {
+  box-shadow: none;
+  transform: none;
+}
+.page-app .admin-filter-chip.is-active {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+  background: var(--color-accent-hover-bg);
+}
+.page-app .admin-result-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-faintest);
+  margin-left: auto;
+  white-space: nowrap;
+}
+.page-app .admin-sort-group {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.page-app .admin-result-count + .admin-sort-group {
+  margin-left: 0;
+}
+
+.page-app .admin-select-all-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.page-app .admin-select-box {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-divider);
+  background: var(--color-bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: none;
+}
+.page-app .admin-select-box:hover {
+  box-shadow: none;
+  transform: none;
+  border-color: var(--color-accent);
+}
+.page-app .admin-select-box.is-checked {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-bg-card);
+}
+
+.page-app .admin-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent-hover-bg);
+  margin-bottom: 10px;
+}
+.page-app .admin-bulk-count {
+  font-size: 13px;
+  color: var(--color-text);
+  flex: 1;
+}
+.page-app .admin-bulk-actions {
+  display: flex;
+  gap: 8px;
+}
+.page-app .admin-bulk-clear {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+  color: var(--color-text-faint);
+  padding: 6px;
+  cursor: pointer;
+  box-shadow: none;
+}
+.page-app .admin-bulk-clear:hover {
+  color: var(--color-text);
+  box-shadow: none;
+  transform: none;
+}
+
 .page-app .admin-list {
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--color-divider);
+  background: var(--color-bg-card);
 }
 .page-app .admin-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 12px 0;
+  gap: 16px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--color-divider-soft);
 }
 .page-app .admin-row:last-child {
   border-bottom: 0;
+}
+/* Users/Spaces tabs — status gets its own aligned column instead of sitting
+   inline next to the name, so it reads at a glance down the whole list. */
+.page-app .admin-list--columns .admin-row {
+  display: grid;
+  grid-template-columns: 16px 34px minmax(0,1fr) 120px auto;
+  align-items: center;
+}
+.page-app .admin-row-head {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  background: var(--color-bg-panel);
+  border-bottom: 1px solid var(--color-divider);
+}
+.page-app .admin-col-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+.page-app .admin-row-status-cell {
+  display: flex;
+  align-items: center;
+}
+.page-app .admin-row-avatar {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent-link);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.page-app .admin-row-avatar.is-inactive {
+  border-color: var(--color-divider);
+  color: var(--color-text-faintest);
+}
+.page-app .admin-row-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-divider);
+  color: var(--color-text-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-panel);
 }
 .page-app .admin-row-text {
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  flex: 1;
 }
 .page-app .admin-row-title {
   font-size: 14px;
@@ -1908,6 +2209,9 @@ a.btn-secondary:hover {
 .page-app .admin-row-meta {
   font-size: 12px;
   color: var(--color-text-faint);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .page-app .admin-status-pill {
   display: inline-flex;
@@ -1943,10 +2247,205 @@ a.btn-secondary:hover {
   border: 1px solid var(--color-accent-link);
   padding: 1px 6px;
 }
+.page-app .admin-copy-btn {
+  background: transparent;
+  border: 0;
+  color: var(--color-text-faint);
+  padding: 2px 4px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: none;
+}
+.page-app .admin-copy-btn:hover {
+  color: var(--color-accent-link);
+  box-shadow: none;
+  transform: none;
+}
+.page-app .admin-copy-btn.is-copied {
+  color: var(--color-personal-border);
+}
 .page-app .admin-empty {
   font-size: 13px;
   color: var(--color-text-faint);
-  padding: 20px 0;
+  padding: 40px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.page-app .admin-empty svg {
+  color: var(--color-text-faintest);
+}
+
+/* Dashboard: stat cards */
+.page-app .dash-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  margin-bottom: 28px;
+}
+.page-app .dash-card {
+  border: 1px solid var(--color-divider);
+  background: var(--color-bg-card);
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.page-app .dash-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.page-app .dash-card-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+}
+.page-app .dash-card-icon {
+  color: var(--color-accent-link);
+  opacity: 0.7;
+}
+.page-app .dash-card-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.page-app .dash-card-value {
+  font-family: var(--font-heading);
+  font-weight: 300;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--color-text);
+}
+.page-app .dash-card-sub {
+  font-size: 12px;
+  color: var(--color-text-faint);
+}
+.page-app .dash-card-sub .dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-personal);
+  margin-right: 6px;
+}
+
+/* Dashboard: needs attention */
+.page-app .dash-attention {
+  border: 1px solid var(--color-danger-border);
+  background: var(--color-bg-card);
+  margin-bottom: 28px;
+}
+.page-app .dash-attention-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--color-divider-soft);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-danger-text);
+}
+.page-app .dash-attention-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  border: 0;
+  border-bottom: 1px solid var(--color-divider-soft);
+  background: transparent;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  color: var(--color-text);
+  cursor: pointer;
+  box-shadow: none;
+  font-family: var(--font-body);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.page-app .dash-attention-row:last-child {
+  border-bottom: 0;
+}
+.page-app .dash-attention-row:hover {
+  background: var(--color-accent-hover-bg);
+  box-shadow: none;
+  transform: none;
+}
+.page-app .dash-attention-text {
+  flex: 1;
+  font-size: 13px;
+}
+.page-app .dash-attention-row svg.chev {
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+}
+
+/* Dashboard: recent activity preview */
+.page-app .dash-section-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.page-app .dash-section-link {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: none;
+  color: var(--color-accent-link);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: none;
+}
+.page-app .dash-section-link:hover {
+  color: var(--color-accent);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Activity log */
+.page-app .activity-day-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-faintest);
+  margin: 24px 0 10px;
+}
+.page-app .activity-day-label:first-child {
+  margin-top: 0;
+}
+.page-app .activity-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.page-app .activity-icon.is-positive {
+  background: var(--color-personal-tint);
+  color: var(--color-personal-border);
+}
+.page-app .activity-icon.is-negative {
+  background: var(--color-item-salmon-tint);
+  color: var(--color-danger-text);
 }
 
 .page-app .settings-privacy-body {
@@ -2753,6 +3252,82 @@ a.btn-secondary:hover {
   }
   .page-app .notes-editor-title-input {
     font-size: 28px;
+  }
+
+  /* Admin console — same breakpoint as the rest of the app shell. The
+     data-grid row layout (fixed avatar/status columns) and the 3-up stat
+     cards both assume desktop width; neither has anywhere to shrink to on a
+     phone, so they fall back to a stacked/wrapping layout instead. */
+  #admin-view .cal-toolbar-right {
+    width: 100%;
+  }
+  #admin-tab-switch {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  #admin-tab-switch .todo-switch-btn {
+    /* flex-basis (not flex:1) — 1 forces each button to a nowrap-flex
+       min-content width it can't shrink below, which overflowed the row
+       instead of wrapping; a wrap-friendly 2-per-row basis fixes that. */
+    flex: 1 1 calc(50% - 1px);
+    justify-content: center;
+    padding: 7px 6px;
+    font-size: 11px;
+    gap: 5px;
+  }
+  .page-app .admin-console-body {
+    padding: 20px;
+  }
+  .page-app .admin-toolbar-strip {
+    padding: 12px 20px;
+    min-height: 0;
+  }
+  .page-app .admin-toolbar-strip-divider {
+    margin: 0 12px;
+  }
+  .page-app .admin-range-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .page-app .dash-grid {
+    grid-template-columns: 1fr;
+  }
+  .page-app .admin-list--columns .admin-row {
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .page-app .admin-list--columns .admin-row-text {
+    flex-basis: 100%;
+    order: 1;
+  }
+  .page-app .admin-list--columns .admin-row-status-cell {
+    order: 2;
+  }
+  /* Un-ordered row children (checkbox, avatar/icon) default to order 0 and
+     stay put; without this the action button — also order 0 by default —
+     would land right after them, ahead of the name it acts on. */
+  .page-app .admin-list--columns .admin-user-toggle-btn,
+  .page-app .admin-list--columns .admin-space-toggle-btn {
+    order: 3;
+    margin-left: auto;
+  }
+  .page-app .admin-list--columns .admin-row.admin-row-head {
+    display: none;
+  }
+  .page-app .admin-toolbar-row {
+    align-items: stretch;
+  }
+  .page-app .admin-search {
+    max-width: none;
+    flex-basis: 100%;
+  }
+  .page-app .admin-sort-group {
+    margin-left: 0;
+  }
+  .page-app .admin-result-count {
+    margin-left: 0;
+    flex-basis: 100%;
   }
 }
 
@@ -3600,6 +4175,13 @@ a.btn-secondary:hover {
 .page-app .confirm-dialog-danger:hover {
   background: rgba(176, 48, 40, 0.08);
 }
+.page-app .confirm-dialog-ok.confirm-dialog-positive {
+  border-color: var(--color-personal-border);
+  color: var(--color-personal-border);
+}
+.page-app .confirm-dialog-ok.confirm-dialog-positive:hover {
+  background: var(--color-personal-tint);
+}
 
 /* Day detail panel — click a date (or day-view empty space) to see everything due
    that day. Sits behind #task-modal (z-index 50) so editing a row from here stacks
@@ -3834,6 +4416,25 @@ a.btn-secondary:hover {
   line-height: 1;
 }
 .page-app .toast-close:hover {
+  color: var(--color-accent);
+  box-shadow: none;
+  transform: none;
+}
+.page-app .toast-action {
+  flex-shrink: 0;
+  background: transparent;
+  border: 0;
+  color: var(--color-accent-link);
+  cursor: pointer;
+  padding: 0;
+  box-shadow: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.page-app .toast-action:hover {
   color: var(--color-accent);
   box-shadow: none;
   transform: none;
