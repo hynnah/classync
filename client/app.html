@@ -984,6 +984,54 @@
     };
   }
 
+  // Keeps Tab/Shift+Tab cycling inside an open modal instead of escaping to
+  // the page behind it, and restores focus to whatever triggered it on
+  // close — the one piece of dialog semantics genuinely missing (role=
+  // "dialog"/aria-modal/Escape-to-close are already on every modal-backdrop
+  // in this app). A stack, not a single variable, because this app already
+  // supports stacked modals on purpose (confirmDialog opened from inside
+  // task-modal, for instance, with Escape closing the topmost layer first)
+  // — trapFocus/releaseFocus follow that same LIFO order.
+  const focusTrapStack = [];
+  const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  function trapFocus(modalEl) {
+    const previouslyFocused = document.activeElement;
+    function getFocusable() {
+      return Array.from(modalEl.querySelectorAll(FOCUSABLE_SELECTOR)).filter((el) => el.offsetParent !== null);
+    }
+    function onKeydown(e) {
+      if (e.key !== 'Tab') return;
+      const focusable = getFocusable();
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    modalEl.addEventListener('keydown', onKeydown);
+    // Only move focus in if the caller hasn't already focused something
+    // inside — several call sites deliberately focus a specific control
+    // (Cancel rather than the destructive OK button, for instance) right
+    // after opening; this is just the fallback for the ones that don't.
+    if (!modalEl.contains(document.activeElement)) {
+      const focusable = getFocusable();
+      if (focusable.length) focusable[0].focus();
+    }
+    focusTrapStack.push(() => {
+      modalEl.removeEventListener('keydown', onKeydown);
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus();
+    });
+  }
+  function releaseFocus() {
+    const cleanup = focusTrapStack.pop();
+    if (cleanup) cleanup();
+  }
+
   // Custom confirm dialog, replacing window.confirm — matches the site's own
   // modal styling instead of the browser chrome, and doesn't block the tab.
   // Top-level (not inside initApp) so both the calendar/day-panel flows and
@@ -1004,11 +1052,13 @@
     confirmOkBtn.classList.toggle('confirm-dialog-positive', positive);
     confirmOkBtn.classList.toggle('confirm-dialog-danger', !positive);
     confirmDialogEl.hidden = false;
+    trapFocus(confirmDialogEl);
     confirmCancelBtn.focus();
     return new Promise((resolve) => { confirmResolve = resolve; });
   }
   function closeConfirmDialog(result) {
     confirmDialogEl.hidden = true;
+    releaseFocus();
     if (confirmResolve) {
       confirmResolve(result);
       confirmResolve = null;
@@ -2282,11 +2332,13 @@
       closeTimePopover();
       updateModeUI();
       modal.hidden = false;
+      trapFocus(modal);
       document.getElementById('task-title').focus();
     }
     async function closeModal() {
       await flushAutoSave();
       modal.hidden = true;
+      releaseFocus();
       editingItemId = null;
       clearTimeout(autoSaveTimer);
     }
@@ -2340,6 +2392,7 @@
           return;
         }
         modal.hidden = true;
+        releaseFocus();
         editingItemId = null;
         await Promise.all([refreshCalendarView(), loadUrgent(), refreshDayPanel(), refreshTodoView(), refreshNotesView(), crossViewRefresh.all?.()]);
       } finally {
@@ -2446,10 +2499,12 @@
       dayPanelTitle.textContent = formatPanelDate(dateStr);
       dayPanelBody.innerHTML = '<p class="day-panel-empty">Loading…</p>';
       dayPanel.hidden = false;
+      trapFocus(dayPanel);
       await refreshDayPanel();
     }
     function closeDayPanel() {
       dayPanel.hidden = true;
+      releaseFocus();
       dayPanelDate = null;
     }
 
@@ -3157,10 +3212,12 @@
       addSpaceCreateError.hidden = true;
       addSpaceJoinError.hidden = true;
       addSpaceModal.hidden = false;
+      trapFocus(addSpaceModal);
       addSpaceCreateName.focus();
     }
     function closeAddSpaceModal() {
       addSpaceModal.hidden = true;
+      releaseFocus();
     }
     switcherAddBtn.addEventListener('click', openAddSpaceModal);
     addSpaceClose.addEventListener('click', closeAddSpaceModal);
@@ -3625,10 +3682,12 @@
       allDayPanelTitle.textContent = formatSpacePanelDate(dateStr);
       allDayPanelBody.innerHTML = '<p class="day-panel-empty">Loading…</p>';
       allDayPanel.hidden = false;
+      trapFocus(allDayPanel);
       await refreshAllDayPanel();
     }
     function closeAllDayPanel() {
       allDayPanel.hidden = true;
+      releaseFocus();
       allDayPanelDate = null;
     }
     document.getElementById('all-day-panel-close').addEventListener('click', closeAllDayPanel);
@@ -3869,10 +3928,12 @@
       spaceDayPanelTitle.textContent = formatSpacePanelDate(dateStr);
       spaceDayPanelBody.innerHTML = '<p class="day-panel-empty">Loading…</p>';
       spaceDayPanel.hidden = false;
+      trapFocus(spaceDayPanel);
       await refreshSpaceDayPanel();
     }
     function closeSpaceDayPanel() {
       spaceDayPanel.hidden = true;
+      releaseFocus();
       spaceDayPanelDate = null;
     }
     document.getElementById('space-day-panel-close').addEventListener('click', closeSpaceDayPanel);
@@ -4176,10 +4237,12 @@
       }
       updateSpaceItemKindUI();
       spaceItemModal.hidden = false;
+      trapFocus(spaceItemModal);
       spaceItemTitleInput.focus();
     }
     function closeSpaceItemModal() {
       spaceItemModal.hidden = true;
+      releaseFocus();
       spaceEditingItemId = null;
     }
     document.getElementById('space-item-modal-close').addEventListener('click', closeSpaceItemModal);
