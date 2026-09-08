@@ -12,6 +12,10 @@
 </head>
 <body class="page-app">
 
+<div id="connectivity-banner" class="connectivity-banner" role="status" hidden>
+  <span id="connectivity-banner-text"></span>
+</div>
+
 <header>
   <button id="rail-toggle" class="rail-toggle" type="button" aria-label="Toggle sidebar">
     <span></span><span></span><span></span>
@@ -4296,12 +4300,36 @@
       window.history.replaceState({}, '', url);
     }
 
+    // Connectivity banner — the browser's own online/offline events plus the
+    // SSE connection's open/error events, whichever is worse wins. sseOpen
+    // starts true (optimistic) so a normal page load doesn't flash
+    // "Reconnecting…" before the very first connection has even had a
+    // chance to open.
+    const connectivityBanner = document.getElementById('connectivity-banner');
+    const connectivityBannerText = document.getElementById('connectivity-banner-text');
+    let sseOpen = true;
+    function updateConnectivityBanner() {
+      if (!navigator.onLine) {
+        connectivityBannerText.textContent = "You're offline — changes won't save until you're back online.";
+        connectivityBanner.hidden = false;
+      } else if (!sseOpen) {
+        connectivityBannerText.textContent = 'Reconnecting…';
+        connectivityBanner.hidden = false;
+      } else {
+        connectivityBanner.hidden = true;
+      }
+    }
+    window.addEventListener('online', updateConnectivityBanner);
+    window.addEventListener('offline', updateConnectivityBanner);
+
     // Live updates over SSE — opened once both closures above have
     // registered their crossViewRefresh handlers, so nothing can arrive
     // before there's something to hand it to. EventSource reconnects on
     // its own after a drop; the server sends a heartbeat comment line
     // every 25s so nothing in between times the connection out as idle.
     const liveUpdates = new EventSource('/sse/updates');
+    liveUpdates.addEventListener('open', () => { sseOpen = true; updateConnectivityBanner(); });
+    liveUpdates.addEventListener('error', () => { sseOpen = false; updateConnectivityBanner(); });
     liveUpdates.addEventListener('role_changed', (e) => {
       const data = JSON.parse(e.data);
       const messages = {

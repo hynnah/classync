@@ -1403,6 +1403,25 @@ a.btn-secondary:hover {
   display: none;
 }
 
+/* A normal-flow flex child ahead of header/.shell, not position:fixed —
+   .page-app is already a fixed-100dvh flex column with its own internal
+   scroll regions (main, the sidebar), so body itself never scrolls and
+   this never needs to fight for stacking context. It just takes its own
+   slice of the column and pushes everything else down by that much,
+   automatically staying visible without overlapping the header. */
+.page-app .connectivity-banner {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--color-accent-hover-bg);
+  color: var(--color-accent-link);
+  border-bottom: 1px solid var(--color-accent);
+}
+
 .page-app main {
   flex: 1;
   display: flex;
