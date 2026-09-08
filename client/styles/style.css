@@ -2675,6 +2675,258 @@ a.btn-secondary:hover {
   padding: 60px 20px 44px;
 }
 
+/* Space Tasks — its own row/card treatment, deliberately NOT sharing
+   .todo-row with Personal's To Do or All's To Do (buildTodoRow/
+   buildAllTodoRow), since only this view was asked to be redesigned;
+   reusing .todo-row would have silently restyled those other two lists
+   too. Colors are the app's existing per-item palette (already used by
+   the calendar day panel via --color-item-<name>-border) and the
+   existing --color-secondary-* token (already used for the Organizer
+   avatar badge) — extended here, not reinvented. */
+.page-app .space-todo-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.page-app .space-todo-group + .space-todo-group {
+  margin-top: 26px;
+}
+.page-app .space-todo-group-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  padding-left: 2px;
+}
+.page-app .space-todo-group-label-count {
+  color: var(--color-text-faintest);
+}
+.page-app .space-todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.page-app .space-todo-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-divider);
+  border-left: 4px solid var(--space-todo-accent, var(--color-divider));
+  padding: 16px 18px;
+}
+.page-app .space-todo-row.is-overdue {
+  border-left-color: var(--color-danger-border);
+  background: var(--color-danger-bg);
+}
+/* Wraps the checkbox + title/meta so the mobile media query can stack
+   this group above the actions row without disturbing the desktop
+   layout, where it just behaves like check+main were direct children. */
+.page-app .space-todo-row-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+.page-app .space-todo-row-check {
+  align-self: center;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--color-personal-border);
+  background: var(--color-bg-card);
+  flex-shrink: 0;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.page-app .space-todo-row-check:hover {
+  border-color: var(--color-accent);
+  box-shadow: none;
+  transform: none;
+}
+.page-app .space-todo-row-check.is-done {
+  background: var(--color-personal);
+  border-color: var(--color-personal-border);
+}
+.page-app .space-todo-row-check svg {
+  display: block;
+  opacity: 0;
+}
+.page-app .space-todo-row-check.is-done svg {
+  opacity: 1;
+}
+.page-app .space-todo-row-check-spacer {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.page-app .space-todo-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.page-app .space-todo-row-title-line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.page-app .space-todo-row-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--space-todo-dot, var(--color-text-faintest));
+  flex-shrink: 0;
+}
+.page-app .space-todo-row-title {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+.page-app .space-todo-row-title.is-done {
+  color: var(--color-text-faint);
+  text-decoration: line-through;
+}
+.page-app .space-todo-row-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.page-app .space-todo-chip {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  background: var(--space-todo-tint, var(--color-bg-panel));
+  color: var(--space-todo-border-text, var(--color-text-soft));
+  border: 1px solid var(--space-todo-border-text, var(--color-divider));
+}
+.page-app .space-todo-chip--shared {
+  background: transparent;
+  color: var(--color-secondary-text);
+  border-color: var(--color-secondary-border);
+}
+/* Same per-item palette the calendar day panel already uses
+   (.day-panel-row--color-<name>), extended here to also drive the
+   title dot and category chip's tint, not just the left border. */
+.page-app .space-todo-row--color-salmon { --space-todo-accent: var(--color-item-salmon-border); --space-todo-dot: var(--color-item-salmon); --space-todo-tint: var(--color-item-salmon-tint); --space-todo-border-text: var(--color-item-salmon-border); }
+.page-app .space-todo-row--color-peach { --space-todo-accent: var(--color-item-peach-border); --space-todo-dot: var(--color-item-peach); --space-todo-tint: var(--color-item-peach-tint); --space-todo-border-text: var(--color-item-peach-border); }
+.page-app .space-todo-row--color-butter { --space-todo-accent: var(--color-item-butter-border); --space-todo-dot: var(--color-item-butter); --space-todo-tint: var(--color-item-butter-tint); --space-todo-border-text: var(--color-item-butter-border); }
+.page-app .space-todo-row--color-lime { --space-todo-accent: var(--color-item-lime-border); --space-todo-dot: var(--color-item-lime); --space-todo-tint: var(--color-item-lime-tint); --space-todo-border-text: var(--color-item-lime-border); }
+.page-app .space-todo-row--color-mint { --space-todo-accent: var(--color-item-mint-border); --space-todo-dot: var(--color-item-mint); --space-todo-tint: var(--color-item-mint-tint); --space-todo-border-text: var(--color-item-mint-border); }
+.page-app .space-todo-row--color-seafoam { --space-todo-accent: var(--color-item-seafoam-border); --space-todo-dot: var(--color-item-seafoam); --space-todo-tint: var(--color-item-seafoam-tint); --space-todo-border-text: var(--color-item-seafoam-border); }
+.page-app .space-todo-row--color-cyan { --space-todo-accent: var(--color-item-cyan-border); --space-todo-dot: var(--color-item-cyan); --space-todo-tint: var(--color-item-cyan-tint); --space-todo-border-text: var(--color-item-cyan-border); }
+.page-app .space-todo-row--color-sky { --space-todo-accent: var(--color-item-sky-border); --space-todo-dot: var(--color-item-sky); --space-todo-tint: var(--color-item-sky-tint); --space-todo-border-text: var(--color-item-sky-border); }
+.page-app .space-todo-row--color-periwinkle { --space-todo-accent: var(--color-item-periwinkle-border); --space-todo-dot: var(--color-item-periwinkle); --space-todo-tint: var(--color-item-periwinkle-tint); --space-todo-border-text: var(--color-item-periwinkle-border); }
+.page-app .space-todo-row--color-lavender { --space-todo-accent: var(--color-item-lavender-border); --space-todo-dot: var(--color-item-lavender); --space-todo-tint: var(--color-item-lavender-tint); --space-todo-border-text: var(--color-item-lavender-border); }
+.page-app .space-todo-row--color-orchid { --space-todo-accent: var(--color-item-orchid-border); --space-todo-dot: var(--color-item-orchid); --space-todo-tint: var(--color-item-orchid-tint); --space-todo-border-text: var(--color-item-orchid-border); }
+.page-app .space-todo-row--color-rose { --space-todo-accent: var(--color-item-rose-border); --space-todo-dot: var(--color-item-rose); --space-todo-tint: var(--color-item-rose-tint); --space-todo-border-text: var(--color-item-rose-border); }
+.page-app .space-todo-date-text {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  color: var(--color-text-faint);
+}
+.page-app .space-todo-overdue-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-danger-text);
+  font-weight: 500;
+}
+.page-app .space-todo-row-actions {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.page-app .space-todo-row:hover .space-todo-row-actions {
+  opacity: 1;
+}
+.page-app .space-todo-row-action-btn {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--color-text-faint);
+  padding: 6px;
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.page-app .space-todo-row-action-btn:hover {
+  color: var(--color-accent);
+  box-shadow: none;
+  transform: none;
+}
+/* One shared layout for every empty state (teacup or checkmark) — a
+   fixed-height icon slot the icon centers within, so the "Nothing left"/
+   "Nothing overdue"/"Nothing finished yet" text always lands at the same
+   spot switching tabs, regardless of how large or small that tab's own
+   icon is. Icon size/shape differences stay scoped to what's inside the
+   slot, not the slot itself. */
+.page-app .space-todo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 70px 20px 40px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+.page-app .space-todo-empty-icon-wrap {
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+.page-app .space-todo-empty img {
+  width: 160px;
+  height: auto;
+  opacity: 0.9;
+}
+.page-app .space-todo-empty p {
+  font-family: var(--font-heading);
+  font-size: 21px;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--color-text-soft);
+  margin: 0;
+  line-height: 1.4;
+}
+.page-app .space-todo-empty-check {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-personal-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-personal-border);
+}
+
 .page-app .todo-rail {
   width: 380px;
   box-sizing: border-box;
@@ -3229,6 +3481,40 @@ a.btn-secondary:hover {
     padding: 7px 6px;
     font-size: 11px;
     gap: 5px;
+  }
+  /* Space Tasks rows: stack the checkbox+content row above the action
+     row, and keep edit/delete always visible instead of hover-revealed
+     — there's no hover on touch, so the desktop opacity-on-hover pattern
+     would otherwise make them permanently unreachable on mobile. */
+  .page-app .space-todo-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px;
+  }
+  .page-app .space-todo-row-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .page-app .space-todo-row-title {
+    font-size: 17px;
+  }
+  .page-app .space-todo-row-actions {
+    opacity: 1;
+    align-self: flex-end;
+    gap: 4px;
+  }
+  .page-app .space-todo-row-action-btn {
+    border: 1px solid var(--color-divider);
+    width: 34px;
+    height: 34px;
+  }
+  .page-app .space-todo-empty-icon-wrap {
+    height: 110px;
+  }
+  .page-app .space-todo-empty img {
+    width: 110px;
   }
   .page-app .notes-list-pane {
     width: 100%;

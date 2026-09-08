@@ -187,7 +187,7 @@ test.describe('Space calendar: creating tasks and events', () => {
     }
   });
 
-  test('the Space Tasks tab lists tasks (not events), and only the creator sees edit/delete on their own row', async ({ page, browser }) => {
+  test('the Space Tasks tab lists tasks and events (events get a spacer, not a checkbox), and only the creator sees edit/delete on their own row', async ({ page, browser }) => {
     const spaceName = 'E2E Space Tasks Tab Test ' + Date.now();
     const { ownerEmail, memberEmail, memberPage, memberContext, spaceId } = await setUpSpaceWithMember(page, browser, spaceName);
     try {
@@ -199,7 +199,8 @@ test.describe('Space calendar: creating tasks and events', () => {
       await page.locator('#space-item-form button[type=submit]').click();
       await expect(page.locator('#space-item-modal')).toBeHidden();
 
-      // an Event created elsewhere in the Space never shows up here
+      // an Event created elsewhere in the Space shows up here too, just
+      // without a checkbox — it never gets a completion state
       await page.evaluate(async (spaceId) => {
         await fetch('/api/items', {
           method: 'POST',
@@ -209,22 +210,25 @@ test.describe('Space calendar: creating tasks and events', () => {
       }, spaceId);
       await page.locator('#space-todo-tab-active').click();
 
-      const row = page.locator('#space-todo-body .todo-row', { hasText: 'Grade the midterms' });
+      const row = page.locator('#space-todo-body .space-todo-row', { hasText: 'Grade the midterms' });
       await expect(row).toBeVisible();
-      await expect(page.locator('#space-todo-body .todo-row', { hasText: 'Field trip, not a task' })).toHaveCount(0);
-      await expect(page.locator('#space-todo-count-active')).toHaveText('01');
+      const eventRow = page.locator('#space-todo-body .space-todo-row', { hasText: 'Field trip, not a task' });
+      await expect(eventRow).toBeVisible();
+      await expect(eventRow.locator('.space-todo-row-check-spacer')).toHaveCount(1);
+      await expect(eventRow.locator('.space-todo-row-check')).toHaveCount(0);
+      await expect(page.locator('#space-todo-count-active')).toHaveText('02');
 
       // the creator sees edit/delete
-      await expect(row.locator('.todo-row-action-btn')).toHaveCount(2);
-      await row.locator('.todo-row-action-btn').first().click();
+      await expect(row.locator('.space-todo-row-action-btn')).toHaveCount(2);
+      await row.locator('.space-todo-row-action-btn').first().click();
       await expect(page.locator('#space-item-modal-title')).toHaveText('Edit task');
       await page.locator('#space-item-modal-close').click();
 
       // marking it done moves it to the Completed tab
-      await row.locator('.todo-row-check').click();
+      await row.locator('.space-todo-row-check').click();
       await page.waitForTimeout(300);
       await page.locator('#space-todo-tab-done').click();
-      await expect(page.locator('#space-todo-body .todo-row', { hasText: 'Grade the midterms' })).toBeVisible();
+      await expect(page.locator('#space-todo-body .space-todo-row', { hasText: 'Grade the midterms' })).toBeVisible();
       await expect(page.locator('#space-todo-count-done')).toHaveText('01');
 
       // a plain Member sees the same task (it's open-to-all) but not edit/delete —
@@ -235,9 +239,9 @@ test.describe('Space calendar: creating tasks and events', () => {
       await memberPage.locator('#scope-switcher-btn').click();
       await memberPage.locator('.scope-switcher-item', { hasText: spaceName }).click();
       await memberPage.locator('#space-nav-tasks').click();
-      const memberRow = memberPage.locator('#space-todo-body .todo-row', { hasText: 'Grade the midterms' });
+      const memberRow = memberPage.locator('#space-todo-body .space-todo-row', { hasText: 'Grade the midterms' });
       await expect(memberRow).toBeVisible();
-      await expect(memberRow.locator('.todo-row-action-btn')).toHaveCount(0);
+      await expect(memberRow.locator('.space-todo-row-action-btn')).toHaveCount(0);
 
       await memberContext.close();
     } finally {

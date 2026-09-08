@@ -101,6 +101,7 @@
   /* destructive (sign out) */
   --color-danger-border: rgba(176, 48, 40, 0.5);
   --color-danger-text: #a5382f;
+  --color-danger-bg: #fbeeec;
   --color-danger-hover-bg: rgba(176, 48, 40, 0.78);
   --color-danger-hover-border: rgba(176, 48, 40, 0.82);
   --color-danger-hover-text: #fdf6f2;

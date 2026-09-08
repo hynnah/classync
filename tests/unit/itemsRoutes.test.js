@@ -373,7 +373,7 @@ describe('/api/items/todo — the To Do view', () => {
     expect(ids).not.toContain(othersNote.body.item.id);
   });
 
-  test('?spaceId scopes to that Space\'s own Tasks tab — undated tasks included, events excluded', async () => {
+  test('?spaceId scopes to that Space\'s own Tasks tab — undated tasks and events both included', async () => {
     const agent = await loggedInAgent('spacescope');
     const created = await agent.post('/api/spaces').send({ name: 'Tasks tab route test' });
     const spaceId = created.body.space.id;
@@ -391,7 +391,7 @@ describe('/api/items/todo — the To Do view', () => {
     expect(res.status).toBe(200);
     const ids = res.body.items.map((i) => i.id);
     expect(ids).toContain(undatedTask.body.item.id);
-    expect(ids).not.toContain(spaceEvent.body.item.id);
+    expect(ids).toContain(spaceEvent.body.item.id);
   });
 
   test('?spaceId for a Space the caller doesn\'t belong to is a 404, not a data leak', async () => {

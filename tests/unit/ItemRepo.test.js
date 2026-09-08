@@ -234,7 +234,7 @@ describe('ItemRepo', () => {
   });
 
   describe('listSpaceTodo', () => {
-    test('every task in this one Space (undated included), excludes events, another Space\'s tasks, and items assigned to specific others', async () => {
+    test('every task or event in this one Space (undated included), excludes another Space\'s items and items assigned to specific others', async () => {
       const space = await SpaceRepo.createSpace({ name: 'listSpaceTodo test', creatorUserId: owner.id });
       createdSpaceIds.push(space.id);
       await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: intruder.id });
@@ -242,6 +242,9 @@ describe('ItemRepo', () => {
       const undatedTask = await ItemRepo.create({
         createdBy: owner.id, spaceId: space.id, kind: 'task', title: 'Space undated task', isOpenToAll: true,
       });
+      // Events don't have a completion state, but they're still worth seeing
+      // in the Space's own Tasks tab (client-side gives them a spacer
+      // instead of a checkbox, same as the day panel already does).
       const spaceEvent = await ItemRepo.create({
         createdBy: owner.id, spaceId: space.id, kind: 'event', title: 'Space event, listSpaceTodo', dueDate: '2026-12-05', isOpenToAll: true,
       });
@@ -260,7 +263,7 @@ describe('ItemRepo', () => {
       const ids = items.map((i) => i.id);
       expect(ids).toContain(undatedTask.id);
       expect(ids).toContain(targetedTask.id);
-      expect(ids).not.toContain(spaceEvent.id);
+      expect(ids).toContain(spaceEvent.id);
       expect(ids).not.toContain(otherSpaceTask.id);
 
       const intruderItems = await ItemRepo.listSpaceTodo({ spaceId: space.id, userId: intruder.id });

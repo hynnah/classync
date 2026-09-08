@@ -127,14 +127,16 @@ async function listForSpace({ spaceId, userId, from, to }) {
   return rows;
 }
 
-// Backs the Space's own Tasks tab — every task in this one Space (never an
-// event; events don't get a done state), regardless of due date. Same reason
+// Backs the Space's own Tasks tab — every task or event in this one Space,
+// regardless of due date (an event still renders with a spacer instead of a
+// checkbox client-side, same as the day panel — it never gets a done state,
+// but it's still worth seeing here alongside the tasks). Same reason
 // listAllForUser/listAllScopedTodo exist: BETWEEN never matches a NULL
-// due_date, so an undated task needs a date-range-free query to ever surface.
+// due_date, so an undated item needs a date-range-free query to ever surface.
 async function listSpaceTodo({ spaceId, userId }) {
   const [rows] = await getPool().query(
     `${SELECT_WITH_STATUS}
-     WHERE items.space_id = ? AND item_assignments.user_id = ? AND items.kind = 'task'
+     WHERE items.space_id = ? AND item_assignments.user_id = ? AND items.kind IN ('task', 'event')
      ORDER BY items.due_date IS NULL, items.due_date ASC, items.due_time ASC`,
     [spaceId, userId]
   );

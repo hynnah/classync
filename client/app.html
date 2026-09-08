@@ -3909,62 +3909,114 @@
     let spaceTodoTasksCache = [];
     let spaceTodoFilter = 'active';
 
-    function formatSpaceTodoMeta(raw, isOverdue) {
-      const parts = [];
-      if (isOverdue) parts.push('Overdue');
-      if (raw.due_date) parts.push(formatTodoDate(raw.due_date));
-      if (raw.due_time) parts.push(raw.due_time.slice(0, 5));
-      parts.push(raw.category || 'Task');
-      return parts.join(' · ');
+    // Today / This week (next 7 days) / Later / No due date — only the
+    // Active tab groups by this; Overdue and Completed stay flat lists
+    // (usually short-lived/short, grouping them added noise, not scannability).
+    function spaceTodoBucket(raw) {
+      if (!raw.due_date) return 'No due date';
+      const todayIso = isoDate(new Date());
+      if (raw.due_date === todayIso) return 'Today';
+      const weekAhead = isoDate(new Date(new Date().setDate(new Date().getDate() + 7)));
+      if (raw.due_date <= weekAhead) return 'This week';
+      return 'Later';
     }
-    function buildSpaceTodoRow(raw) {
-      const row = document.createElement('div');
-      row.className = 'todo-row';
+    const SPACE_TODO_BUCKET_ORDER = ['Today', 'This week', 'Later', 'No due date'];
 
-      const isDone = raw.status === 'completed';
+    function buildSpaceTodoRow(raw) {
+      const isTask = raw.kind === 'task';
+      const isDone = isTask && raw.status === 'completed';
       const isOverdue = raw.due_date && raw.due_date < isoDate(new Date()) && !isDone;
 
-      const check = document.createElement('button');
-      check.type = 'button';
-      check.className = 'todo-row-check' + (isDone ? ' is-done' : '');
-      check.setAttribute('aria-label', isDone ? 'Mark as not done' : 'Mark as done');
-      check.addEventListener('click', async () => {
-        check.disabled = true;
-        const nextStatus = isDone ? 'pending' : 'completed';
-        await fetch(`/api/items/${raw.id}/status`, {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ status: nextStatus }),
+      const row = document.createElement('div');
+      row.className = 'space-todo-row' + (isOverdue ? ' is-overdue' : '') + (raw.color ? ` space-todo-row--color-${raw.color}` : '');
+
+      const top = document.createElement('div');
+      top.className = 'space-todo-row-top';
+      row.appendChild(top);
+
+      // Events don't get a done state (same reason the day panel gives them a
+      // spacer instead of a checkbox there) — a plain non-interactive span
+      // holds the same width so the title still lines up with task rows.
+      const check = document.createElement(isTask ? 'button' : 'span');
+      if (isTask) check.type = 'button';
+      check.className = (isTask ? 'space-todo-row-check' : 'space-todo-row-check-spacer') + (isDone ? ' is-done' : '');
+      if (isTask) {
+        check.setAttribute('aria-label', isDone ? 'Mark as not done' : 'Mark as done');
+        check.innerHTML = '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8" stroke="#fdfcf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        check.addEventListener('click', async () => {
+          check.disabled = true;
+          const nextStatus = isDone ? 'pending' : 'completed';
+          await fetch(`/api/items/${raw.id}/status`, {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ status: nextStatus }),
+          });
+          await Promise.all([refreshSpaceTodoView(), refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshAllIfVisited()]);
         });
-        await Promise.all([refreshSpaceTodoView(), refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshAllIfVisited()]);
-      });
-      row.appendChild(check);
+      }
+      top.appendChild(check);
 
+      const main = document.createElement('div');
+      main.className = 'space-todo-row-main';
+      top.appendChild(main);
+
+      const titleLine = document.createElement('div');
+      titleLine.className = 'space-todo-row-title-line';
+      main.appendChild(titleLine);
+      if (raw.color) {
+        const dot = document.createElement('span');
+        dot.className = 'space-todo-row-dot';
+        titleLine.appendChild(dot);
+      }
       const titleEl = document.createElement('span');
-      titleEl.className = 'todo-row-title' + (isDone ? ' is-done' : '');
+      titleEl.className = 'space-todo-row-title' + (isDone ? ' is-done' : '');
       titleEl.textContent = raw.title;
-      row.appendChild(titleEl);
+      titleLine.appendChild(titleEl);
 
-      const metaEl = document.createElement('span');
-      metaEl.className = 'todo-row-meta' + (isOverdue ? ' is-overdue' : '');
-      metaEl.textContent = formatSpaceTodoMeta(raw, isOverdue);
-      row.appendChild(metaEl);
+      const metaLine = document.createElement('div');
+      metaLine.className = 'space-todo-row-meta-line';
+      main.appendChild(metaLine);
+      if (isOverdue) {
+        const flag = document.createElement('span');
+        flag.className = 'space-todo-overdue-flag';
+        flag.innerHTML = '<svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5l7 12.5H1L8 1.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 6.5v3.2M8 11.7v.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Overdue';
+        metaLine.appendChild(flag);
+      }
+      const categoryChip = document.createElement('span');
+      categoryChip.className = 'space-todo-chip';
+      categoryChip.textContent = raw.category || (isTask ? 'Task' : 'Event');
+      metaLine.appendChild(categoryChip);
+      if (raw.is_open_to_all) {
+        const sharedChip = document.createElement('span');
+        sharedChip.className = 'space-todo-chip space-todo-chip--shared';
+        sharedChip.textContent = 'Open to all';
+        metaLine.appendChild(sharedChip);
+      }
+      if (raw.due_date || raw.due_time) {
+        const dateEl = document.createElement('span');
+        dateEl.className = 'space-todo-date-text';
+        const parts = [];
+        if (raw.due_date) parts.push(formatTodoDate(raw.due_date));
+        if (raw.due_time) parts.push(raw.due_time.slice(0, 5));
+        dateEl.textContent = parts.join(' · ');
+        metaLine.appendChild(dateEl);
+      }
 
       if (raw.created_by === currentUserId) {
         const actions = document.createElement('div');
-        actions.className = 'todo-row-actions';
+        actions.className = 'space-todo-row-actions';
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
-        editBtn.className = 'todo-row-action-btn';
+        editBtn.className = 'space-todo-row-action-btn';
         editBtn.setAttribute('aria-label', 'Edit');
-        editBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.3 2.3a1.5 1.5 0 0 1 2.1 2.1L5.5 12.3l-2.8.7.7-2.8 7.9-7.9Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+        editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.3 2.3a1.5 1.5 0 0 1 2.1 2.1L5.5 12.3l-2.8.7.7-2.8 7.9-7.9Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
         editBtn.addEventListener('click', () => openSpaceItemModal(raw));
         actions.appendChild(editBtn);
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
-        deleteBtn.className = 'todo-row-action-btn';
+        deleteBtn.className = 'space-todo-row-action-btn';
         deleteBtn.setAttribute('aria-label', 'Delete');
-        deleteBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5v8a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7v4M9.5 7v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+        deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5v8a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7v4M9.5 7v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
         deleteBtn.addEventListener('click', async () => {
           if (!(await confirmDialog(`Delete "${raw.title}"? This can't be undone.`))) return;
           deleteBtn.disabled = true;
@@ -3996,10 +4048,48 @@
         const emptyText = spaceTodoFilter === 'done' ? 'Nothing finished yet.'
           : spaceTodoFilter === 'overdue' ? 'Nothing overdue.'
           : 'Nothing left. The list is clear.';
-        spaceTodoBody.innerHTML = `<p class="todo-empty">${emptyText}</p>`;
+        if (spaceTodoFilter === 'overdue') {
+          spaceTodoBody.innerHTML = `
+            <div class="space-todo-empty">
+              <div class="space-todo-empty-icon-wrap">
+                <div class="space-todo-empty-check">
+                  <svg width="20" height="20" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <p>${escapeHtml(emptyText)}</p>
+            </div>`;
+        } else {
+          spaceTodoBody.innerHTML = `
+            <div class="space-todo-empty">
+              <div class="space-todo-empty-icon-wrap">
+                <img src="/assets/ornament.png" alt="">
+              </div>
+              <p>${escapeHtml(emptyText)}</p>
+            </div>`;
+        }
         return;
       }
-      shown.forEach((raw) => spaceTodoBody.appendChild(buildSpaceTodoRow(raw)));
+
+      if (spaceTodoFilter !== 'active') {
+        const list = document.createElement('div');
+        list.className = 'space-todo-list';
+        shown.forEach((raw) => list.appendChild(buildSpaceTodoRow(raw)));
+        spaceTodoBody.appendChild(list);
+        return;
+      }
+
+      const byBucket = {};
+      shown.forEach((raw) => {
+        const bucket = spaceTodoBucket(raw);
+        (byBucket[bucket] = byBucket[bucket] || []).push(raw);
+      });
+      SPACE_TODO_BUCKET_ORDER.filter((b) => byBucket[b] && byBucket[b].length).forEach((bucket) => {
+        const group = document.createElement('div');
+        group.className = 'space-todo-group';
+        group.innerHTML = `<div class="space-todo-group-label">${escapeHtml(bucket)} <span class="space-todo-group-label-count">${String(byBucket[bucket].length).padStart(2, '0')}</span></div>`;
+        byBucket[bucket].forEach((raw) => group.appendChild(buildSpaceTodoRow(raw)));
+        spaceTodoBody.appendChild(group);
+      });
     }
     async function refreshSpaceTodoView() {
       if (!currentSpace) return;
