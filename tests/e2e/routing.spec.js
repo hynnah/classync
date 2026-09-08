@@ -21,6 +21,22 @@ test.describe('landing page entry points require sign-in first', () => {
   });
 });
 
+test.describe('legal pages', () => {
+  test('the landing footer\'s Privacy and Terms links are real pages, not dead "#" links', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('footer a', { hasText: 'Privacy' })).toHaveAttribute('href', '/privacy.html');
+    await expect(page.locator('footer a', { hasText: 'Terms' })).toHaveAttribute('href', '/terms.html');
+
+    await page.locator('footer a', { hasText: 'Privacy' }).click();
+    await expect(page).toHaveURL(/\/privacy\.html/);
+    await expect(page.locator('h1')).toHaveText('Privacy Policy');
+
+    await page.locator('a', { hasText: 'Terms' }).first().click();
+    await expect(page).toHaveURL(/\/terms\.html/);
+    await expect(page.locator('h1')).toHaveText('Terms of Service');
+  });
+});
+
 test.describe('new-user vs. returning-user routing', () => {
   test('a brand-new signed-in user is routed to the first-run picker, not the app', async ({ page }) => {
     const email = `e2e-newuser-${Date.now()}@example.com`;

@@ -230,6 +230,70 @@ a.btn-secondary:hover {
 .page-landing .begin h2 { font-family: var(--font-heading); font-weight: 300; font-size: 44px; line-height: 1.08; margin: 18px auto 0; max-width: 22ch; }
 .page-landing .begin-actions { display: flex; gap: 14px; justify-content: center; margin-top: 34px; flex-wrap: wrap; }
 
+/* Terms/privacy — plain readable documents, not the marketing page's
+   animated background/section rhythm. Reuses .page-landing for its nav,
+   footer, and base background so both stay visually part of the same
+   site, just without the drift-layer clouds behind long body text. */
+.page-landing .legal-content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 64px 24px 110px;
+}
+.page-landing .legal-kicker {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-faint);
+  margin-bottom: 10px;
+}
+.page-landing .legal-content h1 {
+  font-family: var(--font-heading);
+  font-weight: 300;
+  font-size: 44px;
+  margin: 0 0 8px;
+  color: var(--color-text);
+}
+.page-landing .legal-updated {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-faint);
+  margin-bottom: 20px;
+}
+.page-landing .legal-notice {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--color-accent-link);
+  background: var(--color-accent-hover-bg);
+  border: 1px solid var(--color-accent);
+  padding: 14px 18px;
+  margin-bottom: 48px;
+}
+.page-landing .legal-content h2 {
+  font-family: var(--font-heading);
+  font-weight: 400;
+  font-size: 23px;
+  margin: 44px 0 12px;
+  color: var(--color-text);
+}
+.page-landing .legal-content p,
+.page-landing .legal-content li {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--color-text-muted);
+}
+.page-landing .legal-content ul {
+  padding-left: 20px;
+  margin: 10px 0;
+}
+.page-landing .legal-content li + li {
+  margin-top: 6px;
+}
+.page-landing .legal-placeholder {
+  color: var(--color-accent-link);
+  font-style: italic;
+}
+
 .page-landing footer { background: var(--color-dark-bg); position: relative; }
 .page-landing .footer-inner { max-width: 1200px; margin: 0 auto; padding: 64px 56px 36px; }
 .page-landing .footer-top { display: flex; justify-content: space-between; gap: 60px; flex-wrap: wrap; padding-bottom: 42px; border-bottom: 1px solid #3a352d; }
