@@ -121,3 +121,19 @@ CREATE INDEX idx_items_creator ON items(created_by);
 CREATE INDEX idx_assignments_user ON item_assignments(user_id);
 CREATE INDEX idx_space_members_user ON space_members(user_id);
 CREATE INDEX idx_activity_actor ON activity_log(actor_user_id, created_at DESC);
+
+-- express-mysql-session's own store (server/src/auth/sessionStore.js) —
+-- previously left for that library to auto-create at runtime via
+-- createDatabaseTable: true, which meant the app's own DB user needed
+-- CREATE privilege just to boot, even though the table itself never
+-- actually needs to change shape after this. Explicit here instead, with
+-- createDatabaseTable now false, so a properly least-privilege runtime
+-- user (SELECT/INSERT/UPDATE/DELETE only, no DDL) can run the app at all.
+-- Column shape/collation matches exactly what the library creates on its
+-- own, so no data migration is needed for an existing sessions table.
+CREATE TABLE sessions (
+  session_id  VARCHAR(128) COLLATE utf8mb4_bin NOT NULL,
+  expires     INT(11) UNSIGNED NOT NULL,
+  data        MEDIUMTEXT COLLATE utf8mb4_bin,
+  PRIMARY KEY (session_id)
+) ENGINE=InnoDB;
