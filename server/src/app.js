@@ -1,5 +1,6 @@
 const path = require('path');
 const express = require('express');
+const helmet = require('helmet');
 const session = require('express-session');
 const config = require('./config/env');
 const { sessionStore } = require('./auth/sessionStore');
@@ -23,6 +24,37 @@ function createApp() {
   // Cloud, per .env.example). Trusting it in dev would just let a client
   // spoof its own rate-limit key via the header.
   app.set('trust proxy', config.nodeEnv === 'production' ? 1 : false);
+
+  // CSP has to allow 'unsafe-inline' for script-src/style-src: every page
+  // ships its logic as an inline <script type="module"> (no build step to
+  // split it out to a separate file with a nonce), and the landing page
+  // uses inline style="" attributes. That's a real, known weakening — it
+  // doesn't stop an XSS payload from RUNNING, only from loading further
+  // script off-origin or exfiltrating via connect-src, both still blocked
+  // here. Tightening this further would mean refactoring every page's
+  // script out of the HTML, which is a bigger change than a headers pass.
+  // Google Fonts is the only external resource this app actually loads
+  // (checked against every client/*.html); nothing else needs an allowance.
+  // HSTS only in production — forcing it on localhost sticks around in the
+  // browser's HSTS cache long after this app stops running there and
+  // breaks plain http:// dev on that host later.
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'self'"],
+      },
+    },
+    hsts: config.nodeEnv === 'production',
+  }));
 
   app.use(express.json());
 
