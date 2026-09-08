@@ -44,7 +44,7 @@ router.get('/auth/google/callback', oauthCallbackLimiter, async (req, res) => {
     const user = await UserRepo.upsertFromGoogle({ ...profile, ageConfirmed });
 
     if (!user.is_active) {
-      return res.status(403).send('This account has been deactivated.');
+      return res.redirect('/signin.html?error=deactivated');
     }
 
     req.session.regenerate(async (err) => {

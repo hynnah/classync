@@ -20,9 +20,14 @@
     window.location.href = `/auth/google?${target.toString()}`;
   });
 
+  const ERROR_MESSAGES = {
+    deactivated: 'This account has been deactivated. If you think this is a mistake, contact an admin.',
+  };
+
   const params = new URLSearchParams(window.location.search);
-  if (params.get('error')) {
-    errorEl.textContent = 'Sign-in was cancelled or failed. Please try again.';
+  const errorCode = params.get('error');
+  if (errorCode) {
+    errorEl.textContent = ERROR_MESSAGES[errorCode] || 'Sign-in was cancelled or failed. Please try again.';
     errorEl.hidden = false;
   }
 })();

@@ -1,8 +1,14 @@
+jest.mock('../../server/src/auth/oauth', () => ({
+  ...jest.requireActual('../../server/src/auth/oauth'),
+  exchangeCodeForProfile: jest.fn(),
+}));
+
 const request = require('supertest');
 const { createApp } = require('../../server/src/app');
 const { sessionStore } = require('../../server/src/auth/sessionStore');
 const { getPool } = require('../../server/src/db/pool');
 const { UserRepo } = require('../../server/src/db/repositories/UserRepo');
+const { exchangeCodeForProfile } = require('../../server/src/auth/oauth');
 
 afterAll(async () => {
   await sessionStore.close();
@@ -49,6 +55,29 @@ describe('GET /auth/google/callback', () => {
 
     const mismatched = await agent.get(`/auth/google/callback?code=abc&state=${state}not-it`);
     expect(mismatched.status).toBe(400);
+  });
+
+  test('a deactivated user is redirected back to the sign-in page with a specific error code, not a raw 403 page', async () => {
+    const googleSub = 'oauth-deactivated-' + Date.now();
+    const email = `oauth-deactivated-${Date.now()}@example.com`;
+    const user = await UserRepo.upsertFromGoogle({
+      googleSub, email, firstName: 'Deactivated', lastName: 'User', ageConfirmed: true,
+    });
+    await getPool().query('UPDATE users SET is_active = FALSE WHERE id = ?', [user.id]);
+
+    try {
+      exchangeCodeForProfile.mockResolvedValueOnce({ googleSub, email, firstName: 'Deactivated', lastName: 'User' });
+
+      const agent = request.agent(app);
+      const start = await agent.get('/auth/google?ageConfirmed=true');
+      const state = new URL(start.headers.location).searchParams.get('state');
+
+      const res = await agent.get(`/auth/google/callback?code=abc&state=${state}`);
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toBe('/signin.html?error=deactivated');
+    } finally {
+      await getPool().query('DELETE FROM users WHERE id = ?', [user.id]);
+    }
   });
 });
 
