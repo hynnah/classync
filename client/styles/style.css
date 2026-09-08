@@ -4029,6 +4029,30 @@ a.btn-secondary:hover {
   flex-shrink: 0;
   margin-top: 3px;
 }
+/* All scope's Due-now rail mixes Personal + every Space's items, so each
+   row is colored by its own scope rather than the flat personal-green
+   .urgent-item default above. A Space event row isn't a <button> (events
+   never get a done state) — same static, non-hoverable treatment as any
+   other check-spacer row in the app. */
+.page-app .urgent-item--task {
+  border-left-color: var(--color-space-task-border);
+}
+.page-app .urgent-item--task .urgent-item-check {
+  border-color: var(--color-space-task-border);
+}
+.page-app .urgent-item--event {
+  border-left-color: var(--color-space-event-border);
+}
+.page-app .urgent-item--event .urgent-item-check {
+  border-color: var(--color-space-event-border);
+  border-radius: 50%;
+}
+.page-app div.urgent-item--event {
+  cursor: default;
+}
+.page-app div.urgent-item--event:hover {
+  background: transparent;
+}
 .page-app .urgent-item-body,
 .page-app .todo-due-item-body {
   display: flex;

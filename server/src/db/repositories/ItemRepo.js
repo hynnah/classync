@@ -212,6 +212,32 @@ async function listUrgentForUser(userId) {
   return { dueToday, dueWeek };
 }
 
+// All-scope's own Due-now rail: same today/this-week split as
+// listUrgentForUser, but merged across Personal + every Space the user
+// belongs to (space_name included so the rail can label which — same
+// reasoning as listAllScoped). No kind filter — a Space event surfaces here
+// same as a task; the client renders it as a non-completable row (events
+// never get a done state) rather than the query excluding it.
+async function listUrgentAllScoped(userId) {
+  const [dueToday] = await getPool().query(
+    `${SELECT_WITH_STATUS_AND_SPACE}
+     WHERE item_assignments.user_id = ? AND item_assignments.status = 'pending'
+       AND (items.space_id IS NULL OR items.space_id IN (SELECT space_id FROM space_members WHERE user_id = ?))
+       AND items.due_date = CURDATE()
+     ORDER BY items.due_time ASC`,
+    [userId, userId]
+  );
+  const [dueWeek] = await getPool().query(
+    `${SELECT_WITH_STATUS_AND_SPACE}
+     WHERE item_assignments.user_id = ? AND item_assignments.status = 'pending'
+       AND (items.space_id IS NULL OR items.space_id IN (SELECT space_id FROM space_members WHERE user_id = ?))
+       AND items.due_date > CURDATE() AND items.due_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+     ORDER BY items.due_date ASC, items.due_time ASC`,
+    [userId, userId]
+  );
+  return { dueToday, dueWeek };
+}
+
 // The kind !== 'event' check guards against ever toggling a Space event's status
 // through this path — events don't get a meaningful per-user "done" state, only
 // personal task/note items do. Unreachable today (personal items can only be
@@ -279,5 +305,5 @@ async function remove({ itemId, userId }) {
 }
 
 module.exports = {
-  ItemRepo: { findById, findForUser, listAssigneeUserIds, create, listForUser, listForSpace, listSpaceTodo, listAllForUser, listAllScoped, listAllScopedTodo, listAllDatedForUser, listUrgentForUser, setStatus, update, remove },
+  ItemRepo: { findById, findForUser, listAssigneeUserIds, create, listForUser, listForSpace, listSpaceTodo, listAllForUser, listAllScoped, listAllScopedTodo, listAllDatedForUser, listUrgentForUser, listUrgentAllScoped, setStatus, update, remove },
 };

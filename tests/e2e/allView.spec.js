@@ -488,4 +488,65 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
       await getPool().query('DELETE FROM users WHERE email = ?', [email]);
     }
   });
+
+  test('the All Due-now rail merges Personal with every Space, and a Space event shows as a non-completable row', async ({ page }) => {
+    const email = `e2e-allurgent-${Date.now()}@example.com`;
+    let spaceId;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.goto('/app');
+      const space = await page.evaluate(async () => {
+        const r = await fetch('/api/spaces', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name: 'E2E All Urgent Test' }),
+        });
+        return (await r.json()).space;
+      });
+      spaceId = space.id;
+
+      const { todayIso, weekIso } = await page.evaluate(() => {
+        const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const today = new Date();
+        const week = new Date(today.getTime() + 2 * 86400000);
+        return { todayIso: fmt(today), weekIso: fmt(week) };
+      });
+      await page.evaluate(async (dueDate) => {
+        await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ kind: 'task', title: 'E2E All urgent personal task', dueDate }),
+        });
+      }, todayIso);
+      await page.evaluate(async ({ id, dueDate }) => {
+        await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ spaceId: id, kind: 'event', title: 'E2E All urgent space event', isOpenToAll: true, dueDate }),
+        });
+      }, { id: spaceId, dueDate: weekIso });
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#scope-switcher-btn').click();
+      await page.locator('.scope-switcher-item[data-scope="all"]').click();
+      await expect(page.locator('#all-view')).toBeVisible();
+
+      const taskRow = page.locator('#all-urgent-body .urgent-item', { hasText: 'E2E All urgent personal task' });
+      const eventRow = page.locator('#all-urgent-body .urgent-item', { hasText: 'E2E All urgent space event' });
+      await expect(taskRow).toBeVisible();
+      await expect(eventRow).toBeVisible();
+      expect(await taskRow.evaluate((el) => el.tagName)).toBe('BUTTON');
+      expect(await eventRow.evaluate((el) => el.tagName)).toBe('DIV');
+
+      await taskRow.click();
+      await expect(taskRow).toHaveCount(0);
+    } finally {
+      const [users] = await getPool().query('SELECT id FROM users WHERE email = ?', [email]);
+      const userIds = users.map((u) => u.id);
+      if (userIds.length) await getPool().query('DELETE FROM items WHERE created_by IN (?)', [userIds]);
+      if (spaceId) await getPool().query('DELETE FROM spaces WHERE id = ?', [spaceId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
 });

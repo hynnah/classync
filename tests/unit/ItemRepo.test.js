@@ -296,6 +296,47 @@ describe('ItemRepo', () => {
     });
   });
 
+  describe('listUrgentAllScoped', () => {
+    test('merges Personal with every Space the user belongs to, still excluding completed items and another Space\'s items', async () => {
+      const space = await SpaceRepo.createSpace({ name: 'listUrgentAllScoped test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+
+      const personalToday = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Personal due today, urgent-all' });
+      await getPool().query('UPDATE items SET due_date = CURDATE() WHERE id = ?', [personalToday.id]);
+
+      // A Space event still surfaces (the client renders it as a
+      // non-completable row) — this query has no kind filter, unlike
+      // Personal's own listUrgentForUser which only ever sees tasks.
+      const spaceEventWeek = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'event', title: 'Space event due this week, urgent-all', isOpenToAll: true,
+      });
+      await getPool().query('UPDATE items SET due_date = DATE_ADD(CURDATE(), INTERVAL 2 DAY) WHERE id = ?', [spaceEventWeek.id]);
+
+      const doneToday = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Completed, due today, urgent-all' });
+      await getPool().query('UPDATE items SET due_date = CURDATE() WHERE id = ?', [doneToday.id]);
+      await ItemRepo.setStatus({ itemId: doneToday.id, userId: owner.id, status: 'completed' });
+
+      const otherSpace = await SpaceRepo.createSpace({ name: 'listUrgentAllScoped other space', creatorUserId: intruder.id });
+      createdSpaceIds.push(otherSpace.id);
+      const otherSpaceToday = await ItemRepo.create({
+        createdBy: intruder.id, spaceId: otherSpace.id, kind: 'task', title: 'Other Space task, urgent-all', isOpenToAll: true,
+      });
+      await getPool().query('UPDATE items SET due_date = CURDATE() WHERE id = ?', [otherSpaceToday.id]);
+
+      createdIds.push(personalToday.id, spaceEventWeek.id, doneToday.id, otherSpaceToday.id);
+
+      const { dueToday, dueWeek } = await ItemRepo.listUrgentAllScoped(owner.id);
+
+      expect(dueToday.map((i) => i.id)).toContain(personalToday.id);
+      expect(dueToday.map((i) => i.id)).not.toContain(doneToday.id);
+      expect(dueToday.map((i) => i.id)).not.toContain(otherSpaceToday.id);
+      expect(dueWeek.map((i) => i.id)).toContain(spaceEventWeek.id);
+
+      const foundEvent = dueWeek.find((i) => i.id === spaceEventWeek.id);
+      expect(foundEvent.space_name).toBe('listUrgentAllScoped test');
+    });
+  });
+
   describe('setStatus', () => {
     test('a non-owner\'s status change is a silent no-op', async () => {
       const item = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Ownership check status' });

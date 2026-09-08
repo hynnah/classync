@@ -507,6 +507,55 @@ describe('/api/items/all/todo — the merged All To Do list (FR-M1)', () => {
   });
 });
 
+describe('/api/items/all/urgent — the merged All Due-now rail', () => {
+  const app = createApp();
+  const createdIds = [];
+  const createdSpaceIds = [];
+
+  afterAll(async () => {
+    if (createdIds.length) {
+      await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+    }
+    if (createdSpaceIds.length) {
+      await getPool().query('DELETE FROM spaces WHERE id IN (?)', [createdSpaceIds]);
+    }
+    await getPool().query("DELETE FROM users WHERE email LIKE 'itemsallurgent-%@example.com'");
+  });
+
+  async function loggedInAgent(label) {
+    const email = `itemsallurgent-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+    const agent = request.agent(app);
+    await agent.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+    return agent;
+  }
+
+  test('requires login', async () => {
+    const anon = await request(app).get('/api/items/all/urgent');
+    expect(anon.status).toBe(401);
+  });
+
+  test('merges a Personal task due today with a Space event due this week', async () => {
+    const agent = await loggedInAgent('merge');
+    const personal = await agent.post('/api/items').send({ kind: 'task', title: 'All-urgent-route personal today' });
+    createdIds.push(personal.body.item.id);
+    await getPool().query('UPDATE items SET due_date = CURDATE() WHERE id = ?', [personal.body.item.id]);
+
+    const created = await agent.post('/api/spaces').send({ name: 'All-urgent-route space' });
+    createdSpaceIds.push(created.body.space.id);
+    const spaceEvent = await agent.post('/api/items').send({
+      spaceId: created.body.space.id, kind: 'event', title: 'All-urgent-route space event', isOpenToAll: true,
+      dueDate: '2026-08-12',
+    });
+    createdIds.push(spaceEvent.body.item.id);
+    await getPool().query('UPDATE items SET due_date = DATE_ADD(CURDATE(), INTERVAL 2 DAY) WHERE id = ?', [spaceEvent.body.item.id]);
+
+    const res = await agent.get('/api/items/all/urgent');
+    expect(res.status).toBe(200);
+    expect(res.body.dueToday.map((i) => i.id)).toContain(personal.body.item.id);
+    expect(res.body.dueWeek.map((i) => i.id)).toContain(spaceEvent.body.item.id);
+  });
+});
+
 describe('Google Calendar sync wiring on /api/items', () => {
   const app = createApp();
   const createdIds = [];

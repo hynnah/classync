@@ -156,6 +156,15 @@ router.get('/api/items/urgent', requireLogin, async (req, res, next) => {
   }
 });
 
+router.get('/api/items/all/urgent', requireLogin, async (req, res, next) => {
+  try {
+    const { dueToday, dueWeek } = await ItemRepo.listUrgentAllScoped(req.user.id);
+    res.json({ dueToday, dueWeek });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/api/items', requireLogin, async (req, res, next) => {
   try {
     const { spaceId, kind, title, description, category, dueDate, dueTime, color, isOpenToAll, assigneeUserIds } = req.body || {};

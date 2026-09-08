@@ -396,6 +396,16 @@
             <span id="all-cal-legend-note">Live</span>
           </div>
         </div>
+
+        <div class="urgent-panel">
+          <div class="urgent-head">
+            <div class="urgent-kicker">Urgent</div>
+            <div class="urgent-title">Due now</div>
+          </div>
+          <div id="all-urgent-body" class="urgent-body">
+            <p class="urgent-empty">Loading…</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -3125,6 +3135,7 @@
       notesViewFromAll.hidden = true;
       saveViewState({ scope: 'all', view: 'calendar' });
       refreshAllCalendarView();
+      loadAllUrgent();
     }
     async function showAllTodo() {
       allNavTodo.classList.add('is-active');
@@ -3575,6 +3586,65 @@
       });
       cal.setItems(itemsByDate);
     }
+
+    // All-scope's own Due-now rail — merges Personal + every Space's urgent
+    // items (see ItemRepo.listUrgentAllScoped). A Space event still surfaces
+    // here (unlike Personal's rail, which only ever sees tasks) but can't be
+    // marked done — same "spacer, not a control" treatment as the day panel
+    // and Space Tasks tab give events elsewhere: rendered as a static row
+    // (a <div>, not a <button>) so the click delegation below — scoped to
+    // 'button.urgent-item' — never targets it.
+    const allUrgentBody = document.getElementById('all-urgent-body');
+    async function loadAllUrgent() {
+      const res = await fetch('/api/items/all/urgent');
+      if (!res.ok) return;
+      const { dueToday, dueWeek } = await res.json();
+
+      if (!dueToday.length && !dueWeek.length) {
+        allUrgentBody.innerHTML = '<p class="urgent-empty">Nothing due yet — create a task to see it here.</p>';
+        return;
+      }
+
+      allUrgentBody.innerHTML = '';
+      const scopeClass = (raw) => (!raw.space_id ? 'urgent-item--personal' : raw.kind === 'event' ? 'urgent-item--event' : 'urgent-item--task');
+      const buildGroup = (label, list) => {
+        if (!list.length) return null;
+        const group = document.createElement('div');
+        group.className = 'urgent-group';
+        const head = document.createElement('div');
+        head.className = 'urgent-group-head';
+        head.innerHTML = `<span class="urgent-group-label">${label}</span><span class="urgent-group-line"></span><span class="urgent-group-count">${list.length}</span>`;
+        group.appendChild(head);
+        list.forEach((raw) => {
+          const isTask = raw.kind === 'task';
+          const row = document.createElement(isTask ? 'button' : 'div');
+          if (isTask) row.type = 'button';
+          row.className = 'urgent-item ' + scopeClass(raw);
+          row.dataset.id = raw.id;
+          const meta = [raw.space_id ? raw.space_name : 'Personal', raw.kind === 'event' ? 'Event' : (raw.category || 'Task'), raw.due_time ? raw.due_time.slice(0, 5) : null]
+            .filter(Boolean).join(' · ');
+          row.innerHTML = `<span class="urgent-item-check" aria-hidden="true"></span><span class="urgent-item-body"><span class="urgent-item-title">${escapeHtml(raw.title)}</span><span class="urgent-item-meta">${escapeHtml(meta)}</span></span>`;
+          group.appendChild(row);
+        });
+        return group;
+      };
+      const todayGroup = buildGroup('Today', dueToday);
+      const weekGroup = buildGroup('This week', dueWeek);
+      if (todayGroup) allUrgentBody.appendChild(todayGroup);
+      if (weekGroup) allUrgentBody.appendChild(weekGroup);
+    }
+    allUrgentBody.addEventListener('click', async (e) => {
+      const row = e.target.closest('button.urgent-item');
+      if (!row) return;
+      row.disabled = true;
+      await fetch(`/api/items/${row.dataset.id}/status`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      });
+      await Promise.all([loadAllUrgent(), refreshAllCalendarView(), refreshAllTodoView(), refreshAllDayPanel(), crossViewRefresh.personal?.()]);
+    });
+
     document.getElementById('all-cal-prev').addEventListener('click', () => { getAllCal().prev(); refreshAllCalendarView(); });
     document.getElementById('all-cal-next').addEventListener('click', () => { getAllCal().next(); refreshAllCalendarView(); });
     document.getElementById('all-cal-today').addEventListener('click', () => { getAllCal().today(); refreshAllCalendarView(); });
@@ -3703,9 +3773,9 @@
     });
 
     // --- All's own To Do: every task (Personal + every Space's), same
-    // Active/Overdue/Completed layout as Personal's To Do, minus its
-    // Due-now rail (that rail is fed by Personal-only /api/items/urgent —
-    // merging Space urgency into it is a bigger, separate piece of work).
+    // Active/Overdue/Completed layout as Personal's To Do. Its own Due-now
+    // rail lives beside the Calendar sub-tab instead (loadAllUrgent, above)
+    // — same placement Personal uses for its rail.
     const allTodoBody = document.getElementById('all-todo-body');
     const allTodoTabActive = document.getElementById('all-todo-tab-active');
     const allTodoTabOverdue = document.getElementById('all-todo-tab-overdue');
@@ -3799,7 +3869,7 @@
     // lazy calendar/list init on behalf of a mutation from another scope.
     async function refreshAllIfVisited() {
       if (!allViewVisited) return;
-      await Promise.all([refreshAllCalendarView(), refreshAllTodoView(), refreshAllDayPanel()]);
+      await Promise.all([refreshAllCalendarView(), loadAllUrgent(), refreshAllTodoView(), refreshAllDayPanel()]);
     }
     crossViewRefresh.all = refreshAllIfVisited;
 
