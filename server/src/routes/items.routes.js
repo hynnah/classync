@@ -19,10 +19,12 @@ async function notifyItemUpdated(itemId, spaceId) {
 
 const router = express.Router();
 
-// A PIN set with nothing verified yet in this session's req.session is the
-// only locked state — no PIN set at all means notes have always behaved the
-// way they do today, untouched by any of this.
-function notesLocked(req) {
+// Whether THIS session has proved the notes PIN yet — used alongside a
+// note's own is_locked flag (locking is per-note, not per-view): a locked
+// note's content only ever shows once both a PIN exists AND this session has
+// verified it. No PIN set at all means pinUnproven is always false — nothing
+// to prove, so nothing's ever redacted.
+function pinUnproven(req) {
   return !!req.user.notes_pin_hash && !req.session.notesUnlocked;
 }
 
@@ -46,7 +48,7 @@ const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
 // of the payload. spaceId is passed the same way, for the same reason — a Space
 // item never gets a color (the picker is a personal-task-only feature; FR-O1
 // doesn't list color among what an Organizer sets on a Space task/event).
-function validateItemFields({ title, category, dueDate, dueTime, color, plate, kind, spaceId }) {
+function validateItemFields({ title, category, dueDate, dueTime, color, plate, isLocked, kind, spaceId }) {
   if (typeof title !== 'string' || !title.trim()) {
     return 'title is required.';
   }
@@ -69,10 +71,16 @@ function validateItemFields({ title, category, dueDate, dueTime, color, plate, k
     if (plate !== undefined && plate !== null && !PLATE_IDS.includes(plate)) {
       return `plate must be one of: ${PLATE_IDS.join(', ')}`;
     }
+    if (isLocked !== undefined && typeof isLocked !== 'boolean') {
+      return 'isLocked must be true or false.';
+    }
     return null;
   }
   if (plate !== undefined && plate !== null && plate !== '') {
     return 'only notes have a plate.';
+  }
+  if (isLocked !== undefined && isLocked !== null && isLocked !== false) {
+    return 'only notes can be locked.';
   }
   if (category !== undefined && category !== null && !CATEGORIES.includes(category)) {
     return `category must be one of: ${CATEGORIES.join(', ')}`;
@@ -136,29 +144,29 @@ router.get('/api/items/todo', requireLogin, async (req, res, next) => {
     }
     const items = await ItemRepo.listAllForUser(req.user.id);
     // This endpoint mixes Personal tasks and notes together (see
-    // listAllForUser) — the To Do view already filters to kind === 'task'
-    // client-side, so a locked note's title/description never needed to be
-    // in this response at all. Stripped here rather than filtered
-    // client-side so a locked note's content never leaves the server in the
-    // first place.
-    const locked = notesLocked(req);
-    res.json({ items: locked ? items.filter((i) => i.kind !== 'note') : items });
+    // listAllForUser), but the To Do view only ever wants tasks — Notes has
+    // its own dedicated GET /api/notes below. No note, locked or not, needs
+    // to be in this response at all.
+    res.json({ items: items.filter((i) => i.kind !== 'note') });
   } catch (err) {
     next(err);
   }
 });
 
-// The Notes view's own dedicated read — unlike /api/items/todo above, this
-// one exists purely to serve note content, so a locked PIN blocks the whole
-// response (423) rather than silently filtering rows out of it.
+// The Notes view's own dedicated read. Locking is per-note (items.is_locked),
+// not per-view, so this never blocks the whole response — a locked note this
+// session hasn't proven the PIN for just comes back with its title/
+// description redacted to null (isNoteRedacted client-side keys off that),
+// everything else (plate, timestamps) intact so the row still renders.
+function redactIfLocked(item, req) {
+  if (!item.is_locked || !pinUnproven(req)) return item;
+  return { ...item, title: null, description: null };
+}
 router.get('/api/notes', requireLogin, async (req, res, next) => {
   try {
-    const hasNotesPin = !!req.user.notes_pin_hash;
-    if (notesLocked(req)) {
-      return res.status(423).json({ error: 'Notes are locked.', locked: true, hasNotesPin });
-    }
     const items = await ItemRepo.listAllForUser(req.user.id);
-    res.json({ items: items.filter((i) => i.kind === 'note'), locked: false, hasNotesPin });
+    const notes = items.filter((i) => i.kind === 'note').map((n) => redactIfLocked(n, req));
+    res.json({ items: notes, hasNotesPin: !!req.user.notes_pin_hash });
   } catch (err) {
     next(err);
   }
@@ -223,9 +231,8 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
       return res.status(400).json({ error: `kind must be one of: ${PERSONAL_KINDS.join(', ')}` });
     }
 
-    if (kind === 'note' && notesLocked(req)) {
-      return res.status(423).json({ error: 'Notes are locked.' });
-    }
+    // A brand-new note is never locked (locking happens after creation, via
+    // the editor's lock toggle) — nothing to gate at create time.
 
     // On create there's no prior value to preserve, so an omitted dueDate
     // means the same thing an explicit null does — normalized here so
@@ -279,16 +286,27 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
 
 router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
   try {
-    const { title, description, category, dueDate, dueTime, color, plate } = req.body || {};
+    const { title, description, category, dueDate, dueTime, color, plate, isLocked } = req.body || {};
 
     const existing = await ItemRepo.findForUser(req.params.id, req.user.id);
     if (!existing) {
       return res.status(404).json({ error: 'Item not found.' });
     }
-    if (existing.kind === 'note' && notesLocked(req)) {
-      return res.status(423).json({ error: 'Notes are locked.' });
+    // A currently-locked note this session hasn't proven the PIN for refuses
+    // every write, not just reads — content edits, plate changes, and
+    // unlocking itself all require the same proof reading it would.
+    // Locking a currently-unlocked note is the one write that's always
+    // allowed content-wise (no proof needed to protect something going
+    // forward), but only once a PIN actually exists to protect it with.
+    if (existing.kind === 'note') {
+      if (existing.is_locked && pinUnproven(req)) {
+        return res.status(423).json({ error: 'This note is locked.' });
+      }
+      if (isLocked === true && !existing.is_locked && !req.user.notes_pin_hash) {
+        return res.status(400).json({ error: 'Set a PIN in Settings before locking a note.' });
+      }
     }
-    const fieldError = validateItemFields({ title, category, dueDate, dueTime, color, plate, kind: existing.kind, spaceId: existing.space_id });
+    const fieldError = validateItemFields({ title, category, dueDate, dueTime, color, plate, isLocked, kind: existing.kind, spaceId: existing.space_id });
     if (fieldError) {
       return res.status(400).json({ error: fieldError });
     }
@@ -303,6 +321,7 @@ router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
       dueTime,
       color,
       plate,
+      isLocked,
     });
     if (!item) {
       return res.status(404).json({ error: 'Item not found.' });
@@ -339,8 +358,8 @@ router.delete('/api/items/:id', requireLogin, async (req, res, next) => {
     // item_calendar_events, both FK cascade-deleted) won't exist to read from
     // afterward.
     const existing = await ItemRepo.findById(req.params.id);
-    if (existing && existing.kind === 'note' && existing.created_by === req.user.id && notesLocked(req)) {
-      return res.status(423).json({ error: 'Notes are locked.' });
+    if (existing && existing.kind === 'note' && existing.created_by === req.user.id && existing.is_locked && pinUnproven(req)) {
+      return res.status(423).json({ error: 'This note is locked.' });
     }
     const assigneeIds = existing ? await ItemRepo.listAssigneeUserIds(req.params.id) : [];
     const calendarMappings = existing ? await ItemCalendarEventRepo.listForItem(req.params.id) : [];

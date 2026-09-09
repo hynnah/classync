@@ -242,7 +242,7 @@
           <div class="toolbar-heading">Notes</div>
         </div>
         <div class="cal-toolbar-right">
-          <button id="notes-lock-now-btn" class="notes-lock-now-btn" type="button" title="Lock Notes now" hidden>
+          <button id="notes-lock-now-btn" class="notes-lock-now-btn" type="button" title="Re-hide unlocked notes" hidden>
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
           </button>
           <button id="notes-new-btn" class="cal-new-task" type="button">+ New</button>
@@ -259,6 +259,10 @@
               <button id="notes-back-btn" class="notes-back-btn" type="button" aria-label="Back to notes list">←</button>
               <span id="notes-editor-meta" class="kicker"></span>
               <span class="kicker-rule"></span>
+              <button id="notes-lock-toggle-btn" class="notes-lock-toggle-btn" type="button" hidden>
+                <svg id="notes-lock-toggle-icon" width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                <span id="notes-lock-toggle-label">Lock</span>
+              </button>
               <button id="notes-delete-btn" class="notes-delete-btn" type="button">
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5v8a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7v4M9.5 7v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
                 Delete
@@ -286,16 +290,6 @@
             </div>
           </div>
         </div>
-      </div>
-      <div id="notes-lock-screen" class="notes-lock-screen" hidden>
-        <svg width="28" height="28" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
-        <p class="notes-lock-title">Notes are locked</p>
-        <p class="notes-lock-hint">Enter your 4-digit PIN to view them.</p>
-        <form id="notes-lock-form" class="notes-lock-form">
-          <input id="notes-lock-input" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="····" autocomplete="off">
-          <button type="submit" class="modal-cancel">Unlock</button>
-        </form>
-        <p id="notes-lock-error" class="form-error" hidden></p>
       </div>
     </div>
 
@@ -455,6 +449,15 @@
             <button id="all-todo-tab-done" class="todo-switch-btn" type="button">Completed <span id="all-todo-count-done" class="todo-switch-count">00</span></button>
           </div>
           <div id="all-todo-body" class="todo-body"></div>
+        </div>
+        <div class="todo-rail">
+          <div class="todo-rail-head">
+            <div class="urgent-kicker">Urgent</div>
+            <div class="urgent-title">Due now</div>
+          </div>
+          <div id="all-todo-due-body" class="todo-due-body"></div>
+          <img class="todo-rail-plate" src="/assets/swan.png" alt="" aria-hidden="true">
+          <p class="todo-rail-footer">Personal + every Space you belong to</p>
         </div>
       </div>
     </div>
@@ -989,6 +992,25 @@
         </div>
         <p id="add-space-join-error" class="form-error" hidden></p>
         <button type="submit" class="modal-cancel">Join Space</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="notes-unlock-modal" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="notes-unlock-title">
+    <div class="modal-head">
+      <h2 id="notes-unlock-title">Enter your Notes PIN</h2>
+      <button id="notes-unlock-close" class="modal-close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="notes-unlock-body">
+      <p class="notes-unlock-hint">This note is locked. Unlocking reveals every locked note for the rest of this visit.</p>
+      <form id="notes-unlock-form">
+        <div class="field">
+          <input id="notes-unlock-input" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="4-digit PIN" autocomplete="off">
+        </div>
+        <p id="notes-unlock-error" class="form-error" hidden></p>
+        <button type="submit" class="add-space-submit">Unlock</button>
       </form>
     </div>
   </div>
@@ -2853,11 +2875,18 @@
     const notesTitleInput = document.getElementById('notes-editor-title');
     const notesBodyInput = document.getElementById('notes-editor-body');
     const notesWordCount = document.getElementById('notes-word-count');
-    const notesLockScreen = document.getElementById('notes-lock-screen');
-    const notesLockForm = document.getElementById('notes-lock-form');
-    const notesLockInput = document.getElementById('notes-lock-input');
-    const notesLockError = document.getElementById('notes-lock-error');
     const notesLockNowBtn = document.getElementById('notes-lock-now-btn');
+    const notesLockToggleBtn = document.getElementById('notes-lock-toggle-btn');
+    const notesLockToggleLabel = document.getElementById('notes-lock-toggle-label');
+    const notesUnlockModal = document.getElementById('notes-unlock-modal');
+    const notesUnlockClose = document.getElementById('notes-unlock-close');
+    const notesUnlockForm = document.getElementById('notes-unlock-form');
+    const notesUnlockInput = document.getElementById('notes-unlock-input');
+    const notesUnlockError = document.getElementById('notes-unlock-error');
+    let hasNotesPin = false;
+    // The note a locked-row click was trying to open — reopened automatically
+    // once the shared PIN unlocks every locked note for this visit.
+    let pendingUnlockNoteId = null;
     const notesPlateCard = document.getElementById('notes-plate-card');
     const notesPlateCardImg = document.getElementById('notes-plate-card-img');
     const notesPlateCardLabel = document.getElementById('notes-plate-card-label');
@@ -2907,6 +2936,14 @@
       return `Edited ${datePart} · ${timePart}`;
     }
 
+    // A locked note the server hasn't revealed yet for this session comes
+    // back with title/description redacted to null (see items.routes.js's
+    // GET /api/notes) — everything else (plate, timestamps) still there so
+    // the row still renders, just without the content itself.
+    function isNoteHidden(note) {
+      return note.is_locked && note.title === null;
+    }
+
     function renderNotesList() {
       notesListEl.innerHTML = '';
       if (!notesCache.length) {
@@ -2914,9 +2951,10 @@
         return;
       }
       notesCache.forEach((note) => {
+        const hidden = isNoteHidden(note);
         const item = document.createElement('button');
         item.type = 'button';
-        item.className = 'notes-list-item' + (note.id === selectedNoteId ? ' is-active' : '');
+        item.className = 'notes-list-item' + (note.id === selectedNoteId ? ' is-active' : '') + (hidden ? ' is-locked-hidden' : '');
 
         const mat = document.createElement('span');
         mat.className = 'notes-list-mat';
@@ -2926,22 +2964,35 @@
           matImg.alt = '';
           mat.appendChild(matImg);
         }
+        if (note.is_locked) {
+          const badge = document.createElement('span');
+          badge.className = 'notes-list-lock-badge';
+          badge.setAttribute('aria-hidden', 'true');
+          badge.innerHTML = '<svg width="9" height="9" viewBox="0 0 16 16" fill="none"><rect x="3.5" y="7" width="9" height="6.5" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+          mat.appendChild(badge);
+        }
 
         const text = document.createElement('span');
         text.className = 'notes-list-text';
         const title = document.createElement('p');
         title.className = 'notes-list-title';
-        title.textContent = note.title;
+        title.textContent = hidden ? 'Locked note' : note.title;
         const preview = document.createElement('p');
         preview.className = 'notes-list-preview';
-        preview.textContent = note.description || '';
+        preview.textContent = hidden ? 'Enter your PIN to view this note.' : (note.description || '');
         const meta = document.createElement('span');
         meta.className = 'notes-list-meta';
         meta.textContent = formatNoteMeta(note);
         text.append(title, preview, meta);
 
         item.append(mat, text);
-        item.addEventListener('click', () => selectNote(note.id));
+        item.addEventListener('click', () => {
+          if (hidden) {
+            openNotesUnlockModal(note.id);
+          } else {
+            selectNote(note.id);
+          }
+        });
         notesListEl.appendChild(item);
       });
     }
@@ -2970,13 +3021,21 @@
       notesPlateCardLabel.textContent = plate.label;
     }
 
+    // Hidden regardless of lock state when there's no PIN to lock anything
+    // with — nothing to toggle until Settings > Privacy has one set.
+    function renderLockToggle(note) {
+      notesLockToggleBtn.hidden = !hasNotesPin;
+      notesLockToggleLabel.textContent = note.is_locked ? 'Unlock' : 'Lock';
+      notesLockToggleBtn.classList.toggle('is-locked', !!note.is_locked);
+    }
+
     function selectNote(id) {
       clearTimeout(notesAutoSaveTimer);
       selectedNoteId = id;
       const note = notesCache.find((n) => n.id === id);
       renderNotesList();
       closePlatePicker();
-      if (!note) {
+      if (!note || isNoteHidden(note)) {
         notesEditorEmpty.hidden = false;
         notesEditor.hidden = true;
         setNotesEditing(false);
@@ -2988,6 +3047,7 @@
       notesBodyInput.value = note.description || '';
       notesEditorMeta.textContent = formatNoteMeta(note);
       renderPlateCard(note);
+      renderLockToggle(note);
       updateNotesWordCount();
       setNotesEditing(true);
     }
@@ -3064,36 +3124,22 @@
       renderNotesList();
     });
 
-    // Locked is a session-only flag server-side (see items.routes.js's
-    // notesLocked) — a fresh page load always starts locked again if a PIN
-    // is set (the bootstrap's one POST /api/notes-pin/lock call), so this
-    // screen is what a Notes visit shows until that PIN is re-entered.
-    function showNotesLocked(locked) {
-      notesShellEl.hidden = locked;
-      notesLockScreen.hidden = !locked;
-      notesNewBtn.hidden = locked;
-      if (locked) {
-        closePlatePicker();
-        notesLockError.hidden = true;
-        notesLockInput.value = '';
-        notesLockInput.focus();
-      }
-    }
-
+    // Locking is per-note (see items.routes.js's is_locked column) — this
+    // fetch always succeeds; individual locked-and-unrevealed notes come
+    // back redacted (see isNoteHidden) rather than the whole endpoint 423ing.
+    // A fresh page load always starts every locked note hidden again (the
+    // bootstrap's one POST /api/notes-pin/lock call), regardless of what was
+    // revealed last visit.
     async function refreshNotesView() {
       const res = await fetch('/api/notes');
-      if (res.status === 423) {
-        const body = await res.json().catch(() => ({}));
-        notesLockNowBtn.hidden = !body.hasNotesPin;
-        showNotesLocked(true);
-        return;
-      }
       if (!res.ok) return;
-      const { items, hasNotesPin } = await res.json();
-      notesLockNowBtn.hidden = !hasNotesPin;
-      showNotesLocked(false);
+      const { items, hasNotesPin: pinSet } = await res.json();
+      hasNotesPin = pinSet;
       notesCache = items
         .sort((a, b) => new Date(b.updated_at.replace(' ', 'T')) - new Date(a.updated_at.replace(' ', 'T')));
+      // Only worth showing "re-hide" once something is actually revealed —
+      // a locked-but-still-redacted note doesn't need re-locking again.
+      notesLockNowBtn.hidden = !hasNotesPin || !notesCache.some((n) => n.is_locked && n.title !== null);
       if (selectedNoteId && !notesCache.find((n) => n.id === selectedNoteId)) selectedNoteId = null;
       if (selectedNoteId) {
         selectNote(selectedNoteId);
@@ -3103,14 +3149,40 @@
         notesEditor.hidden = true;
         setNotesEditing(false);
       }
+      if (pendingUnlockNoteId != null) {
+        const toOpen = pendingUnlockNoteId;
+        pendingUnlockNoteId = null;
+        const note = notesCache.find((n) => n.id === toOpen);
+        if (note && !isNoteHidden(note)) selectNote(toOpen);
+      }
     }
 
-    notesLockForm.addEventListener('submit', async (e) => {
+    function openNotesUnlockModal(noteId) {
+      pendingUnlockNoteId = noteId ?? null;
+      notesUnlockError.hidden = true;
+      notesUnlockInput.value = '';
+      notesUnlockModal.hidden = false;
+      trapFocus(notesUnlockModal);
+      notesUnlockInput.focus();
+    }
+    function closeNotesUnlockModal() {
+      notesUnlockModal.hidden = true;
+      releaseFocus();
+      pendingUnlockNoteId = null;
+    }
+    notesUnlockClose.addEventListener('click', closeNotesUnlockModal);
+    notesUnlockModal.addEventListener('click', (e) => {
+      if (e.target === notesUnlockModal) closeNotesUnlockModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !notesUnlockModal.hidden) closeNotesUnlockModal();
+    });
+    notesUnlockForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const pin = notesLockInput.value;
+      const pin = notesUnlockInput.value;
       if (!/^\d{4}$/.test(pin)) {
-        notesLockError.textContent = 'Enter your 4-digit PIN.';
-        notesLockError.hidden = false;
+        notesUnlockError.textContent = 'Enter your 4-digit PIN.';
+        notesUnlockError.hidden = false;
         return;
       }
       const res = await fetch('/api/notes-pin/verify', {
@@ -3120,18 +3192,43 @@
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        notesLockError.textContent = body.error || 'Incorrect PIN.';
-        notesLockError.hidden = false;
-        notesLockInput.value = '';
-        notesLockInput.focus();
+        notesUnlockError.textContent = body.error || 'Incorrect PIN.';
+        notesUnlockError.hidden = false;
+        notesUnlockInput.value = '';
+        notesUnlockInput.focus();
         return;
       }
+      // pendingUnlockNoteId survives this close — refreshNotesView reopens it.
+      notesUnlockModal.hidden = true;
+      releaseFocus();
       await refreshNotesView();
     });
+
+    // Re-hides every locked note for this visit without waiting for a
+    // reload — if the note currently open in the editor is one of them, drop
+    // back to the empty state since it just got redacted out from under it.
     notesLockNowBtn.addEventListener('click', async () => {
       await fetch('/api/notes-pin/lock', { method: 'POST' });
-      selectedNoteId = null;
       await refreshNotesView();
+    });
+
+    notesLockToggleBtn.addEventListener('click', async () => {
+      if (!selectedNoteId) return;
+      const note = notesCache.find((n) => n.id === selectedNoteId);
+      if (!note) return;
+      notesLockToggleBtn.disabled = true;
+      const res = await fetch(`/api/items/${selectedNoteId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title: notesTitleInput.value.trim() || 'Untitled', isLocked: !note.is_locked }),
+      });
+      notesLockToggleBtn.disabled = false;
+      if (!res.ok) return;
+      const body = await res.json();
+      const idx = notesCache.findIndex((n) => n.id === selectedNoteId);
+      if (idx !== -1) notesCache[idx] = body.item;
+      renderLockToggle(body.item);
+      renderNotesList();
     });
 
     notesNewBtn.addEventListener('click', async () => {
@@ -4066,6 +4163,7 @@
     const allTodoCountActive = document.getElementById('all-todo-count-active');
     const allTodoCountOverdue = document.getElementById('all-todo-count-overdue');
     const allTodoCountDone = document.getElementById('all-todo-count-done');
+    const allTodoDueBody = document.getElementById('all-todo-due-body');
     let allTodoTasksCache = [];
     let allTodoFilter = 'active';
 
@@ -4136,12 +4234,51 @@
       }
       shown.forEach((raw) => allTodoBody.appendChild(buildAllTodoRow(raw)));
     }
+    // Same idea as Personal's own .todo-rail, scoped to Personal + every
+    // Space instead — filtered to tasks only (events don't have a done
+    // state, and this rail only exists to complete things from), matching
+    // the To Do body's own scope right above it.
+    function buildAllTodoDueRow(raw) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'todo-due-item';
+      row.dataset.id = raw.id;
+      const meta = [raw.category || 'Task', raw.due_time ? raw.due_time.slice(0, 5) : null, raw.space_id ? raw.space_name : 'Personal']
+        .filter(Boolean).join(' · ');
+      row.innerHTML = `<span class="todo-due-item-check" aria-hidden="true"></span><span class="todo-due-item-body"><span class="todo-due-item-title">${escapeHtml(raw.title)}</span><span class="todo-due-item-meta">${escapeHtml(meta)}</span></span>`;
+      return row;
+    }
+    async function refreshAllTodoRail() {
+      const res = await fetch('/api/items/all/urgent');
+      if (!res.ok) return;
+      const { dueToday } = await res.json();
+      const dueSoon = dueToday.filter((i) => i.kind === 'task');
+      allTodoDueBody.innerHTML = '';
+      if (!dueSoon.length) {
+        allTodoDueBody.innerHTML = '<p class="urgent-empty">Nothing due today.</p>';
+        return;
+      }
+      dueSoon.forEach((raw) => allTodoDueBody.appendChild(buildAllTodoDueRow(raw)));
+    }
+    allTodoDueBody.addEventListener('click', async (e) => {
+      const row = e.target.closest('.todo-due-item');
+      if (!row) return;
+      row.disabled = true;
+      await fetch(`/api/items/${row.dataset.id}/status`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      });
+      await Promise.all([refreshAllTodoView(), refreshAllCalendarView(), loadAllUrgent(), crossViewRefresh.personal?.()]);
+    });
+
     async function refreshAllTodoView() {
       const res = await fetch('/api/items/all/todo');
       if (!res.ok) return;
       const { items } = await res.json();
       allTodoTasksCache = items;
       renderAllTodoBody();
+      await refreshAllTodoRail();
     }
     allTodoTabActive.addEventListener('click', () => { allTodoFilter = 'active'; renderAllTodoBody(); });
     allTodoTabOverdue.addEventListener('click', () => { allTodoFilter = 'overdue'; renderAllTodoBody(); });

@@ -12,7 +12,7 @@ afterAll(async () => {
   await getPool().end();
 });
 
-describe('Notes PIN lock — /api/notes-pin/*, /api/notes, and gating on /api/items', () => {
+describe('Notes PIN lock — per-note is_locked, /api/notes-pin/*, /api/notes, and gating on /api/items', () => {
   const app = createApp();
   const createdIds = [];
 
@@ -38,50 +38,79 @@ describe('Notes PIN lock — /api/notes-pin/*, /api/notes, and gating on /api/it
     const list = await agent.get('/api/notes');
     expect(list.status).toBe(200);
     expect(list.body.hasNotesPin).toBe(false);
-    expect(list.body.items.map((i) => i.id)).toContain(note.body.item.id);
+    const found = list.body.items.find((i) => i.id === note.body.item.id);
+    expect(found.title).toBe('Unlocked note');
 
     const verify = await agent.post('/api/notes-pin/verify').send({ pin: '0000' });
     expect(verify.status).toBe(200);
     expect(verify.body.unlocked).toBe(true);
   });
 
-  test('once a PIN is set, /api/notes 423s until verified, and locks again after /api/notes-pin/lock', async () => {
+  test('locking requires a PIN to exist, then a locked note redacts until verified and re-redacts after /api/notes-pin/lock', async () => {
     const agent = await loggedInAgent('lockflow');
+    const note = await agent.post('/api/items').send({ kind: 'note', title: 'Diary entry', description: 'private stuff' });
+    createdIds.push(note.body.item.id);
+
+    // Can't lock without a PIN set at all.
+    const noPin = await agent.patch(`/api/items/${note.body.item.id}`).send({ title: 'Diary entry', isLocked: true });
+    expect(noPin.status).toBe(400);
+
     await agent.post('/api/account/notes-pin').send({ pin: '1234' });
     // Setting a PIN unlocks the session that set it — lock explicitly to
     // simulate the fresh-page-load state the bootstrap always starts from.
     await agent.post('/api/notes-pin/lock');
 
-    const locked = await agent.get('/api/notes');
-    expect(locked.status).toBe(423);
-    expect(locked.body.hasNotesPin).toBe(true);
+    // Locking itself needs no proof of the PIN — only reading/editing/
+    // unlocking a locked note does.
+    const lock = await agent.patch(`/api/items/${note.body.item.id}`).send({ title: 'Diary entry', isLocked: true });
+    expect(lock.status).toBe(200);
+    expect(lock.body.item.is_locked).toBeTruthy();
+
+    const redacted = await agent.get('/api/notes');
+    expect(redacted.status).toBe(200);
+    const hiddenRow = redacted.body.items.find((i) => i.id === note.body.item.id);
+    expect(hiddenRow.title).toBeNull();
+    expect(hiddenRow.description).toBeNull();
+    expect(hiddenRow.is_locked).toBeTruthy();
 
     const wrongPin = await agent.post('/api/notes-pin/verify').send({ pin: '9999' });
     expect(wrongPin.status).toBe(401);
 
     const rightPin = await agent.post('/api/notes-pin/verify').send({ pin: '1234' });
     expect(rightPin.status).toBe(200);
-    expect(rightPin.body.unlocked).toBe(true);
 
-    const unlocked = await agent.get('/api/notes');
-    expect(unlocked.status).toBe(200);
+    const revealed = await agent.get('/api/notes');
+    const revealedRow = revealed.body.items.find((i) => i.id === note.body.item.id);
+    expect(revealedRow.title).toBe('Diary entry');
+    expect(revealedRow.description).toBe('private stuff');
 
     const relock = await agent.post('/api/notes-pin/lock');
     expect(relock.status).toBe(200);
-    expect(relock.body.unlocked).toBe(false);
 
-    const lockedAgain = await agent.get('/api/notes');
-    expect(lockedAgain.status).toBe(423);
+    const redactedAgain = await agent.get('/api/notes');
+    const redactedAgainRow = redactedAgain.body.items.find((i) => i.id === note.body.item.id);
+    expect(redactedAgainRow.title).toBeNull();
   });
 
-  test('locked notes are stripped from /api/items/todo, and a plain task in the same response is unaffected', async () => {
-    const agent = await loggedInAgent('todostrip');
-    const note = await agent.post('/api/items').send({ kind: 'note', title: 'Should be hidden while locked' });
-    const task = await agent.post('/api/items').send({ kind: 'task', title: 'Task, unaffected by the notes lock' });
-    createdIds.push(note.body.item.id, task.body.item.id);
+  test('an unlocked note is never redacted, even with a PIN set and the session freshly re-locked', async () => {
+    const agent = await loggedInAgent('unlockednote');
+    const note = await agent.post('/api/items').send({ kind: 'note', title: 'Never locked' });
+    createdIds.push(note.body.item.id);
 
-    await agent.post('/api/account/notes-pin').send({ pin: '5555' });
+    await agent.post('/api/account/notes-pin').send({ pin: '4242' });
     await agent.post('/api/notes-pin/lock');
+
+    const list = await agent.get('/api/notes');
+    const row = list.body.items.find((i) => i.id === note.body.item.id);
+    expect(row.title).toBe('Never locked');
+    expect(row.is_locked).toBeFalsy();
+  });
+
+  test('notes, locked or not, are never included in /api/items/todo — Notes has its own GET /api/notes', async () => {
+    const agent = await loggedInAgent('todostrip');
+    const note = await agent.post('/api/items').send({ kind: 'note', title: 'Should never appear here' });
+    const task = await agent.post('/api/items').send({ kind: 'task', title: 'Task, unaffected' });
+    createdIds.push(note.body.item.id, task.body.item.id);
 
     const todo = await agent.get('/api/items/todo');
     expect(todo.status).toBe(200);
@@ -90,19 +119,23 @@ describe('Notes PIN lock — /api/notes-pin/*, /api/notes, and gating on /api/it
     expect(ids).toContain(task.body.item.id);
   });
 
-  test('creating, editing, and deleting a note are all 423 while locked, and succeed once unlocked', async () => {
+  test('creating a note is never blocked; editing/deleting/unlocking a locked note requires session proof, and succeeds once verified', async () => {
     const agent = await loggedInAgent('mutategate');
-    const note = await agent.post('/api/items').send({ kind: 'note', title: 'Pre-lock note' });
-    createdIds.push(note.body.item.id);
-
     await agent.post('/api/account/notes-pin').send({ pin: '7777' });
+    const note = await agent.post('/api/items').send({ kind: 'note', title: 'Locked target' });
+    createdIds.push(note.body.item.id);
+    await agent.patch(`/api/items/${note.body.item.id}`).send({ title: 'Locked target', isLocked: true });
     await agent.post('/api/notes-pin/lock');
 
-    const createBlocked = await agent.post('/api/items').send({ kind: 'note', title: 'Blocked create' });
-    expect(createBlocked.status).toBe(423);
+    const createOk = await agent.post('/api/items').send({ kind: 'note', title: 'Unrelated new note' });
+    expect(createOk.status).toBe(201);
+    createdIds.push(createOk.body.item.id);
 
     const editBlocked = await agent.patch(`/api/items/${note.body.item.id}`).send({ title: 'Blocked edit' });
     expect(editBlocked.status).toBe(423);
+
+    const unlockBlocked = await agent.patch(`/api/items/${note.body.item.id}`).send({ title: 'Locked target', isLocked: false });
+    expect(unlockBlocked.status).toBe(423);
 
     const deleteBlocked = await agent.delete(`/api/items/${note.body.item.id}`);
     expect(deleteBlocked.status).toBe(423);
@@ -113,8 +146,24 @@ describe('Notes PIN lock — /api/notes-pin/*, /api/notes, and gating on /api/it
     expect(editOk.status).toBe(200);
     expect(editOk.body.item.title).toBe('Unblocked edit');
 
-    const createOk = await agent.post('/api/items').send({ kind: 'note', title: 'Unblocked create' });
-    expect(createOk.status).toBe(201);
-    createdIds.push(createOk.body.item.id);
+    const unlockOk = await agent.patch(`/api/items/${note.body.item.id}`).send({ title: 'Unblocked edit', isLocked: false });
+    expect(unlockOk.status).toBe(200);
+    expect(unlockOk.body.item.is_locked).toBeFalsy();
+  });
+
+  test('removing the PIN entirely unlocks every note it was protecting', async () => {
+    const agent = await loggedInAgent('pinremoval');
+    await agent.post('/api/account/notes-pin').send({ pin: '3333' });
+    const note = await agent.post('/api/items').send({ kind: 'note', title: 'Orphaned by PIN removal' });
+    createdIds.push(note.body.item.id);
+    await agent.patch(`/api/items/${note.body.item.id}`).send({ title: 'Orphaned by PIN removal', isLocked: true });
+
+    const removed = await agent.delete('/api/account/notes-pin');
+    expect(removed.status).toBe(200);
+
+    const list = await agent.get('/api/notes');
+    const row = list.body.items.find((i) => i.id === note.body.item.id);
+    expect(row.is_locked).toBeFalsy();
+    expect(row.title).toBe('Orphaned by PIN removal');
   });
 });

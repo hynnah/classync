@@ -276,7 +276,7 @@ async function setStatus({ itemId, userId, status }) {
 // findForUser but would fail the UPDATE's WHERE, and without this check the
 // function would silently no-op the write and still return the (unchanged)
 // item via the re-fetch below, reporting success on a blocked edit.
-async function update({ itemId, userId, title, description, category, dueDate, dueTime, color, plate }) {
+async function update({ itemId, userId, title, description, category, dueDate, dueTime, color, plate, isLocked }) {
   const current = await findForUser(itemId, userId);
   if (!current || current.created_by !== userId) return null;
   const next = {
@@ -287,15 +287,17 @@ async function update({ itemId, userId, title, description, category, dueDate, d
     dueTime: dueTime !== undefined ? dueTime : current.due_time,
     color: color !== undefined ? color : current.color,
     // undefined-means-unchanged same as every other field here — a body-only
-    // autosave (never sends plate) leaves it exactly as it was, which is the
-    // whole point: editing a note must not clear its plate.
+    // autosave (never sends plate/isLocked) leaves both exactly as they
+    // were, which is the whole point: editing a note must not clear its
+    // plate or silently unlock it.
     plate: plate !== undefined ? plate : current.plate,
+    isLocked: isLocked !== undefined ? isLocked : current.is_locked,
   };
   await getPool().query(
     `UPDATE items
-     SET title = ?, description = ?, category = ?, due_date = ?, due_time = ?, color = ?, plate = ?
+     SET title = ?, description = ?, category = ?, due_date = ?, due_time = ?, color = ?, plate = ?, is_locked = ?
      WHERE id = ? AND created_by = ?`,
-    [next.title, next.description, next.category, next.dueDate, next.dueTime, next.color, next.plate, itemId, userId]
+    [next.title, next.description, next.category, next.dueDate, next.dueTime, next.color, next.plate, next.isLocked, itemId, userId]
   );
   return findForUser(itemId, userId);
 }
@@ -308,6 +310,17 @@ async function remove({ itemId, userId }) {
   return result.affectedRows > 0;
 }
 
+// Removing a PIN entirely (account.routes.js's DELETE /api/account/notes-pin)
+// has to take every note it was protecting with it — otherwise a note stays
+// is_locked = TRUE with no PIN left that could ever prove session-unlocked,
+// permanently redacted with no way back in through the UI.
+async function unlockAllNotesForUser(userId) {
+  await getPool().query(
+    "UPDATE items SET is_locked = FALSE WHERE created_by = ? AND kind = 'note' AND is_locked = TRUE",
+    [userId]
+  );
+}
+
 module.exports = {
-  ItemRepo: { findById, findForUser, listAssigneeUserIds, create, listForUser, listForSpace, listSpaceTodo, listAllForUser, listAllScoped, listAllScopedTodo, listAllDatedForUser, listUrgentForUser, listUrgentAllScoped, setStatus, update, remove },
+  ItemRepo: { findById, findForUser, listAssigneeUserIds, create, listForUser, listForSpace, listSpaceTodo, listAllForUser, listAllScoped, listAllScopedTodo, listAllDatedForUser, listUrgentForUser, listUrgentAllScoped, setStatus, update, remove, unlockAllNotesForUser },
 };

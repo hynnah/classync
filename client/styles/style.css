@@ -3079,52 +3079,6 @@ a.btn-secondary:hover {
   display: flex;
   min-height: 0;
 }
-.page-app .notes-lock-screen {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--color-text-faint);
-  text-align: center;
-  min-height: 0;
-}
-.page-app .notes-lock-screen svg {
-  color: var(--color-text-faintest);
-  margin-bottom: 4px;
-}
-.page-app .notes-lock-title {
-  font-family: var(--font-heading);
-  font-weight: 400;
-  font-size: 22px;
-  color: var(--color-text);
-  margin: 0;
-}
-.page-app .notes-lock-hint {
-  font-size: 13px;
-  margin: 0 0 10px;
-}
-.page-app .notes-lock-form {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.page-app .notes-lock-form input {
-  width: 120px;
-  box-sizing: border-box;
-  border: 1px solid #d8cfbc;
-  background: #fff;
-  padding: 10px 12px;
-  font-family: var(--font-mono);
-  font-size: 15px;
-  letter-spacing: 0.4em;
-  text-align: center;
-  color: var(--color-text);
-}
-.page-app .notes-lock-screen .form-error {
-  margin-top: 10px;
-}
 .page-app .notes-lock-now-btn {
   display: inline-flex;
   align-items: center;
@@ -3139,6 +3093,70 @@ a.btn-secondary:hover {
 }
 .page-app .notes-lock-now-btn:hover {
   background: var(--color-accent-hover-bg);
+}
+/* A locked-and-still-redacted list row: real title/preview text never
+   reached the client (see items.routes.js's redactIfLocked), so this is
+   read-only styling, not a client-side blur of real content. */
+.page-app .notes-list-item.is-locked-hidden .notes-list-title,
+.page-app .notes-list-item.is-locked-hidden .notes-list-preview {
+  color: var(--color-text-faint);
+  font-style: italic;
+}
+.page-app .notes-list-lock-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--color-bg-panel);
+  border: 1px solid #e2d9c6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a09889;
+}
+.page-app .notes-lock-toggle-btn {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid var(--color-accent);
+  color: var(--color-text);
+  padding: 7px 11px;
+  cursor: pointer;
+}
+.page-app .notes-lock-toggle-btn:hover {
+  background: var(--color-accent-hover-bg);
+}
+.page-app .notes-lock-toggle-btn.is-locked {
+  border-color: #b68235;
+  color: #8a6427;
+}
+.page-app .notes-unlock-body {
+  padding: 20px 24px 24px;
+}
+.page-app .notes-unlock-hint {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--color-text-faint);
+  margin: 0 0 16px;
+}
+.page-app .notes-unlock-body form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.page-app .notes-unlock-body .field {
+  margin: 0;
+}
+.page-app .notes-unlock-body input {
+  letter-spacing: 0.4em;
+  text-align: center;
 }
 .page-app .notes-list-pane {
   width: 320px;
@@ -3179,6 +3197,7 @@ a.btn-secondary:hover {
   border-left-color: var(--color-personal-border);
 }
 .page-app .notes-list-mat {
+  position: relative;
   width: 48px;
   height: 48px;
   flex-shrink: 0;
@@ -3188,7 +3207,6 @@ a.btn-secondary:hover {
   background: #fffdf9;
   border: 1px solid #e2d9c6;
   padding: 2px;
-  overflow: hidden;
 }
 .page-app .notes-list-mat img {
   max-width: 100%;

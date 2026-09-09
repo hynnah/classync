@@ -1,6 +1,7 @@
 const express = require('express');
 const { requireLogin } = require('../auth/guard');
 const { UserRepo } = require('../db/repositories/UserRepo');
+const { ItemRepo } = require('../db/repositories/ItemRepo');
 const { CalendarTokenRepo } = require('../db/repositories/CalendarTokenRepo');
 const { SpaceRepo } = require('../db/repositories/SpaceRepo');
 const { disconnectAndCleanup } = require('../calendar/sync');
@@ -73,6 +74,10 @@ router.post('/api/account/notes-pin', requireLogin, async (req, res, next) => {
 router.delete('/api/account/notes-pin', requireLogin, async (req, res, next) => {
   try {
     await UserRepo.setNotesPinHash(req.user.id, null);
+    // Removing the PIN takes every note it was protecting with it — a note
+    // left is_locked = TRUE here would be permanently redacted with no PIN
+    // ever able to prove session-unlocked again.
+    await ItemRepo.unlockAllNotesForUser(req.user.id);
     req.session.notesUnlocked = true;
     res.json({ hasNotesPin: false });
   } catch (err) {

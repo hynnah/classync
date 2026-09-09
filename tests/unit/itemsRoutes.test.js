@@ -424,7 +424,7 @@ describe('/api/items/todo — the To Do view', () => {
     expect(res.status).toBe(401);
   });
 
-  test('only returns the caller\'s own personal items — an undated task and a note included, another user\'s items excluded', async () => {
+  test('only returns the caller\'s own personal tasks — an undated one included, a note (any note, Notes has its own GET /api/notes) and another user\'s items excluded', async () => {
     const mine = await loggedInAgent('mine');
     const theirs = await loggedInAgent('theirs');
 
@@ -439,7 +439,7 @@ describe('/api/items/todo — the To Do view', () => {
     expect(res.status).toBe(200);
     const ids = res.body.items.map((i) => i.id);
     expect(ids).toContain(undatedTask.body.item.id);
-    expect(ids).toContain(note.body.item.id);
+    expect(ids).not.toContain(note.body.item.id);
     expect(ids).not.toContain(othersNote.body.item.id);
   });
 

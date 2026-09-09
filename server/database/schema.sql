@@ -67,6 +67,11 @@ CREATE TABLE items (
   -- as color being task-only. Random on create when omitted; NULL only ever
   -- happens for a non-note item.
   plate           CHAR(3) NULL,
+  -- Per-note lock (items.routes.js's GET /api/notes redacts title/
+  -- description for a locked note the caller's session hasn't proven the
+  -- PIN for yet). Note-only, same pattern as color/plate. Always FALSE at
+  -- create — locking happens after, via the editor's lock toggle.
+  is_locked       BOOLEAN NOT NULL DEFAULT FALSE,
   is_open_to_all  BOOLEAN NOT NULL DEFAULT FALSE,
   admin_status    ENUM('open','closed') NOT NULL DEFAULT 'open',
   created_by      BIGINT UNSIGNED NOT NULL,
@@ -78,7 +83,8 @@ CREATE TABLE items (
     (space_id IS NULL AND kind IN ('task','note')) OR (space_id IS NOT NULL)
   ),
   CONSTRAINT chk_color_task_only CHECK (color IS NULL OR kind = 'task'),
-  CONSTRAINT chk_plate_note_only CHECK (plate IS NULL OR kind = 'note')
+  CONSTRAINT chk_plate_note_only CHECK (plate IS NULL OR kind = 'note'),
+  CONSTRAINT chk_locked_note_only CHECK (is_locked = FALSE OR kind = 'note')
 ) ENGINE=InnoDB;
 
 CREATE TABLE item_assignments (

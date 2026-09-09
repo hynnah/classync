@@ -185,6 +185,63 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
     }
   });
 
+  test('the To Do sub-view has its own Due-now rail, same as the Calendar sub-view', async ({ page }) => {
+    const email = `e2e-alltodorail-${Date.now()}@example.com`;
+    let spaceId;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.goto('/app');
+      const space = await page.evaluate(async () => {
+        const r = await fetch('/api/spaces', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name: 'E2E All To Do Rail Test' }),
+        });
+        return (await r.json()).space;
+      });
+      spaceId = space.id;
+      const todayIso = await page.evaluate(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+      await page.evaluate(async ({ id, dueDate }) => {
+        await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ spaceId: id, kind: 'task', title: 'E2E All To Do rail space task', dueDate, isOpenToAll: true }),
+        });
+        await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ kind: 'task', title: 'E2E All To Do rail personal task', dueDate }),
+        });
+      }, { id: spaceId, dueDate: todayIso });
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#scope-switcher-btn').click();
+      await page.locator('.scope-switcher-item[data-scope="all"]').click();
+      await page.locator('#all-nav-todo').click();
+
+      const railSpaceRow = page.locator('#all-todo-due-body .todo-due-item', { hasText: 'E2E All To Do rail space task' });
+      const railPersonalRow = page.locator('#all-todo-due-body .todo-due-item', { hasText: 'E2E All To Do rail personal task' });
+      await expect(railSpaceRow).toBeVisible();
+      await expect(railPersonalRow).toBeVisible();
+      await expect(railSpaceRow).toContainText('E2E All To Do Rail Test');
+      await expect(railPersonalRow).toContainText('Personal');
+
+      // completing from the rail actually completes it, same as the main list's check
+      await railPersonalRow.click();
+      await expect(page.locator('#all-todo-due-body .todo-due-item', { hasText: 'E2E All To Do rail personal task' })).toHaveCount(0);
+    } finally {
+      const [users] = await getPool().query('SELECT id FROM users WHERE email = ?', [email]);
+      const userIds = users.map((u) => u.id);
+      if (userIds.length) await getPool().query('DELETE FROM items WHERE created_by IN (?)', [userIds]);
+      if (spaceId) await getPool().query('DELETE FROM spaces WHERE id = ?', [spaceId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
   test('a new item created from All\'s "+ New" is always Personal, never tied to a Space', async ({ page }) => {
     const email = `e2e-allnew-${Date.now()}@example.com`;
     let spaceId;

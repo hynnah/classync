@@ -729,7 +729,7 @@ test.describe('the Notes view (split from To Do)', () => {
       await page.waitForTimeout(900); // debounced auto-save
 
       const saved = await page.evaluate(async (id) => {
-        const r = await fetch('/api/items/todo');
+        const r = await fetch('/api/notes');
         const body = await r.json();
         return body.items.find((i) => i.id === id);
       }, created.id);
@@ -739,7 +739,7 @@ test.describe('the Notes view (split from To Do)', () => {
       await page.locator('#notes-new-btn').click();
       await expect(page.locator('#notes-editor-title')).toHaveValue('Untitled');
       const newNote = await page.evaluate(async () => {
-        const r = await fetch('/api/items/todo');
+        const r = await fetch('/api/notes');
         const body = await r.json();
         return body.items.find((i) => i.title === 'Untitled');
       });

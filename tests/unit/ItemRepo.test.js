@@ -110,10 +110,11 @@ describe('ItemRepo', () => {
     });
   });
 
-  // Backs the To Do view's /api/items/todo — the only route that can ever
-  // return a personal note or an undated task (listForUser's date-range
-  // BETWEEN never matches either). Never had a dedicated isolation test of
-  // its own before now (Day 6 checklist gap).
+  // Backs both GET /api/notes (Notes view) and GET /api/items/todo (To Do
+  // view, which then filters to kind === 'task' itself) — the only function
+  // that can ever return a personal note or an undated task (listForUser's
+  // date-range BETWEEN never matches either). Never had a dedicated
+  // isolation test of its own before now (Day 6 checklist gap).
   describe('listAllForUser', () => {
     test('only returns the caller\'s own personal items — never another user\'s, never a Space item they created', async () => {
       const dated = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Dated task', dueDate: '2026-09-15' });
