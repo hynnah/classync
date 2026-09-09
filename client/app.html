@@ -242,6 +242,9 @@
           <div class="toolbar-heading">Notes</div>
         </div>
         <div class="cal-toolbar-right">
+          <button id="notes-lock-now-btn" class="notes-lock-now-btn" type="button" title="Lock Notes now" hidden>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </button>
           <button id="notes-new-btn" class="cal-new-task" type="button">+ New</button>
         </div>
       </div>
@@ -269,6 +272,16 @@
             </div>
           </div>
         </div>
+      </div>
+      <div id="notes-lock-screen" class="notes-lock-screen" hidden>
+        <svg width="28" height="28" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6.5" rx="1" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+        <p class="notes-lock-title">Notes are locked</p>
+        <p class="notes-lock-hint">Enter your 4-digit PIN to view them.</p>
+        <form id="notes-lock-form" class="notes-lock-form">
+          <input id="notes-lock-input" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="····" autocomplete="off">
+          <button type="submit" class="modal-cancel">Unlock</button>
+        </form>
+        <p id="notes-lock-error" class="form-error" hidden></p>
       </div>
     </div>
 
@@ -512,8 +525,29 @@
         <section class="settings-row-section">
           <div class="settings-row-section-label">Privacy</div>
           <div class="settings-row-section-body settings-privacy-body">
-            <p class="settings-section-desc">Personal to-dos and Notes are never shown to any Space, and no Organizer can read them. Signing in grants Classync your name, email, and avatar only.</p>
-            <p class="settings-quote">Your to-do list is yours. A Space only ever sees what a Space is given.</p>
+            <div class="settings-privacy-intro">
+              <p class="settings-section-desc">Personal to-dos and Notes are never shown to any Space, and no Organizer can read them. Signing in grants Classync your name, email, and avatar only.</p>
+              <p class="settings-quote">Your to-do list is yours. A Space only ever sees what a Space is given.</p>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-row-text">
+                <span class="settings-row-label">Notes PIN <span id="notes-pin-status-label" class="settings-status-pill">Not set</span></span>
+                <span class="settings-row-hint">Locks your Notes behind a 4-digit PIN on this device. Forgetting it isn't a problem — being signed in is already enough to set a new one.</span>
+              </div>
+              <div class="settings-notes-pin-actions">
+                <button id="notes-pin-set-btn" class="settings-toggle-btn" type="button">Set PIN</button>
+                <button id="notes-pin-remove-btn" class="settings-toggle-btn settings-toggle-btn--danger" type="button" hidden>Remove</button>
+              </div>
+            </div>
+            <form id="notes-pin-form" class="notes-pin-form" hidden>
+              <div class="field">
+                <input id="notes-pin-input" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="4-digit PIN" autocomplete="off">
+              </div>
+              <button type="submit" class="modal-cancel">Save</button>
+              <button id="notes-pin-cancel-btn" class="settings-toggle-btn" type="button">Cancel</button>
+            </form>
+            <p id="notes-pin-error" class="form-error" hidden></p>
           </div>
         </section>
 
@@ -1216,6 +1250,72 @@
       calendarToggleBtn.disabled = false;
     });
 
+    // Notes PIN — locks Personal Notes behind a 4-digit PIN, enforced
+    // server-side (see items.routes.js's notesLocked). Setting/changing/
+    // removing it only ever needs the caller to be signed in, never the old
+    // PIN itself — that's the "forgot my PIN" recovery path.
+    const notesPinStatusLabel = document.getElementById('notes-pin-status-label');
+    const notesPinSetBtn = document.getElementById('notes-pin-set-btn');
+    const notesPinRemoveBtn = document.getElementById('notes-pin-remove-btn');
+    const notesPinForm = document.getElementById('notes-pin-form');
+    const notesPinInput = document.getElementById('notes-pin-input');
+    const notesPinCancelBtn = document.getElementById('notes-pin-cancel-btn');
+    const notesPinError = document.getElementById('notes-pin-error');
+    let hasNotesPin = false;
+
+    function renderNotesPinState() {
+      notesPinStatusLabel.textContent = hasNotesPin ? 'Enabled' : 'Not set';
+      notesPinStatusLabel.classList.toggle('is-connected', hasNotesPin);
+      notesPinSetBtn.textContent = hasNotesPin ? 'Change PIN' : 'Set PIN';
+      notesPinRemoveBtn.hidden = !hasNotesPin;
+    }
+    function hideNotesPinForm() {
+      notesPinForm.hidden = true;
+      notesPinInput.value = '';
+      notesPinError.hidden = true;
+    }
+    notesPinSetBtn.addEventListener('click', () => {
+      notesPinForm.hidden = false;
+      notesPinError.hidden = true;
+      notesPinInput.value = '';
+      notesPinInput.focus();
+    });
+    notesPinCancelBtn.addEventListener('click', hideNotesPinForm);
+    notesPinForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pin = notesPinInput.value;
+      if (!/^\d{4}$/.test(pin)) {
+        notesPinError.textContent = 'PIN must be exactly 4 digits.';
+        notesPinError.hidden = false;
+        return;
+      }
+      const res = await fetch('/api/account/notes-pin', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ pin }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        notesPinError.textContent = body.error || 'Could not save the PIN — please try again.';
+        notesPinError.hidden = false;
+        return;
+      }
+      hasNotesPin = true;
+      renderNotesPinState();
+      hideNotesPinForm();
+    });
+    notesPinRemoveBtn.addEventListener('click', async () => {
+      if (!(await confirmDialog('Remove your Notes PIN? Your Notes will no longer be locked.'))) return;
+      notesPinRemoveBtn.disabled = true;
+      const res = await fetch('/api/account/notes-pin', { method: 'DELETE' });
+      if (res.ok) {
+        hasNotesPin = false;
+        renderNotesPinState();
+        hideNotesPinForm();
+      }
+      notesPinRemoveBtn.disabled = false;
+    });
+
     deleteAccountBtn.addEventListener('click', async () => {
       deleteAccountError.hidden = true;
       if (!(await confirmDialog('Delete your account? This permanently removes your Personal to-dos, notes, and anything you created in a shared Space. This can\'t be undone.'))) return;
@@ -1247,6 +1347,8 @@
       document.getElementById('settings-stat-since').textContent = `${MONTHS[since.getMonth()].slice(0, 3)} ${since.getFullYear()}`;
       prefs = { weekStartsOn: me.weekStartsOn, openingView: me.openingView };
       renderPrefs();
+      hasNotesPin = !!me.hasNotesPin;
+      renderNotesPinState();
     }
 
     function showSettings() {
@@ -2737,6 +2839,11 @@
     const notesTitleInput = document.getElementById('notes-editor-title');
     const notesBodyInput = document.getElementById('notes-editor-body');
     const notesWordCount = document.getElementById('notes-word-count');
+    const notesLockScreen = document.getElementById('notes-lock-screen');
+    const notesLockForm = document.getElementById('notes-lock-form');
+    const notesLockInput = document.getElementById('notes-lock-input');
+    const notesLockError = document.getElementById('notes-lock-error');
+    const notesLockNowBtn = document.getElementById('notes-lock-now-btn');
 
     let notesCache = [];
     let selectedNoteId = null;
@@ -2834,12 +2941,34 @@
       scheduleNotesAutoSave();
     });
 
+    // Locked is a session-only flag server-side (see items.routes.js's
+    // notesLocked) — a fresh page load always starts locked again if a PIN
+    // is set (the bootstrap's one POST /api/notes-pin/lock call), so this
+    // screen is what a Notes visit shows until that PIN is re-entered.
+    function showNotesLocked(locked) {
+      notesShellEl.hidden = locked;
+      notesLockScreen.hidden = !locked;
+      notesNewBtn.hidden = locked;
+      if (locked) {
+        notesLockError.hidden = true;
+        notesLockInput.value = '';
+        notesLockInput.focus();
+      }
+    }
+
     async function refreshNotesView() {
-      const res = await fetch('/api/items/todo');
+      const res = await fetch('/api/notes');
+      if (res.status === 423) {
+        const body = await res.json().catch(() => ({}));
+        notesLockNowBtn.hidden = !body.hasNotesPin;
+        showNotesLocked(true);
+        return;
+      }
       if (!res.ok) return;
-      const { items } = await res.json();
+      const { items, hasNotesPin } = await res.json();
+      notesLockNowBtn.hidden = !hasNotesPin;
+      showNotesLocked(false);
       notesCache = items
-        .filter((i) => i.kind === 'note')
         .sort((a, b) => new Date(b.updated_at.replace(' ', 'T')) - new Date(a.updated_at.replace(' ', 'T')));
       if (selectedNoteId && !notesCache.find((n) => n.id === selectedNoteId)) selectedNoteId = null;
       if (selectedNoteId) {
@@ -2851,6 +2980,35 @@
         setNotesEditing(false);
       }
     }
+
+    notesLockForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pin = notesLockInput.value;
+      if (!/^\d{4}$/.test(pin)) {
+        notesLockError.textContent = 'Enter your 4-digit PIN.';
+        notesLockError.hidden = false;
+        return;
+      }
+      const res = await fetch('/api/notes-pin/verify', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ pin }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        notesLockError.textContent = body.error || 'Incorrect PIN.';
+        notesLockError.hidden = false;
+        notesLockInput.value = '';
+        notesLockInput.focus();
+        return;
+      }
+      await refreshNotesView();
+    });
+    notesLockNowBtn.addEventListener('click', async () => {
+      await fetch('/api/notes-pin/lock', { method: 'POST' });
+      selectedNoteId = null;
+      await refreshNotesView();
+    });
 
     notesNewBtn.addEventListener('click', async () => {
       const res = await fetch('/api/items', {
@@ -4410,6 +4568,10 @@
     document.getElementById('user-initials').textContent = initials;
     document.getElementById('user-initials-2').textContent = initials;
     const weekStartsOn = me.weekStartsOn === 'monday' ? 1 : 0;
+    // Every fresh page load starts Notes locked again (a no-op when no PIN
+    // is set) — awaited before anything below gets a chance to fetch Notes,
+    // including a saved view state that lands straight on the Notes tab.
+    if (me.hasNotesPin) await fetch('/api/notes-pin/lock', { method: 'POST' });
     const { showSettings, showAdmin, setIsAdmin } = initSettings();
     setIsAdmin(!!me.isAdmin);
     await initApp(weekStartsOn);
