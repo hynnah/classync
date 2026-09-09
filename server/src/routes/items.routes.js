@@ -31,6 +31,9 @@ const SPACE_KINDS = ['task', 'event'];
 const CATEGORIES = ['Assignment', 'Activity', 'Quiz', 'Project', 'Presentation', 'Exam', 'Others'];
 const STATUSES = ['pending', 'completed'];
 const COLORS = ['salmon', 'peach', 'butter', 'lime', 'mint', 'seafoam', 'cyan', 'sky', 'periwinkle', 'lavender', 'orchid', 'rose'];
+// The 20 book plates in client/assets/orn/ (e00.png..e19.png) — a note's
+// decorative "plate", picked at random on create when none is given.
+const PLATE_IDS = ['e00', 'e01', 'e02', 'e03', 'e04', 'e05', 'e06', 'e07', 'e08', 'e09', 'e10', 'e11', 'e12', 'e13', 'e14', 'e15', 'e16', 'e17', 'e18', 'e19'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
 
@@ -43,7 +46,7 @@ const TIME_RE = /^\d{2}:\d{2}(:\d{2})?$/;
 // of the payload. spaceId is passed the same way, for the same reason — a Space
 // item never gets a color (the picker is a personal-task-only feature; FR-O1
 // doesn't list color among what an Organizer sets on a Space task/event).
-function validateItemFields({ title, category, dueDate, dueTime, color, kind, spaceId }) {
+function validateItemFields({ title, category, dueDate, dueTime, color, plate, kind, spaceId }) {
   if (typeof title !== 'string' || !title.trim()) {
     return 'title is required.';
   }
@@ -63,7 +66,13 @@ function validateItemFields({ title, category, dueDate, dueTime, color, kind, sp
     if (color !== undefined && color !== null && color !== '') {
       return 'notes don\'t have a color.';
     }
+    if (plate !== undefined && plate !== null && !PLATE_IDS.includes(plate)) {
+      return `plate must be one of: ${PLATE_IDS.join(', ')}`;
+    }
     return null;
+  }
+  if (plate !== undefined && plate !== null && plate !== '') {
+    return 'only notes have a plate.';
   }
   if (category !== undefined && category !== null && !CATEGORIES.includes(category)) {
     return `category must be one of: ${CATEGORIES.join(', ')}`;
@@ -197,7 +206,7 @@ router.get('/api/items/all/urgent', requireLogin, async (req, res, next) => {
 
 router.post('/api/items', requireLogin, async (req, res, next) => {
   try {
-    const { spaceId, kind, title, description, category, dueDate, dueTime, color, isOpenToAll, assigneeUserIds } = req.body || {};
+    const { spaceId, kind, title, description, category, dueDate, dueTime, color, plate, isOpenToAll, assigneeUserIds } = req.body || {};
 
     if (spaceId) {
       const membership = await SpaceRepo.getMembership(spaceId, req.user.id);
@@ -223,11 +232,15 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
     // validateItemFields' undefined-means-unchanged rule (which only makes
     // sense for an update) doesn't let a dateless Event slip through create.
     const fieldError = validateItemFields({
-      title, category, dueDate: dueDate === undefined ? null : dueDate, dueTime, color, kind, spaceId,
+      title, category, dueDate: dueDate === undefined ? null : dueDate, dueTime, color, plate, kind, spaceId,
     });
     if (fieldError) {
       return res.status(400).json({ error: fieldError });
     }
+    // New notes get a random plate when the caller doesn't pick one — every
+    // note carries one from the moment it exists, never a blank/missing state
+    // the client has to guard against.
+    const notePlate = kind === 'note' ? (plate || PLATE_IDS[Math.floor(Math.random() * PLATE_IDS.length)]) : null;
 
     let normalizedAssignees;
     if (spaceId && !isOpenToAll) {
@@ -252,6 +265,7 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
       dueDate: dueDate || null,
       dueTime: dueTime || null,
       color: color || null,
+      plate: notePlate,
       isOpenToAll: spaceId ? !!isOpenToAll : false,
       assigneeUserIds: normalizedAssignees,
     });
@@ -265,7 +279,7 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
 
 router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
   try {
-    const { title, description, category, dueDate, dueTime, color } = req.body || {};
+    const { title, description, category, dueDate, dueTime, color, plate } = req.body || {};
 
     const existing = await ItemRepo.findForUser(req.params.id, req.user.id);
     if (!existing) {
@@ -274,7 +288,7 @@ router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
     if (existing.kind === 'note' && notesLocked(req)) {
       return res.status(423).json({ error: 'Notes are locked.' });
     }
-    const fieldError = validateItemFields({ title, category, dueDate, dueTime, color, kind: existing.kind, spaceId: existing.space_id });
+    const fieldError = validateItemFields({ title, category, dueDate, dueTime, color, plate, kind: existing.kind, spaceId: existing.space_id });
     if (fieldError) {
       return res.status(400).json({ error: fieldError });
     }
@@ -288,6 +302,7 @@ router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
       dueDate,
       dueTime,
       color,
+      plate,
     });
     if (!item) {
       return res.status(404).json({ error: 'Item not found.' });

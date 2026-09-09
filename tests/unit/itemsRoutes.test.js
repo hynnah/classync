@@ -165,6 +165,76 @@ describe('note vs. task validation on /api/items', () => {
   });
 });
 
+describe('a note\'s plate', () => {
+  const app = createApp();
+  const createdIds = [];
+  const PLATE_IDS = ['e00', 'e01', 'e02', 'e03', 'e04', 'e05', 'e06', 'e07', 'e08', 'e09', 'e10', 'e11', 'e12', 'e13', 'e14', 'e15', 'e16', 'e17', 'e18', 'e19'];
+
+  afterAll(async () => {
+    if (createdIds.length) {
+      await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+    }
+    await getPool().query("DELETE FROM users WHERE email LIKE 'itemsplate-%@example.com'");
+  });
+
+  async function loggedInAgent() {
+    const email = `itemsplate-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+    const agent = request.agent(app);
+    await agent.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+    return agent;
+  }
+
+  test('a new note with no plate given gets a random, valid one assigned', async () => {
+    const agent = await loggedInAgent();
+    const res = await agent.post('/api/items').send({ kind: 'note', title: 'Random plate note' });
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.item.id);
+    expect(PLATE_IDS).toContain(res.body.item.plate);
+  });
+
+  test('an explicit valid plate is stored as given', async () => {
+    const agent = await loggedInAgent();
+    const res = await agent.post('/api/items').send({ kind: 'note', title: 'Chosen plate note', plate: 'e05' });
+    expect(res.status).toBe(201);
+    createdIds.push(res.body.item.id);
+    expect(res.body.item.plate).toBe('e05');
+  });
+
+  test('an invalid plate id is rejected', async () => {
+    const agent = await loggedInAgent();
+    const res = await agent.post('/api/items').send({ kind: 'note', title: 'bad plate', plate: 'not-a-plate' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/plate/i);
+  });
+
+  test('a plate on a task is rejected — plates are notes-only', async () => {
+    const agent = await loggedInAgent();
+    const res = await agent.post('/api/items').send({ kind: 'task', title: 'task with a plate', plate: 'e02' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/plate/i);
+  });
+
+  test('PATCHing only the title/description (an autosave) never clears the plate', async () => {
+    const agent = await loggedInAgent();
+    const created = await agent.post('/api/items').send({ kind: 'note', title: 'Plate survives autosave', plate: 'e11' });
+    createdIds.push(created.body.item.id);
+
+    const res = await agent.patch(`/api/items/${created.body.item.id}`).send({ title: 'Plate survives autosave', description: 'edited body' });
+    expect(res.status).toBe(200);
+    expect(res.body.item.plate).toBe('e11');
+  });
+
+  test('PATCH can change the plate to a different valid one', async () => {
+    const agent = await loggedInAgent();
+    const created = await agent.post('/api/items').send({ kind: 'note', title: 'Plate change', plate: 'e00' });
+    createdIds.push(created.body.item.id);
+
+    const res = await agent.patch(`/api/items/${created.body.item.id}`).send({ title: 'Plate change', plate: 'e19' });
+    expect(res.status).toBe(200);
+    expect(res.body.item.plate).toBe('e19');
+  });
+});
+
 describe('Space-scoped items on /api/items', () => {
   const app = createApp();
   const createdIds = [];

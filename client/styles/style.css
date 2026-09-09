@@ -3155,7 +3155,9 @@ a.btn-secondary:hover {
   min-height: 0;
 }
 .page-app .notes-list-item {
-  display: block;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
   width: 100%;
   box-sizing: border-box;
   text-align: left;
@@ -3175,6 +3177,27 @@ a.btn-secondary:hover {
 .page-app .notes-list-item.is-active {
   background: var(--color-bg);
   border-left-color: var(--color-personal-border);
+}
+.page-app .notes-list-mat {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fffdf9;
+  border: 1px solid #e2d9c6;
+  padding: 2px;
+  overflow: hidden;
+}
+.page-app .notes-list-mat img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.page-app .notes-list-text {
+  flex: 1;
+  min-width: 0;
 }
 .page-app .notes-list-title {
   font-family: var(--font-heading);
@@ -3271,9 +3294,20 @@ a.btn-secondary:hover {
 .page-app .notes-delete-btn:hover {
   background: rgba(176, 48, 40, 0.08);
 }
+.page-app .notes-editor-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
+  /* When the editor pane is narrow, the plate wraps ABOVE the title rather
+     than below it — reads as a plate pinned to the top of the page, not an
+     afterthought stuck under it. */
+  flex-wrap: wrap-reverse;
+  margin-bottom: 14px;
+}
 .page-app .notes-editor-title-input {
   display: block;
-  width: 100%;
+  flex: 1 1 220px;
+  min-width: 180px;
   border: 0;
   background: transparent;
   font-family: var(--font-heading);
@@ -3281,12 +3315,105 @@ a.btn-secondary:hover {
   font-size: 40px;
   color: var(--color-text);
   padding: 0 0 14px;
-  margin-bottom: 14px;
   border-bottom: 1px solid var(--color-divider-soft);
 }
 .page-app .notes-editor-title-input:focus {
   outline: none;
   border-bottom-color: var(--color-accent);
+}
+.page-app .notes-plate-card {
+  flex: 0 0 auto;
+  width: 124px;
+  box-sizing: border-box;
+  padding: 8px;
+  background: #fffdf9;
+  border: 1px solid #e2d9c6;
+  /* The one tilted element in the product — do not add a second, do not
+     randomize the angle per note. */
+  transform: rotate(-1.6deg);
+  box-shadow: 0 6px 20px rgba(58, 53, 45, 0.09);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+.page-app .notes-plate-card:hover {
+  border-color: #b68235;
+  box-shadow: 0 6px 20px rgba(58, 53, 45, 0.09);
+  transform: rotate(-1.6deg);
+}
+.page-app .notes-plate-card img {
+  width: 100%;
+  height: 98px;
+  object-fit: contain;
+}
+.page-app .notes-plate-card-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a09889;
+  text-align: center;
+}
+.page-app .notes-plate-picker {
+  margin-top: 18px;
+  border: 1px solid #e2d9c6;
+  background: #f9f5ec;
+  padding: 16px 18px;
+}
+.page-app .notes-plate-picker-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.page-app .notes-plate-picker-close {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: #a09889;
+  cursor: pointer;
+  box-shadow: none;
+}
+.page-app .notes-plate-picker-close:hover {
+  color: #262521;
+  box-shadow: none;
+  transform: none;
+}
+.page-app .notes-plate-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(94px, 1fr));
+  gap: 12px;
+}
+.page-app .notes-plate-tile {
+  height: 94px;
+  box-sizing: border-box;
+  padding: 7px;
+  background: #fffdf9;
+  border: 1px solid #e2d9c6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: none;
+}
+.page-app .notes-plate-tile:hover {
+  border-color: #b68235;
+  box-shadow: none;
+  transform: none;
+}
+.page-app .notes-plate-tile.is-current {
+  border-color: #b68235;
+}
+.page-app .notes-plate-tile img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 .page-app .notes-editor-body-input {
   display: block;

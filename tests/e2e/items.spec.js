@@ -758,6 +758,59 @@ test.describe('the Notes view (split from To Do)', () => {
     }
   });
 
+  test('a note carries a plate — a random one on create, a list thumbnail, and a picker that changes it without clearing on the next autosave', async ({ page }) => {
+    const email = `e2e-notesplate-${Date.now()}@example.com`;
+    const createdIds = [];
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      await page.locator('#personal-nav-notes').click();
+      await page.locator('#notes-new-btn').click();
+      await expect(page.locator('#notes-editor-title')).toHaveValue('Untitled');
+
+      const created = await page.evaluate(async () => {
+        const r = await fetch('/api/notes');
+        const body = await r.json();
+        return body.items.find((i) => i.title === 'Untitled');
+      });
+      createdIds.push(created.id);
+      expect(created.plate).toMatch(/^e\d{2}$/);
+
+      // The list thumbnail and the editor's plate card both show an <img>
+      // for the note's random plate.
+      await expect(page.locator('.notes-list-item.is-active .notes-list-mat img')).toBeVisible();
+      await expect(page.locator('#notes-plate-card-img')).toBeVisible();
+
+      // Opening the picker highlights the note's current plate.
+      await page.locator('#notes-plate-card').click();
+      await expect(page.locator('#notes-plate-picker')).toBeVisible();
+      await expect(page.locator(`.notes-plate-tile[data-plate-id="${created.plate}"]`)).toHaveClass(/is-current/);
+
+      // Picking a different plate updates the card, closes the picker, and
+      // persists — pick whichever tile isn't the current one, deterministically.
+      const nextPlate = created.plate === 'e00' ? 'e01' : 'e00';
+      await page.locator(`.notes-plate-tile[data-plate-id="${nextPlate}"]`).click();
+      await expect(page.locator('#notes-plate-picker')).toBeHidden();
+      await expect(page.locator('#notes-plate-card-img')).toHaveAttribute('src', `/assets/orn/${nextPlate}.png`);
+
+      // Editing the body (an autosave) must not clear the plate back to nothing.
+      await page.locator('#notes-editor-body').fill('Body text after a plate change.');
+      await page.waitForTimeout(900);
+      const afterAutosave = await page.evaluate(async (id) => {
+        const r = await fetch('/api/notes');
+        const body = await r.json();
+        return body.items.find((i) => i.id === id);
+      }, created.id);
+      expect(afterAutosave.plate).toBe(nextPlate);
+    } finally {
+      if (createdIds.length) await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
   test('switching to a Space hides To Do and Notes; switching back resets to Calendar', async ({ page }) => {
     const email = `e2e-todoswitch-${Date.now()}@example.com`;
     let spaceId;

@@ -45,15 +45,15 @@ async function findForUser(itemId, userId) {
 // selected, so an Organizer who assigns a task to others only can still
 // find, edit, and delete it afterward through the same assignment-gated
 // findForUser() every other read/write already goes through.
-async function create({ createdBy, spaceId, kind, title, description, category, dueDate, dueTime, color, isOpenToAll, assigneeUserIds }) {
+async function create({ createdBy, spaceId, kind, title, description, category, dueDate, dueTime, color, plate, isOpenToAll, assigneeUserIds }) {
   return withDeadlockRetry(async () => {
     const conn = await getPool().getConnection();
     try {
       await conn.beginTransaction();
       const [result] = await conn.query(
-        `INSERT INTO items (space_id, kind, title, description, category, due_date, due_time, color, is_open_to_all, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [spaceId || null, kind, title, description || null, category || null, dueDate || null, dueTime || null, color || null, !!isOpenToAll, createdBy]
+        `INSERT INTO items (space_id, kind, title, description, category, due_date, due_time, color, plate, is_open_to_all, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [spaceId || null, kind, title, description || null, category || null, dueDate || null, dueTime || null, color || null, plate || null, !!isOpenToAll, createdBy]
       );
 
       let assignees;
@@ -276,7 +276,7 @@ async function setStatus({ itemId, userId, status }) {
 // findForUser but would fail the UPDATE's WHERE, and without this check the
 // function would silently no-op the write and still return the (unchanged)
 // item via the re-fetch below, reporting success on a blocked edit.
-async function update({ itemId, userId, title, description, category, dueDate, dueTime, color }) {
+async function update({ itemId, userId, title, description, category, dueDate, dueTime, color, plate }) {
   const current = await findForUser(itemId, userId);
   if (!current || current.created_by !== userId) return null;
   const next = {
@@ -286,12 +286,16 @@ async function update({ itemId, userId, title, description, category, dueDate, d
     dueDate: dueDate !== undefined ? dueDate : current.due_date,
     dueTime: dueTime !== undefined ? dueTime : current.due_time,
     color: color !== undefined ? color : current.color,
+    // undefined-means-unchanged same as every other field here — a body-only
+    // autosave (never sends plate) leaves it exactly as it was, which is the
+    // whole point: editing a note must not clear its plate.
+    plate: plate !== undefined ? plate : current.plate,
   };
   await getPool().query(
     `UPDATE items
-     SET title = ?, description = ?, category = ?, due_date = ?, due_time = ?, color = ?
+     SET title = ?, description = ?, category = ?, due_date = ?, due_time = ?, color = ?, plate = ?
      WHERE id = ? AND created_by = ?`,
-    [next.title, next.description, next.category, next.dueDate, next.dueTime, next.color, itemId, userId]
+    [next.title, next.description, next.category, next.dueDate, next.dueTime, next.color, next.plate, itemId, userId]
   );
   return findForUser(itemId, userId);
 }

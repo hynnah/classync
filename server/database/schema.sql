@@ -62,6 +62,11 @@ CREATE TABLE items (
   due_date        DATE NULL,
   due_time        TIME NULL,
   color           ENUM('salmon','peach','butter','lime','mint','seafoam','cyan','sky','periwinkle','lavender','orchid','rose') NULL,
+  -- One of the 20 plate ids in client/assets/orn/ (e00-e19) — a note's
+  -- "book plate" (see items.routes.js's PLATE_IDS). Note-only, same pattern
+  -- as color being task-only. Random on create when omitted; NULL only ever
+  -- happens for a non-note item.
+  plate           CHAR(3) NULL,
   is_open_to_all  BOOLEAN NOT NULL DEFAULT FALSE,
   admin_status    ENUM('open','closed') NOT NULL DEFAULT 'open',
   created_by      BIGINT UNSIGNED NOT NULL,
@@ -72,7 +77,8 @@ CREATE TABLE items (
   CONSTRAINT chk_personal_kind CHECK (
     (space_id IS NULL AND kind IN ('task','note')) OR (space_id IS NOT NULL)
   ),
-  CONSTRAINT chk_color_task_only CHECK (color IS NULL OR kind = 'task')
+  CONSTRAINT chk_color_task_only CHECK (color IS NULL OR kind = 'task'),
+  CONSTRAINT chk_plate_note_only CHECK (plate IS NULL OR kind = 'note')
 ) ENGINE=InnoDB;
 
 CREATE TABLE item_assignments (

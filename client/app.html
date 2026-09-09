@@ -264,7 +264,21 @@
                 Delete
               </button>
             </div>
-            <input id="notes-editor-title" class="notes-editor-title-input" type="text" placeholder="Untitled" maxlength="255">
+            <div class="notes-editor-title-row">
+              <input id="notes-editor-title" class="notes-editor-title-input" type="text" placeholder="Untitled" maxlength="255">
+              <button id="notes-plate-card" class="notes-plate-card" type="button" title="Change the plate">
+                <img id="notes-plate-card-img" alt="">
+                <span id="notes-plate-card-label" class="notes-plate-card-label"></span>
+              </button>
+            </div>
+            <div id="notes-plate-picker" class="notes-plate-picker" hidden>
+              <div class="notes-plate-picker-head">
+                <span class="kicker">Choose a plate</span>
+                <span class="kicker-rule"></span>
+                <button id="notes-plate-picker-close" class="notes-plate-picker-close" type="button">Close</button>
+              </div>
+              <div id="notes-plate-picker-grid" class="notes-plate-picker-grid"></div>
+            </div>
             <textarea id="notes-editor-body" class="notes-editor-body-input" placeholder="Write something…"></textarea>
             <div class="notes-editor-footer">
               <span id="notes-word-count"></span>
@@ -2844,6 +2858,42 @@
     const notesLockInput = document.getElementById('notes-lock-input');
     const notesLockError = document.getElementById('notes-lock-error');
     const notesLockNowBtn = document.getElementById('notes-lock-now-btn');
+    const notesPlateCard = document.getElementById('notes-plate-card');
+    const notesPlateCardImg = document.getElementById('notes-plate-card-img');
+    const notesPlateCardLabel = document.getElementById('notes-plate-card-label');
+    const notesPlatePicker = document.getElementById('notes-plate-picker');
+    const notesPlatePickerGrid = document.getElementById('notes-plate-picker-grid');
+    const notesPlatePickerClose = document.getElementById('notes-plate-picker-close');
+
+    // Display order is deliberate — botanicals first, then creatures, then
+    // objects and places — not alphabetical or by id. Keep it.
+    const PLATES = [
+      { id: 'e02', label: 'Tulip, dark plate' },
+      { id: 'e03', label: 'Magnolia, dark plate' },
+      { id: 'e08', label: 'Tulip, grey plate' },
+      { id: 'e07', label: 'Magnolia, x-ray' },
+      { id: 'e18', label: 'Carnations, 50c' },
+      { id: 'e01', label: 'Blossom, halftone' },
+      { id: 'e11', label: 'Hare, 50c' },
+      { id: 'e04', label: 'Rabbit, woodcut' },
+      { id: 'e15', label: 'Sparrow, Matthew' },
+      { id: 'e12', label: 'Swan, wax seal' },
+      { id: 'e10', label: 'Two cats, framed' },
+      { id: 'e05', label: 'Moon, two plates' },
+      { id: 'e13', label: 'Cupid, embossed' },
+      { id: 'e14', label: 'Woman in a cloche' },
+      { id: 'e16', label: 'With love, cast' },
+      { id: 'e17', label: 'Playing cards' },
+      { id: 'e00', label: 'Paris, 10' },
+      { id: 'e19', label: 'Paris, 5' },
+      { id: 'e09', label: 'Label plates' },
+      { id: 'e06', label: 'Birds, frieze' },
+    ];
+    const PLATE_BY_ID = Object.fromEntries(PLATES.map((p) => [p.id, p]));
+    function platePath(id) {
+      return `/assets/orn/${id || 'e02'}.png`;
+    }
+    let plateOpen = false;
 
     let notesCache = [];
     let selectedNoteId = null;
@@ -2867,6 +2917,18 @@
         const item = document.createElement('button');
         item.type = 'button';
         item.className = 'notes-list-item' + (note.id === selectedNoteId ? ' is-active' : '');
+
+        const mat = document.createElement('span');
+        mat.className = 'notes-list-mat';
+        if (note.plate) {
+          const matImg = document.createElement('img');
+          matImg.src = platePath(note.plate);
+          matImg.alt = '';
+          mat.appendChild(matImg);
+        }
+
+        const text = document.createElement('span');
+        text.className = 'notes-list-text';
         const title = document.createElement('p');
         title.className = 'notes-list-title';
         title.textContent = note.title;
@@ -2876,7 +2938,9 @@
         const meta = document.createElement('span');
         meta.className = 'notes-list-meta';
         meta.textContent = formatNoteMeta(note);
-        item.append(title, preview, meta);
+        text.append(title, preview, meta);
+
+        item.append(mat, text);
         item.addEventListener('click', () => selectNote(note.id));
         notesListEl.appendChild(item);
       });
@@ -2895,11 +2959,23 @@
       notesShellEl.classList.toggle('is-editing', isEditing);
     }
 
+    function closePlatePicker() {
+      plateOpen = false;
+      notesPlatePicker.hidden = true;
+    }
+
+    function renderPlateCard(note) {
+      const plate = PLATE_BY_ID[note.plate] || PLATE_BY_ID.e02;
+      notesPlateCardImg.src = platePath(plate.id);
+      notesPlateCardLabel.textContent = plate.label;
+    }
+
     function selectNote(id) {
       clearTimeout(notesAutoSaveTimer);
       selectedNoteId = id;
       const note = notesCache.find((n) => n.id === id);
       renderNotesList();
+      closePlatePicker();
       if (!note) {
         notesEditorEmpty.hidden = false;
         notesEditor.hidden = true;
@@ -2911,6 +2987,7 @@
       notesTitleInput.value = note.title;
       notesBodyInput.value = note.description || '';
       notesEditorMeta.textContent = formatNoteMeta(note);
+      renderPlateCard(note);
       updateNotesWordCount();
       setNotesEditing(true);
     }
@@ -2941,6 +3018,52 @@
       scheduleNotesAutoSave();
     });
 
+    // Picker grid is built once — its 20 tiles never change, only which one
+    // carries the is-current gold border (renderPlatePicker below, called
+    // every open and every pick).
+    PLATES.forEach((plate) => {
+      const tile = document.createElement('button');
+      tile.type = 'button';
+      tile.className = 'notes-plate-tile';
+      tile.dataset.plateId = plate.id;
+      tile.title = plate.label;
+      const img = document.createElement('img');
+      img.src = platePath(plate.id);
+      img.alt = plate.label;
+      tile.appendChild(img);
+      notesPlatePickerGrid.appendChild(tile);
+    });
+    function renderPlatePicker() {
+      const note = notesCache.find((n) => n.id === selectedNoteId);
+      const currentId = (note && note.plate) || 'e02';
+      notesPlatePickerGrid.querySelectorAll('.notes-plate-tile').forEach((tile) => {
+        tile.classList.toggle('is-current', tile.dataset.plateId === currentId);
+      });
+    }
+    notesPlateCard.addEventListener('click', () => {
+      plateOpen = !plateOpen;
+      notesPlatePicker.hidden = !plateOpen;
+      if (plateOpen) renderPlatePicker();
+    });
+    notesPlatePickerClose.addEventListener('click', closePlatePicker);
+    notesPlatePickerGrid.addEventListener('click', async (e) => {
+      const tile = e.target.closest('.notes-plate-tile');
+      if (!tile || !selectedNoteId) return;
+      const plateId = tile.dataset.plateId;
+      closePlatePicker();
+      const res = await fetch(`/api/items/${selectedNoteId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title: notesTitleInput.value.trim() || 'Untitled', plate: plateId }),
+      });
+      if (!res.ok) return;
+      const body = await res.json();
+      const idx = notesCache.findIndex((n) => n.id === selectedNoteId);
+      if (idx !== -1) notesCache[idx] = body.item;
+      renderPlateCard(body.item);
+      renderNotesList();
+    });
+
     // Locked is a session-only flag server-side (see items.routes.js's
     // notesLocked) — a fresh page load always starts locked again if a PIN
     // is set (the bootstrap's one POST /api/notes-pin/lock call), so this
@@ -2950,6 +3073,7 @@
       notesLockScreen.hidden = !locked;
       notesNewBtn.hidden = locked;
       if (locked) {
+        closePlatePicker();
         notesLockError.hidden = true;
         notesLockInput.value = '';
         notesLockInput.focus();
@@ -3035,6 +3159,7 @@
       clearTimeout(notesAutoSaveTimer);
       await saveSelectedNote();
       selectedNoteId = null;
+      closePlatePicker();
       renderNotesList();
       notesEditorEmpty.hidden = false;
       notesEditor.hidden = true;
