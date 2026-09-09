@@ -3061,6 +3061,19 @@ a.btn-secondary:hover {
     width: 100%;
     border-left: 0;
     border-top: 1px solid var(--color-divider);
+    /* Stacked below the task list here instead of beside it — at the
+       desktop's own roomy padding plus the full-size swan illustration,
+       this panel was tall enough on a phone to push most of the actual
+       task list out of the initial viewport. Both are purely spacing/
+       decoration, not content, so they're what shrinks. */
+    padding: 20px 24px;
+  }
+  .page-app .todo-rail-plate {
+    width: 96px;
+    margin: 14px auto 0;
+  }
+  .page-app .todo-rail-footer {
+    margin: 12px 0 0;
   }
 }
 
