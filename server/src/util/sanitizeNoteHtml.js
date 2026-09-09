@@ -2,8 +2,11 @@ const xss = require('xss');
 
 // The exact formatting the Notes editor's toolbar can produce — nothing
 // else survives. Regex-validated style *values* (not just property names)
-// so a color/size/align can't smuggle something like `expression()` or a
-// `url()` through an otherwise-legitimate CSS property.
+// so a size/align can't smuggle something like `expression()` or a `url()`
+// through an otherwise-legitimate CSS property. Text color was a toolbar
+// option too until it was removed — no longer whitelisted, so any color
+// style already saved from that window is stripped (not the surrounding
+// tag) the next time the note round-trips through here.
 //
 // stripIgnoreTag deliberately left at its default (false): turning it on
 // makes the underlying parser swallow a literal "<" not followed by a real
@@ -25,11 +28,6 @@ const filterXSS = new xss.FilterXSS({
   },
   css: {
     whiteList: {
-      // A browser re-serializing an inline style back out through innerHTML
-      // normalizes a hex value the toolbar set (e.g. "#c0392b") to
-      // "rgb(r, g, b)" — confirmed live, not merely a defensive guess — so
-      // both forms have to be accepted or every real save loses its color.
-      color: /^#[0-9a-f]{3}$|^#[0-9a-f]{6}$|^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/i,
       'text-align': /^(left|center|right)$/,
       'font-size': /^(1[0-9]|2[0-4])px$/, // 10px - 24px, matches the toolbar's own size options
     },

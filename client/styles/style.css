@@ -3517,14 +3517,6 @@ a.btn-secondary:hover {
   padding: 0 4px;
   cursor: pointer;
 }
-.page-app .notes-toolbar-color {
-  width: 26px;
-  height: 26px;
-  border: 1px solid #e2d9c6;
-  background: transparent;
-  padding: 2px;
-  cursor: pointer;
-}
 .page-app .notes-editor-footer {
   display: flex;
   justify-content: space-between;

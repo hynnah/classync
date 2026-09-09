@@ -308,7 +308,6 @@
                 <option value="18px">Large</option>
                 <option value="24px">Huge</option>
               </select>
-              <input type="color" id="notes-toolbar-color" class="notes-toolbar-color" title="Text color" value="#3a352d">
             </div>
             <div id="notes-editor-body" class="notes-editor-body-input" contenteditable="true" data-placeholder="Write something…"></div>
             <div class="notes-editor-footer">
@@ -3267,7 +3266,6 @@
       sel.addRange(newRange);
     }
     const notesToolbarSize = document.getElementById('notes-toolbar-size');
-    const notesToolbarColor = document.getElementById('notes-toolbar-color');
     notesToolbarSize.addEventListener('mousedown', saveNotesSelection);
     notesToolbarSize.addEventListener('change', () => {
       const value = notesToolbarSize.value;
@@ -3275,13 +3273,6 @@
       if (!value || !restoreNotesSelection()) return;
       notesBodyInput.focus();
       wrapSelectionWithStyle('fontSize', value);
-      scheduleNotesAutoSave();
-    });
-    notesToolbarColor.addEventListener('mousedown', saveNotesSelection);
-    notesToolbarColor.addEventListener('input', () => {
-      if (!restoreNotesSelection()) return;
-      notesBodyInput.focus();
-      wrapSelectionWithStyle('color', notesToolbarColor.value);
       scheduleNotesAutoSave();
     });
 

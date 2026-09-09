@@ -1,18 +1,19 @@
 const { sanitizeNoteHtml } = require('../../server/src/util/sanitizeNoteHtml');
 
 describe('sanitizeNoteHtml', () => {
-  test('keeps allowed formatting: bold, italic, color, alignment, font-size, lists, line breaks', () => {
+  test('keeps allowed formatting: bold, italic, alignment, font-size, lists, line breaks', () => {
     expect(sanitizeNoteHtml('<b>bold</b>')).toBe('<b>bold</b>');
     expect(sanitizeNoteHtml('<i>italic</i>')).toBe('<i>italic</i>');
-    expect(sanitizeNoteHtml('<span style="color:#ff0000">red</span>')).toBe('<span style="color:#ff0000;">red</span>');
-    // A browser round-trips a hex color the toolbar set back out through
-    // innerHTML as rgb(r, g, b) — both forms have to survive, or every real
-    // save (which always goes through innerHTML) loses its color.
-    expect(sanitizeNoteHtml('<span style="color: rgb(192, 57, 43);">red2</span>')).toBe('<span style="color:rgb(192, 57, 43);">red2</span>');
     expect(sanitizeNoteHtml('<div style="text-align:center">c</div>')).toBe('<div style="text-align:center;">c</div>');
     expect(sanitizeNoteHtml('<span style="font-size:16px">s</span>')).toBe('<span style="font-size:16px;">s</span>');
     expect(sanitizeNoteHtml('<ul><li>one</li><li>two</li></ul>')).toBe('<ul><li>one</li><li>two</li></ul>');
     expect(sanitizeNoteHtml('line1<br>line2')).toBe('line1<br>line2');
+  });
+
+  test('strips a color style — removed from the toolbar, no longer in the allowlist, but keeps the surrounding tag and text', () => {
+    const out = sanitizeNoteHtml('<span style="color:#ff0000">red</span>');
+    expect(out).not.toMatch(/color/i);
+    expect(out).toContain('red');
   });
 
   test('strips a <script> tag and its content entirely, not just the tag', () => {
@@ -35,15 +36,15 @@ describe('sanitizeNoteHtml', () => {
   });
 
   test('rejects a CSS injection attempt (expression()) but keeps the surrounding tag', () => {
-    const out = sanitizeNoteHtml('<span style="color: expression(alert(1))">bad</span>');
+    const out = sanitizeNoteHtml('<span style="font-size: expression(alert(1))">bad</span>');
     expect(out).not.toMatch(/expression/i);
     expect(out).toContain('bad');
   });
 
   test('strips an onclick attribute but keeps a legitimate style value on the same element', () => {
-    const out = sanitizeNoteHtml('<div onclick="alert(1)" style="color:#fff">x</div>');
+    const out = sanitizeNoteHtml('<div onclick="alert(1)" style="text-align:center">x</div>');
     expect(out).not.toMatch(/onclick/i);
-    expect(out).toContain('color:#fff');
+    expect(out).toContain('text-align:center');
   });
 
   test('preserves literal angle brackets in plain text — does not silently drop trailing content', () => {
