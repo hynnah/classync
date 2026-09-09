@@ -130,4 +130,47 @@ describe('/api/account and /api/calendar', () => {
     expect(stillIn.status).toBe(200);
     expect(stillIn.body.id).toBe(ownerId);
   });
+
+  describe('POST/DELETE /api/account/notes-pin', () => {
+    test('requires login', async () => {
+      const res = await request(app).post('/api/account/notes-pin').send({ pin: '1234' });
+      expect(res.status).toBe(401);
+    });
+
+    test('rejects a non-4-digit PIN', async () => {
+      const { agent } = await loggedInAgent('pin-invalid');
+      const tooShort = await agent.post('/api/account/notes-pin').send({ pin: '12' });
+      expect(tooShort.status).toBe(400);
+      const notDigits = await agent.post('/api/account/notes-pin').send({ pin: 'abcd' });
+      expect(notDigits.status).toBe(400);
+    });
+
+    test('sets the PIN, reports hasNotesPin on /api/account, and clearing it removes that', async () => {
+      const { agent } = await loggedInAgent('pin-set');
+      let me = await agent.get('/api/account');
+      expect(me.body.hasNotesPin).toBe(false);
+
+      const set = await agent.post('/api/account/notes-pin').send({ pin: '4242' });
+      expect(set.status).toBe(200);
+      expect(set.body.hasNotesPin).toBe(true);
+
+      me = await agent.get('/api/account');
+      expect(me.body.hasNotesPin).toBe(true);
+
+      const cleared = await agent.delete('/api/account/notes-pin');
+      expect(cleared.status).toBe(200);
+      expect(cleared.body.hasNotesPin).toBe(false);
+
+      me = await agent.get('/api/account');
+      expect(me.body.hasNotesPin).toBe(false);
+    });
+
+    test('changing an existing PIN needs no proof of the old one — being signed in is the recovery path', async () => {
+      const { agent } = await loggedInAgent('pin-change');
+      await agent.post('/api/account/notes-pin').send({ pin: '1111' });
+      const changed = await agent.post('/api/account/notes-pin').send({ pin: '9999' });
+      expect(changed.status).toBe(200);
+      expect(changed.body.hasNotesPin).toBe(true);
+    });
+  });
 });

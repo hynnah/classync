@@ -16,6 +16,12 @@ CREATE TABLE users (
   -- Settings instead; nothing changes for anyone who doesn't.
   week_starts_on    ENUM('sunday','monday') NOT NULL DEFAULT 'sunday',
   opening_view      ENUM('all','personal') NOT NULL DEFAULT 'personal',
+  -- salt:hash (scrypt, server/src/auth/notesPin.js) — NULL means no PIN is
+  -- set, so Personal Notes stay unlocked exactly like before this feature
+  -- existed. Never the raw PIN. Setting/changing/clearing it only requires
+  -- being signed in (no "old PIN" needed) — being signed in already is the
+  -- recovery path for a forgotten PIN.
+  notes_pin_hash    VARCHAR(255) NULL,
   created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_users_google_sub (google_sub),
   UNIQUE KEY uq_users_email (email)

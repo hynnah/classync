@@ -15,6 +15,7 @@ const { accountRouter } = require('./routes/account.routes');
 const { calendarAuthRouter } = require('./routes/calendarAuth.routes');
 const { adminRouter } = require('./routes/admin.routes');
 const { sseRouter } = require('./routes/sse.routes');
+const { notesPinRouter } = require('./routes/notesPin.routes');
 
 function createApp() {
   const app = express();
@@ -88,6 +89,7 @@ function createApp() {
   app.use(calendarAuthRouter);
   app.use(adminRouter);
   app.use(sseRouter);
+  app.use(notesPinRouter);
 
   app.use(express.static(path.join(__dirname, '..', '..', 'client')));
 

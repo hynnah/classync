@@ -19,6 +19,13 @@ async function notifyItemUpdated(itemId, spaceId) {
 
 const router = express.Router();
 
+// A PIN set with nothing verified yet in this session's req.session is the
+// only locked state — no PIN set at all means notes have always behaved the
+// way they do today, untouched by any of this.
+function notesLocked(req) {
+  return !!req.user.notes_pin_hash && !req.session.notesUnlocked;
+}
+
 const PERSONAL_KINDS = ['task', 'note'];
 const SPACE_KINDS = ['task', 'event'];
 const CATEGORIES = ['Assignment', 'Activity', 'Quiz', 'Project', 'Presentation', 'Exam', 'Others'];
@@ -119,7 +126,30 @@ router.get('/api/items/todo', requireLogin, async (req, res, next) => {
       return res.json({ items });
     }
     const items = await ItemRepo.listAllForUser(req.user.id);
-    res.json({ items });
+    // This endpoint mixes Personal tasks and notes together (see
+    // listAllForUser) — the To Do view already filters to kind === 'task'
+    // client-side, so a locked note's title/description never needed to be
+    // in this response at all. Stripped here rather than filtered
+    // client-side so a locked note's content never leaves the server in the
+    // first place.
+    const locked = notesLocked(req);
+    res.json({ items: locked ? items.filter((i) => i.kind !== 'note') : items });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// The Notes view's own dedicated read — unlike /api/items/todo above, this
+// one exists purely to serve note content, so a locked PIN blocks the whole
+// response (423) rather than silently filtering rows out of it.
+router.get('/api/notes', requireLogin, async (req, res, next) => {
+  try {
+    const hasNotesPin = !!req.user.notes_pin_hash;
+    if (notesLocked(req)) {
+      return res.status(423).json({ error: 'Notes are locked.', locked: true, hasNotesPin });
+    }
+    const items = await ItemRepo.listAllForUser(req.user.id);
+    res.json({ items: items.filter((i) => i.kind === 'note'), locked: false, hasNotesPin });
   } catch (err) {
     next(err);
   }
@@ -184,6 +214,10 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
       return res.status(400).json({ error: `kind must be one of: ${PERSONAL_KINDS.join(', ')}` });
     }
 
+    if (kind === 'note' && notesLocked(req)) {
+      return res.status(423).json({ error: 'Notes are locked.' });
+    }
+
     // On create there's no prior value to preserve, so an omitted dueDate
     // means the same thing an explicit null does — normalized here so
     // validateItemFields' undefined-means-unchanged rule (which only makes
@@ -237,6 +271,9 @@ router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
     if (!existing) {
       return res.status(404).json({ error: 'Item not found.' });
     }
+    if (existing.kind === 'note' && notesLocked(req)) {
+      return res.status(423).json({ error: 'Notes are locked.' });
+    }
     const fieldError = validateItemFields({ title, category, dueDate, dueTime, color, kind: existing.kind, spaceId: existing.space_id });
     if (fieldError) {
       return res.status(400).json({ error: fieldError });
@@ -287,6 +324,9 @@ router.delete('/api/items/:id', requireLogin, async (req, res, next) => {
     // item_calendar_events, both FK cascade-deleted) won't exist to read from
     // afterward.
     const existing = await ItemRepo.findById(req.params.id);
+    if (existing && existing.kind === 'note' && existing.created_by === req.user.id && notesLocked(req)) {
+      return res.status(423).json({ error: 'Notes are locked.' });
+    }
     const assigneeIds = existing ? await ItemRepo.listAssigneeUserIds(req.params.id) : [];
     const calendarMappings = existing ? await ItemCalendarEventRepo.listForItem(req.params.id) : [];
 

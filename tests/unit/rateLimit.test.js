@@ -6,6 +6,7 @@ const request = require('supertest');
 const {
   buildJoinCodeLimiter,
   buildOauthCallbackLimiter,
+  buildNotesPinLimiter,
   joinCodeLimiter,
 } = require('../../server/src/middleware/rateLimit');
 
@@ -40,6 +41,17 @@ describe('rate limiting', () => {
     const tripped = await request(app).get('/probe');
     expect(tripped.status).toBe(429);
     expect(tripped.text).toMatch(/too many sign-in attempts/i);
+  });
+
+  test('the notes-PIN limiter allows exactly its limit (5), then trips with a JSON 429', async () => {
+    const app = appWithLimiter(buildNotesPinLimiter({ skip: () => false }));
+    for (let i = 0; i < 5; i++) {
+      const res = await request(app).get('/probe');
+      expect(res.status).toBe(200);
+    }
+    const tripped = await request(app).get('/probe');
+    expect(tripped.status).toBe(429);
+    expect(tripped.body.error).toMatch(/too many pin attempts/i);
   });
 
   test('the real, app-mounted limiter is skipped under TEST_AUTH_BYPASS — why the rest of the suite hammering these routes never trips it', async () => {

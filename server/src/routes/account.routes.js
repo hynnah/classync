@@ -4,6 +4,7 @@ const { UserRepo } = require('../db/repositories/UserRepo');
 const { CalendarTokenRepo } = require('../db/repositories/CalendarTokenRepo');
 const { SpaceRepo } = require('../db/repositories/SpaceRepo');
 const { disconnectAndCleanup } = require('../calendar/sync');
+const { PIN_RE, hashPin } = require('../auth/notesPin');
 
 const router = express.Router();
 
@@ -28,6 +29,7 @@ router.get('/api/account', requireLogin, async (req, res, next) => {
       calendarConnected: !!(token && token.is_connected),
       spacesCount: spaces.length,
       organizerCount: spaces.filter((s) => s.role === 'organizer').length,
+      hasNotesPin: !!req.user.notes_pin_hash,
     });
   } catch (err) {
     next(err);
@@ -45,6 +47,34 @@ router.patch('/api/account/preferences', requireLogin, async (req, res, next) =>
     }
     await UserRepo.updatePreferences(req.user.id, { weekStartsOn, openingView });
     res.json({ weekStartsOn, openingView });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Setting or changing the PIN never needs the *old* one — being signed in
+// already is the recovery path for a forgotten PIN (the "Reset via Settings"
+// design decision). Unlocks the session immediately after, so setting a
+// fresh PIN doesn't lock the person out of the notes they're looking at.
+router.post('/api/account/notes-pin', requireLogin, async (req, res, next) => {
+  try {
+    const { pin } = req.body || {};
+    if (typeof pin !== 'string' || !PIN_RE.test(pin)) {
+      return res.status(400).json({ error: 'PIN must be exactly 4 digits.' });
+    }
+    await UserRepo.setNotesPinHash(req.user.id, hashPin(pin));
+    req.session.notesUnlocked = true;
+    res.json({ hasNotesPin: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/api/account/notes-pin', requireLogin, async (req, res, next) => {
+  try {
+    await UserRepo.setNotesPinHash(req.user.id, null);
+    req.session.notesUnlocked = true;
+    res.json({ hasNotesPin: false });
   } catch (err) {
     next(err);
   }

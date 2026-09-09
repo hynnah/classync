@@ -53,6 +53,14 @@ async function updatePreferences(userId, { weekStartsOn, openingView }) {
   return findById(userId);
 }
 
+// hash is a hashPin() output to set/change the PIN, or null to remove it
+// (removing needs no "old PIN" — being signed in already is the recovery
+// path for a forgotten one).
+async function setNotesPinHash(userId, hash) {
+  await getPool().query('UPDATE users SET notes_pin_hash = ? WHERE id = ?', [hash, userId]);
+  return findById(userId);
+}
+
 // Mirrors leaveSpace's own rule (FR-O5): deleting your account can't leave a
 // Space with Members but no Organizer, so it's blocked wherever you're the
 // sole Organizer and other Members remain — same fix-it-first message as
@@ -116,4 +124,4 @@ async function deleteAccount(userId) {
   });
 }
 
-module.exports = { UserRepo: { findByGoogleSub, findById, create, upsertFromGoogle, markOnboarded, updatePreferences, deleteAccount } };
+module.exports = { UserRepo: { findByGoogleSub, findById, create, upsertFromGoogle, markOnboarded, updatePreferences, setNotesPinHash, deleteAccount } };

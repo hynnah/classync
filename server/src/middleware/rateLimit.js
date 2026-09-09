@@ -46,9 +46,29 @@ function buildOauthCallbackLimiter({ skip = defaultSkip } = {}) {
   });
 }
 
+// A 4-digit PIN only has 10,000 possible values — the hash in notesPin.js
+// slows down an offline guess against a leaked hash, but an online guesser
+// hitting this endpoint directly needs to be stopped by a limiter instead.
+// Tighter than the join-code one (10/15min) since the search space here is
+// smaller by two orders of magnitude.
+function buildNotesPinLimiter({ skip = defaultSkip } = {}) {
+  return rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip,
+    handler: (req, res) => {
+      res.status(429).json({ error: 'Too many PIN attempts. Please wait a few minutes and try again.' });
+    },
+  });
+}
+
 module.exports = {
   buildJoinCodeLimiter,
   buildOauthCallbackLimiter,
+  buildNotesPinLimiter,
   joinCodeLimiter: buildJoinCodeLimiter(),
   oauthCallbackLimiter: buildOauthCallbackLimiter(),
+  notesPinLimiter: buildNotesPinLimiter(),
 };
