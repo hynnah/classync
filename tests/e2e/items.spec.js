@@ -872,6 +872,171 @@ test.describe('the Notes view (split from To Do)', () => {
     }
   });
 
+  test('bold/italic/underline work from the keyboard, not just the toolbar buttons', async ({ page }) => {
+    const email = `e2e-notesshortcuts-${Date.now()}@example.com`;
+    const createdIds = [];
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#personal-nav-notes').click();
+      await page.locator('#notes-new-btn').click();
+
+      const created = await page.evaluate(async () => {
+        const r = await fetch('/api/notes');
+        const body = await r.json();
+        return body.items.find((i) => i.title === 'Untitled');
+      });
+      createdIds.push(created.id);
+
+      const body = page.locator('#notes-editor-body');
+      const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+      await body.click();
+      await page.keyboard.press(`${modifier}+b`);
+      await page.keyboard.type('bold');
+      await page.keyboard.press(`${modifier}+b`);
+      await page.keyboard.type(' ');
+      await page.keyboard.press(`${modifier}+i`);
+      await page.keyboard.type('italic');
+      await page.keyboard.press(`${modifier}+i`);
+      await page.keyboard.type(' ');
+      await page.keyboard.press(`${modifier}+u`);
+      await page.keyboard.type('under');
+      await page.keyboard.press(`${modifier}+u`);
+      await expect(body.locator('b')).toHaveText('bold');
+      await expect(body.locator('i')).toHaveText('italic');
+      await expect(body.locator('u')).toHaveText('under');
+
+      await page.waitForTimeout(900);
+      const saved = await page.evaluate(async (id) => {
+        const r = await fetch('/api/notes');
+        const b = await r.json();
+        return b.items.find((i) => i.id === id);
+      }, created.id);
+      // The underline survives the server-side sanitizer round trip too —
+      // not just present in the live DOM before a save.
+      expect(saved.description).toContain('<u>under</u>');
+    } finally {
+      if (createdIds.length) await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
+  test('font size applies with no text selected, the same "next character" way bold does', async ({ page }) => {
+    const email = `e2e-notesfontsize-${Date.now()}@example.com`;
+    const createdIds = [];
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#personal-nav-notes').click();
+      await page.locator('#notes-new-btn').click();
+
+      const created = await page.evaluate(async () => {
+        const r = await fetch('/api/notes');
+        const body = await r.json();
+        return body.items.find((i) => i.title === 'Untitled');
+      });
+      createdIds.push(created.id);
+
+      const body = page.locator('#notes-editor-body');
+      const sizeSelect = page.locator('#notes-toolbar-size');
+      await body.click();
+      // No selection at all — a collapsed cursor, the ordinary case right
+      // after clicking into an empty note. Picking a size here used to be
+      // a silent no-op; it should now seed a pending style the next
+      // typed character actually lands in. A real click on the select
+      // fires mousedown before its dropdown opens — that's what the app
+      // relies on to capture the editor's selection before focus moves to
+      // the select — but Playwright's selectOption() sets the value
+      // directly without it, so it's dispatched explicitly here to match
+      // what an actual click does.
+      await sizeSelect.dispatchEvent('mousedown');
+      await sizeSelect.selectOption('24px');
+      await page.keyboard.type('big');
+      await expect(body.locator('span[style*="font-size"]')).toHaveText('big');
+
+      // The size still applies over a real selection too — the original,
+      // already-working path — not just the newly-added no-selection one.
+      await page.keyboard.press('End');
+      await page.keyboard.type(' small');
+      // Select just the newly-typed word, not all the way back through
+      // "big" too.
+      for (let i = 0; i < 'small'.length; i += 1) await page.keyboard.press('Shift+ArrowLeft');
+      await sizeSelect.dispatchEvent('mousedown');
+      await sizeSelect.selectOption('12px');
+      await expect(body.locator('span[style*="font-size: 12px"]')).toHaveText('small');
+
+      await page.waitForTimeout(900);
+      const saved = await page.evaluate(async (id) => {
+        const r = await fetch('/api/notes');
+        const b = await r.json();
+        return b.items.find((i) => i.id === id);
+      }, created.id);
+      // "small" ends up nested inside the outer 24px span (it was typed
+      // right after "big" within the same still-open run, then re-sized)
+      // rather than as a separate sibling \u2014 real, structurally valid
+      // nesting, not a bug to flatten away.
+      expect(saved.description).toContain('font-size:24px');
+      expect(saved.description).toContain('big');
+      expect(saved.description).toContain('font-size:12px');
+      expect(saved.description).toContain('small');
+      // The zero-width space the pending-style span is seeded with never
+      // reaches the saved value.
+      expect(saved.description).not.toContain('\u200B');
+    } finally {
+      if (createdIds.length) await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
+  test('typing continuously through an autosave/live-update round trip never resets the cursor to the start', async ({ page }) => {
+    const email = `e2e-notescursor-${Date.now()}@example.com`;
+    const createdIds = [];
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#personal-nav-notes').click();
+      await page.locator('#notes-new-btn').click();
+
+      const created = await page.evaluate(async () => {
+        const r = await fetch('/api/notes');
+        const body = await r.json();
+        return body.items.find((i) => i.title === 'Untitled');
+      });
+      createdIds.push(created.id);
+
+      const body = page.locator('#notes-editor-body');
+      await body.click();
+      await page.keyboard.type('AAA');
+      // Long enough for the debounced autosave to fire and for the
+      // server's item_updated broadcast — sent to every current assignee,
+      // which always includes a note's own creator — to round-trip back
+      // over this same session's SSE connection and run the client's
+      // refresh, all while the cursor stays put in this field.
+      await page.waitForTimeout(1200);
+      await page.keyboard.type('BBB');
+      await page.waitForTimeout(1200);
+      // A reset mid-typing would have put the second half of the text back
+      // at the start of the field instead of continuing where it left off.
+      await expect(body).toHaveText('AAABBB');
+
+      const saved = await page.evaluate(async (id) => {
+        const r = await fetch('/api/notes');
+        const b = await r.json();
+        return b.items.find((i) => i.id === id);
+      }, created.id);
+      expect(saved.description).toContain('AAABBB');
+    } finally {
+      if (createdIds.length) await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
   test('switching to a Space hides To Do and Notes; switching back resets to Calendar', async ({ page }) => {
     const email = `e2e-todoswitch-${Date.now()}@example.com`;
     let spaceId;

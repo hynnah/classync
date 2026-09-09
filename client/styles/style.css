@@ -3094,11 +3094,11 @@ a.btn-secondary:hover {
 .page-app .notes-lock-now-btn:hover {
   background: var(--color-accent-hover-bg);
 }
-/* A locked-and-still-redacted list row: real title/preview text never
-   reached the client (see items.routes.js's redactIfLocked), so this is
-   read-only styling, not a client-side blur of real content. */
-.page-app .notes-list-item.is-locked-hidden .notes-list-title,
-.page-app .notes-list-item.is-locked-hidden .notes-list-preview {
+/* A locked-and-still-redacted list row: the title is real (the server only
+   redacts description — see items.routes.js's redactIfLocked), but styled
+   as a hint that the body itself is hidden; no .notes-list-preview element
+   is even rendered for this row (renderNotesList skips it while hidden). */
+.page-app .notes-list-item.is-locked-hidden .notes-list-title {
   color: var(--color-text-faint);
   font-style: italic;
 }
@@ -3314,13 +3314,22 @@ a.btn-secondary:hover {
 }
 .page-app .notes-editor-title-row {
   display: flex;
-  align-items: flex-start;
+  /* The plate card (~133px, image + label + padding) is much taller than
+     the title input (~63px) — whichever edge the two are aligned to,
+     that ~70px difference piles up entirely on one side: flex-start (or,
+     given flex-wrap: wrap-reverse below flips which edge counts as
+     cross-start, flex-end) put it all above the title as a large empty
+     gap; the other extreme puts it all below, as an equally large gap
+     before the note body. There's no alignment that removes it — the row
+     is only ever as short as its tallest item — so center splits the
+     difference evenly instead of dumping the whole thing on one side. */
+  align-items: center;
   gap: 22px;
   /* When the editor pane is narrow, the plate wraps ABOVE the title rather
      than below it — reads as a plate pinned to the top of the page, not an
      afterthought stuck under it. */
   flex-wrap: wrap-reverse;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 .page-app .notes-editor-title-input {
   display: block;
@@ -3343,7 +3352,13 @@ a.btn-secondary:hover {
   flex: 0 0 auto;
   width: 124px;
   box-sizing: border-box;
-  padding: 8px;
+  /* Trimmed from 8px — the card's own chrome (padding/gap), not the
+     photo inside it (.notes-plate-card img keeps its own 98px height
+     untouched) — this is what's left to tighten once the title row is
+     already centered; the photo itself (98px) is still taller than the
+     title text (~63px), so ~17-18px of gap above/below the title is the
+     floor regardless of how far the card's own padding/gap shrink. */
+  padding: 4px;
   background: #fffdf9;
   border: 1px solid #e2d9c6;
   /* The one tilted element in the product — do not add a second, do not
@@ -3353,7 +3368,7 @@ a.btn-secondary:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
+  gap: 3px;
   cursor: pointer;
 }
 .page-app .notes-plate-card:hover {
@@ -3469,7 +3484,7 @@ a.btn-secondary:hover {
   align-items: center;
   gap: 4px;
   padding-bottom: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   border-bottom: 1px solid #ece5d6;
 }
 .page-app .notes-toolbar-btn {
@@ -3498,6 +3513,18 @@ a.btn-secondary:hover {
 }
 .page-app .notes-toolbar-btn--italic {
   font-style: italic;
+}
+.page-app .notes-toolbar-btn--underline {
+  text-decoration: underline;
+}
+/* Reflects the format that's actually active at the caret (or across the
+   whole selection) — the same "what I type next will look like this"
+   feedback Google Docs/most notes apps give, so clicking Bold with nothing
+   selected has a visible confirmation, not just an invisible pending state. */
+.page-app .notes-toolbar-btn.is-active {
+  background: var(--color-bg);
+  border-color: var(--color-accent);
+  color: var(--color-text);
 }
 .page-app .notes-toolbar-divider {
   width: 1px;

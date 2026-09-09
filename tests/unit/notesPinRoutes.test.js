@@ -69,8 +69,13 @@ describe('Notes PIN lock — per-note is_locked, /api/notes-pin/*, /api/notes, a
     const redacted = await agent.get('/api/notes');
     expect(redacted.status).toBe(200);
     const hiddenRow = redacted.body.items.find((i) => i.id === note.body.item.id);
-    expect(hiddenRow.title).toBeNull();
+    // Title stays visible even while redacted — only the body is hidden —
+    // so the list can still show which note this is; `redacted` is the
+    // explicit signal for "still locked," not a null-title check (a
+    // genuinely empty, unlocked note also has a null description).
+    expect(hiddenRow.title).toBe('Diary entry');
     expect(hiddenRow.description).toBeNull();
+    expect(hiddenRow.redacted).toBe(true);
     expect(hiddenRow.is_locked).toBeTruthy();
 
     const wrongPin = await agent.post('/api/notes-pin/verify').send({ pin: '9999' });
@@ -83,13 +88,16 @@ describe('Notes PIN lock — per-note is_locked, /api/notes-pin/*, /api/notes, a
     const revealedRow = revealed.body.items.find((i) => i.id === note.body.item.id);
     expect(revealedRow.title).toBe('Diary entry');
     expect(revealedRow.description).toBe('private stuff');
+    expect(revealedRow.redacted).toBeFalsy();
 
     const relock = await agent.post('/api/notes-pin/lock');
     expect(relock.status).toBe(200);
 
     const redactedAgain = await agent.get('/api/notes');
     const redactedAgainRow = redactedAgain.body.items.find((i) => i.id === note.body.item.id);
-    expect(redactedAgainRow.title).toBeNull();
+    expect(redactedAgainRow.title).toBe('Diary entry');
+    expect(redactedAgainRow.description).toBeNull();
+    expect(redactedAgainRow.redacted).toBe(true);
   });
 
   test('an unlocked note is never redacted, even with a PIN set and the session freshly re-locked', async () => {

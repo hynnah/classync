@@ -41,14 +41,17 @@ test.describe('Notes PIN lock (per-note)', () => {
       await page.locator('#notes-lock-toggle-btn').click();
       await expect(page.locator('#notes-lock-toggle-label')).toHaveText('Unlock');
 
-      // A fresh page load redacts the locked note but leaves the other alone.
+      // A fresh page load redacts the locked note's body but leaves its
+      // title (and the other note entirely) alone — the title is how you
+      // tell locked notes apart in the list, only the body preview is gone.
       await page.reload();
       await page.waitForSelector('#cal-root .calendar-days');
       await page.locator('#personal-nav-notes').click();
-      const secretRow = page.locator('.notes-list-item', { hasText: 'Locked note' });
+      const secretRow = page.locator('.notes-list-item', { hasText: 'E2E notes-pin secret note' });
       await expect(secretRow).toBeVisible();
-      await expect(page.locator('.notes-list-item', { hasText: 'E2E notes-pin secret note' })).toHaveCount(0);
+      await expect(secretRow.locator('.notes-list-preview')).toHaveCount(0);
       await expect(page.locator('.notes-list-item', { hasText: 'E2E notes-pin open note' })).toBeVisible();
+      await expect(page.locator('.notes-list-item', { hasText: 'E2E notes-pin open note' }).locator('.notes-list-preview')).toHaveCount(1);
 
       // Clicking the redacted row opens the unlock modal, not the editor.
       await secretRow.click();
@@ -71,7 +74,8 @@ test.describe('Notes PIN lock (per-note)', () => {
       // "Re-hide" (Lock now) redacts it again without a reload, and the open
       // editor drops back to the empty state since it just got redacted.
       await page.locator('#notes-lock-now-btn').click();
-      await expect(page.locator('.notes-list-item', { hasText: 'Locked note' })).toBeVisible();
+      await expect(secretRow).toBeVisible();
+      await expect(secretRow.locator('.notes-list-preview')).toHaveCount(0);
       await expect(page.locator('#notes-editor')).toBeHidden();
       await expect(page.locator('#notes-editor-empty')).toBeVisible();
     } finally {
@@ -114,8 +118,10 @@ test.describe('Notes PIN lock (per-note)', () => {
       await page.reload();
       await page.waitForSelector('#cal-root .calendar-days');
       await page.locator('#personal-nav-notes').click();
-      await expect(page.locator('.notes-list-item', { hasText: 'E2E pin-removal note' })).toBeVisible();
-      await expect(page.locator('.notes-list-item', { hasText: 'Locked note' })).toHaveCount(0);
+      const row = page.locator('.notes-list-item', { hasText: 'E2E pin-removal note' });
+      await expect(row).toBeVisible();
+      await expect(row).not.toHaveClass(/is-locked-hidden/);
+      await expect(row.locator('.notes-list-preview')).toHaveCount(1);
     } finally {
       const [users] = await getPool().query('SELECT id FROM users WHERE email = ?', [email]);
       if (users.length) await getPool().query('DELETE FROM items WHERE created_by = ?', [users[0].id]);

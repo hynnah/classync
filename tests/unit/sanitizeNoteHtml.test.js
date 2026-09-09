@@ -1,9 +1,10 @@
 const { sanitizeNoteHtml } = require('../../server/src/util/sanitizeNoteHtml');
 
 describe('sanitizeNoteHtml', () => {
-  test('keeps allowed formatting: bold, italic, alignment, font-size, lists, line breaks', () => {
+  test('keeps allowed formatting: bold, italic, underline, alignment, font-size, lists, line breaks', () => {
     expect(sanitizeNoteHtml('<b>bold</b>')).toBe('<b>bold</b>');
     expect(sanitizeNoteHtml('<i>italic</i>')).toBe('<i>italic</i>');
+    expect(sanitizeNoteHtml('<u>underline</u>')).toBe('<u>underline</u>');
     expect(sanitizeNoteHtml('<div style="text-align:center">c</div>')).toBe('<div style="text-align:center;">c</div>');
     expect(sanitizeNoteHtml('<span style="font-size:16px">s</span>')).toBe('<span style="font-size:16px;">s</span>');
     expect(sanitizeNoteHtml('<ul><li>one</li><li>two</li></ul>')).toBe('<ul><li>one</li><li>two</li></ul>');

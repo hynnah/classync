@@ -156,12 +156,14 @@ router.get('/api/items/todo', requireLogin, async (req, res, next) => {
 
 // The Notes view's own dedicated read. Locking is per-note (items.is_locked),
 // not per-view, so this never blocks the whole response — a locked note this
-// session hasn't proven the PIN for just comes back with its title/
-// description redacted to null (isNoteRedacted client-side keys off that),
-// everything else (plate, timestamps) intact so the row still renders.
+// session hasn't proven the PIN for comes back with its title still intact
+// (so the list can show which note it is) but its description redacted to
+// null; an explicit `redacted: true` flag is the client's signal for "still
+// hidden," not a null check (a genuinely empty, unlocked note also has a
+// null description, so that alone can't distinguish the two states).
 function redactIfLocked(item, req) {
   if (!item.is_locked || !pinUnproven(req)) return item;
-  return { ...item, title: null, description: null };
+  return { ...item, description: null, redacted: true };
 }
 router.get('/api/notes', requireLogin, async (req, res, next) => {
   try {

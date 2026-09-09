@@ -19,6 +19,7 @@ const filterXSS = new xss.FilterXSS({
   whiteList: {
     b: [],
     i: [],
+    u: [],
     span: ['style'],
     div: ['style'],
     p: ['style'],

@@ -268,24 +268,10 @@
                 Delete
               </button>
             </div>
-            <div class="notes-editor-title-row">
-              <input id="notes-editor-title" class="notes-editor-title-input" type="text" placeholder="Untitled" maxlength="255">
-              <button id="notes-plate-card" class="notes-plate-card" type="button" title="Change the plate">
-                <img id="notes-plate-card-img" alt="">
-                <span id="notes-plate-card-label" class="notes-plate-card-label"></span>
-              </button>
-            </div>
-            <div id="notes-plate-picker" class="notes-plate-picker" hidden>
-              <div class="notes-plate-picker-head">
-                <span class="kicker">Choose a plate</span>
-                <span class="kicker-rule"></span>
-                <button id="notes-plate-picker-close" class="notes-plate-picker-close" type="button">Close</button>
-              </div>
-              <div id="notes-plate-picker-grid" class="notes-plate-picker-grid"></div>
-            </div>
             <div id="notes-editor-toolbar" class="notes-editor-toolbar">
-              <button type="button" class="notes-toolbar-btn notes-toolbar-btn--bold" data-cmd="bold" title="Bold">B</button>
-              <button type="button" class="notes-toolbar-btn notes-toolbar-btn--italic" data-cmd="italic" title="Italic">I</button>
+              <button type="button" class="notes-toolbar-btn notes-toolbar-btn--bold" data-cmd="bold" title="Bold (Ctrl+B)">B</button>
+              <button type="button" class="notes-toolbar-btn notes-toolbar-btn--italic" data-cmd="italic" title="Italic (Ctrl+I)">I</button>
+              <button type="button" class="notes-toolbar-btn notes-toolbar-btn--underline" data-cmd="underline" title="Underline (Ctrl+U)">U</button>
               <span class="notes-toolbar-divider"></span>
               <button type="button" class="notes-toolbar-btn" data-cmd="justifyLeft" title="Align left">
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -308,6 +294,21 @@
                 <option value="18px">Large</option>
                 <option value="24px">Huge</option>
               </select>
+            </div>
+            <div class="notes-editor-title-row">
+              <input id="notes-editor-title" class="notes-editor-title-input" type="text" placeholder="Untitled" maxlength="255">
+              <button id="notes-plate-card" class="notes-plate-card" type="button" title="Change the plate">
+                <img id="notes-plate-card-img" alt="">
+                <span id="notes-plate-card-label" class="notes-plate-card-label"></span>
+              </button>
+            </div>
+            <div id="notes-plate-picker" class="notes-plate-picker" hidden>
+              <div class="notes-plate-picker-head">
+                <span class="kicker">Choose a plate</span>
+                <span class="kicker-rule"></span>
+                <button id="notes-plate-picker-close" class="notes-plate-picker-close" type="button">Close</button>
+              </div>
+              <div id="notes-plate-picker-grid" class="notes-plate-picker-grid"></div>
             </div>
             <div id="notes-editor-body" class="notes-editor-body-input" contenteditable="true" data-placeholder="Write something…"></div>
             <div class="notes-editor-footer">
@@ -2963,11 +2964,11 @@
     }
 
     // A locked note the server hasn't revealed yet for this session comes
-    // back with title/description redacted to null (see items.routes.js's
-    // GET /api/notes) — everything else (plate, timestamps) still there so
-    // the row still renders, just without the content itself.
+    // back with description redacted to null and redacted:true (see
+    // items.routes.js's GET /api/notes) — title, plate, and timestamps are
+    // still real, so the row still renders and is identifiable by name.
     function isNoteHidden(note) {
-      return note.is_locked && note.title === null;
+      return !!note.redacted;
     }
 
     function renderNotesList() {
@@ -3002,14 +3003,23 @@
         text.className = 'notes-list-text';
         const title = document.createElement('p');
         title.className = 'notes-list-title';
-        title.textContent = hidden ? 'Locked note' : note.title;
-        const preview = document.createElement('p');
-        preview.className = 'notes-list-preview';
-        preview.textContent = hidden ? 'Enter your PIN to view this note.' : htmlToPlainText(note.description);
+        // The title is never redacted (only the body is, server-side) — a
+        // locked note is identifiable by name in the list even before it's
+        // unlocked. The body preview, though, is left out of the DOM
+        // entirely while hidden, not just visually hidden — there's nothing
+        // to show since the server never sent it.
+        title.textContent = note.title;
         const meta = document.createElement('span');
         meta.className = 'notes-list-meta';
         meta.textContent = formatNoteMeta(note);
-        text.append(title, preview, meta);
+        if (hidden) {
+          text.append(title, meta);
+        } else {
+          const preview = document.createElement('p');
+          preview.className = 'notes-list-preview';
+          preview.textContent = htmlToPlainText(note.description);
+          text.append(title, preview, meta);
+        }
 
         item.append(mat, text);
         item.addEventListener('click', () => {
@@ -3092,6 +3102,10 @@
       renderPlateCard(note);
       renderLockToggle(note);
       updateNotesWordCount();
+      // Stale from whichever note was open before — cleared here rather
+      // than left to the next focus/keyup/mouseup in the (now different)
+      // body content, which won't fire until the user actually clicks in.
+      NOTES_TOGGLE_BTNS.forEach((btn) => btn.classList.remove('is-active'));
       setNotesEditing(true);
     }
 
@@ -3101,7 +3115,13 @@
       // An empty contenteditable can still hold a stray <br> some browsers
       // leave behind — textContent is what actually decides "empty", not
       // innerHTML, so that stray tag never gets saved as if it were content.
-      const description = notesBodyInput.textContent.trim() ? notesBodyInput.innerHTML : null;
+      // The zero-width space applyPendingCaretStyle seeds a pending format
+      // span with (see above) is stripped from both sides of that check —
+      // a note where the only "content" is an unused pending-format marker
+      // still saves as empty, and a real save never persists the marker
+      // itself, on the actually-typed-into note or an empty one alike.
+      const bareText = notesBodyInput.textContent.replace(/\u200B/g, '').trim();
+      const description = bareText ? notesBodyInput.innerHTML.replace(/\u200B/g, '') : null;
       const res = await fetch(`/api/items/${selectedNoteId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
@@ -3209,19 +3229,57 @@
       e.preventDefault();
       document.execCommand(e.shiftKey ? 'outdent' : 'indent');
     });
+    // Bold/italic/underline explicitly bound rather than left to whatever a
+    // given browser does by default for a contenteditable — this is what
+    // actually guarantees Ctrl/Cmd+B/I/U work the same way the toolbar
+    // buttons do (same execCommand call, same autosave trigger), on every
+    // browser, rather than relying on unwritten default behavior. Undo,
+    // redo, cut, copy, and paste are deliberately left untouched — those
+    // are native browser/OS behavior already, and driving them through
+    // execCommand would fight the browser's own undo history rather than
+    // use it.
+    const NOTES_SHORTCUT_CMDS = { b: 'bold', i: 'italic', u: 'underline' };
+    notesBodyInput.addEventListener('keydown', (e) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const cmd = NOTES_SHORTCUT_CMDS[e.key.toLowerCase()];
+      if (!cmd) return;
+      e.preventDefault();
+      document.execCommand(cmd, false, null);
+      scheduleNotesAutoSave();
+      updateToolbarActiveStates();
+    });
 
     // Toolbar — mousedown + preventDefault (not click) keeps focus, and so
     // the live Selection, inside the editor the whole time; execCommand
     // then runs against whatever's still selected there. Color/size instead
     // use real form controls that necessarily steal focus to work at all,
     // so those save/restore the Range explicitly around the interaction.
+    const NOTES_TOGGLE_BTNS = Array.from(
+      document.querySelectorAll('#notes-editor-toolbar .notes-toolbar-btn[data-cmd]')
+    ).filter((btn) => ['bold', 'italic', 'underline'].includes(btn.dataset.cmd));
+    // queryCommandState reports whether the format is "on" right now — for
+    // a collapsed cursor that's the pending "what I type next looks like
+    // this" state, same thing execCommand itself just toggled, so the
+    // button lighting up is a direct reflection of that state, not a guess.
+    function updateToolbarActiveStates() {
+      if (!notesBodyInput.contains(document.activeElement)) return;
+      NOTES_TOGGLE_BTNS.forEach((btn) => {
+        let isOn = false;
+        try { isOn = document.queryCommandState(btn.dataset.cmd); } catch (err) { /* unsupported in this browser — leave off */ }
+        btn.classList.toggle('is-active', isOn);
+      });
+    }
     document.querySelectorAll('#notes-editor-toolbar .notes-toolbar-btn[data-cmd]').forEach((btn) => {
       btn.addEventListener('mousedown', (e) => {
         e.preventDefault();
         document.execCommand(btn.dataset.cmd, false, null);
         scheduleNotesAutoSave();
+        updateToolbarActiveStates();
       });
     });
+    notesBodyInput.addEventListener('keyup', updateToolbarActiveStates);
+    notesBodyInput.addEventListener('mouseup', updateToolbarActiveStates);
+    notesBodyInput.addEventListener('focus', updateToolbarActiveStates);
 
     let notesSavedRange = null;
     function saveNotesSelection() {
@@ -3237,12 +3295,10 @@
       sel.addRange(notesSavedRange);
       return true;
     }
-    // Only meaningful over an actual text selection — same as any of these
-    // toolbar buttons is a no-op with nothing selected, execCommand's own
-    // native behavior for bold/italic already handles a collapsed cursor
-    // (toggling a "what I type next looks like this" state); reproducing
-    // that here for a manually-applied style is a lot more machinery for a
-    // rarely-needed case, so it's out of scope for this pass.
+    // Only meaningful over an actual text selection — wraps the selected
+    // text in a styled span. Called only when there IS a real (non-
+    // collapsed) selection; a collapsed cursor goes through
+    // applyPendingCaretStyle below instead.
     function wrapSelectionWithStyle(styleProp, value) {
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
@@ -3265,6 +3321,38 @@
       newRange.selectNodeContents(span);
       sel.addRange(newRange);
     }
+    // Bold/italic/underline get a "what I type next looks like this" state
+    // for free from execCommand when the cursor is collapsed — there's no
+    // selection to wrap, but the browser remembers the toggle and applies
+    // it to the next character typed. A manually-applied style like font
+    // size has no such native behavior, so with nothing selected (by far
+    // the common case — the cursor is usually just sitting wherever you
+    // last left it, not highlighting anything) this used to just silently
+    // do nothing. This reproduces the same behavior manually: an empty
+    // styled span is inserted at the caret with a zero-width space inside
+    // it, and the caret is placed right after that character — so the
+    // very next character typed lands inside the span and inherits its
+    // style, same as bold does natively. The zero-width space itself is
+    // stripped back out before saving (see saveSelectedNote) — it never
+    // reaches the database, and if nothing ends up typed into the span at
+    // all, the note is treated as having no real content there either.
+    function applyPendingCaretStyle(styleProp, value) {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return false;
+      const range = sel.getRangeAt(0);
+      const span = document.createElement('span');
+      span.style[styleProp] = value;
+      const zwsp = document.createTextNode('\u200B');
+      span.appendChild(zwsp);
+      range.deleteContents();
+      range.insertNode(span);
+      const newRange = document.createRange();
+      newRange.setStart(zwsp, 1);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+      return true;
+    }
     const notesToolbarSize = document.getElementById('notes-toolbar-size');
     notesToolbarSize.addEventListener('mousedown', saveNotesSelection);
     notesToolbarSize.addEventListener('change', () => {
@@ -3272,7 +3360,12 @@
       notesToolbarSize.value = '';
       if (!value || !restoreNotesSelection()) return;
       notesBodyInput.focus();
-      wrapSelectionWithStyle('fontSize', value);
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+        wrapSelectionWithStyle('fontSize', value);
+      } else {
+        applyPendingCaretStyle('fontSize', value);
+      }
       scheduleNotesAutoSave();
     });
 
@@ -3322,6 +3415,15 @@
       renderNotesList();
     });
 
+    // True while the caret/focus is actually inside the title or body field
+    // — i.e. the user is mid-edit right now, as opposed to just having a
+    // note open. Node.contains() also returns true for the node itself, so
+    // this covers both notesBodyInput (contenteditable's activeElement is
+    // the div itself, never a descendant text node) and notesTitleInput.
+    function notesEditorIsFocused() {
+      return document.activeElement === notesTitleInput || notesBodyInput.contains(document.activeElement);
+    }
+
     // Locking is per-note (see items.routes.js's is_locked column) — this
     // fetch always succeeds; individual locked-and-unrevealed notes come
     // back redacted (see isNoteHidden) rather than the whole endpoint 423ing.
@@ -3337,9 +3439,28 @@
         .sort((a, b) => new Date(b.updated_at.replace(' ', 'T')) - new Date(a.updated_at.replace(' ', 'T')));
       // Only worth showing "re-hide" once something is actually revealed —
       // a locked-but-still-redacted note doesn't need re-locking again.
-      notesLockNowBtn.hidden = !hasNotesPin || !notesCache.some((n) => n.is_locked && n.title !== null);
+      notesLockNowBtn.hidden = !hasNotesPin || !notesCache.some((n) => n.is_locked && !n.redacted);
       if (selectedNoteId && !notesCache.find((n) => n.id === selectedNoteId)) selectedNoteId = null;
-      if (selectedNoteId) {
+      // This same fetch also runs as an item_updated SSE echo of the user's
+      // own autosave — the note's own creator is always one of its
+      // assignees, so every save this user makes bounces straight back to
+      // them. Calling the full selectNote() here would blow away
+      // notesTitleInput.value/notesBodyInput.innerHTML — and with it, the
+      // live caret position, any in-progress "next character is bold"
+      // typing state, and the browser's own undo stack — every debounce
+      // cycle, mid-keystroke. While the user is actually focused in this
+      // note's title/body, notesCache is still refreshed (above) but the
+      // live DOM is left alone; it's already exactly what was just saved,
+      // so there's nothing to correct. Switching to a different note, or
+      // an update landing while this one isn't focused, still gets the
+      // full re-render.
+      const selected = selectedNoteId && notesCache.find((n) => n.id === selectedNoteId);
+      if (selected && notesEditorIsFocused() && !isNoteHidden(selected)) {
+        notesEditorMeta.textContent = formatNoteMeta(selected);
+        renderPlateCard(selected);
+        renderLockToggle(selected);
+        renderNotesList();
+      } else if (selectedNoteId) {
         selectNote(selectedNoteId);
       } else {
         renderNotesList();
