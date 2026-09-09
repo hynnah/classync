@@ -722,7 +722,7 @@ test.describe('the Notes view (split from To Do)', () => {
       await listItem.click();
       await expect(page.locator('#notes-editor')).toBeVisible();
       await expect(page.locator('#notes-editor-title')).toHaveValue('E2E notes view note');
-      await expect(page.locator('#notes-editor-body')).toHaveValue('Original body text.');
+      await expect(page.locator('#notes-editor-body')).toHaveText('Original body text.');
 
       await page.locator('#notes-editor-body').fill('Updated body text.');
       await expect(page.locator('#notes-word-count')).toHaveText('3 words');
@@ -733,7 +733,7 @@ test.describe('the Notes view (split from To Do)', () => {
         const body = await r.json();
         return body.items.find((i) => i.id === id);
       }, created.id);
-      expect(saved.description).toBe('Updated body text.');
+      expect(saved.description).toContain('Updated body text.');
 
       // new note via the "+ New" button
       await page.locator('#notes-new-btn').click();
@@ -805,6 +805,67 @@ test.describe('the Notes view (split from To Do)', () => {
         return body.items.find((i) => i.id === id);
       }, created.id);
       expect(afterAutosave.plate).toBe(nextPlate);
+    } finally {
+      if (createdIds.length) await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
+  test('the rich-text toolbar formats note content, and it survives an autosave + reload round trip', async ({ page }) => {
+    const email = `e2e-notesformat-${Date.now()}@example.com`;
+    const createdIds = [];
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#personal-nav-notes').click();
+      await page.locator('#notes-new-btn').click();
+
+      const created = await page.evaluate(async () => {
+        const r = await fetch('/api/notes');
+        const body = await r.json();
+        return body.items.find((i) => i.title === 'Untitled');
+      });
+      createdIds.push(created.id);
+
+      const body = page.locator('#notes-editor-body');
+      await body.click();
+      await page.keyboard.type('bold text');
+      await page.keyboard.press('Home');
+      await page.keyboard.down('Shift');
+      await page.keyboard.press('End');
+      await page.keyboard.up('Shift');
+      await page.locator('.notes-toolbar-btn[data-cmd="bold"]').click();
+      await expect(body.locator('b')).toHaveText('bold text');
+
+      // Auto-bullet: "- " at the start of a new line converts to a list.
+      await body.click();
+      await page.keyboard.press('End');
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('- first item');
+      await expect(body.locator('ul li')).toHaveText('first item');
+
+      await page.waitForTimeout(900); // debounced autosave
+      const saved = await page.evaluate(async (id) => {
+        const r = await fetch('/api/notes');
+        const b = await r.json();
+        return b.items.find((i) => i.id === id);
+      }, created.id);
+      expect(saved.description).toContain('<b>bold text</b>');
+      // Bold's "what I type next" state naturally carries across the Enter
+      // into the new line too — real browser behavior, matched here rather
+      // than fought.
+      expect(saved.description).toContain('<ul><li><b>first item</b></li></ul>');
+
+      // Round trip through a reload — the formatting has to render back,
+      // not just survive as a database string.
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#personal-nav-notes').click();
+      await page.locator('.notes-list-item').first().click();
+      await expect(body.locator('b').first()).toHaveText('bold text');
+      await expect(body.locator('ul li')).toHaveText('first item');
     } finally {
       if (createdIds.length) await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
       await getPool().query('DELETE FROM users WHERE email = ?', [email]);

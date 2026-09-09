@@ -5,6 +5,7 @@ const { SpaceRepo } = require('../db/repositories/SpaceRepo');
 const { ItemCalendarEventRepo } = require('../db/repositories/ItemCalendarEventRepo');
 const sseHub = require('../realtime/sseHub');
 const { syncItemForUsers, deleteCalendarEventsForItem } = require('../calendar/sync');
+const { sanitizeNoteHtml } = require('../util/sanitizeNoteHtml');
 
 // Notifies everyone with visibility into this item — every open session
 // refreshing whatever view they're already on picks up the change the same
@@ -267,7 +268,10 @@ router.post('/api/items', requireLogin, async (req, res, next) => {
       spaceId: spaceId || null,
       kind,
       title: title.trim(),
-      description: description || null,
+      // Rich text is a Notes-only feature — a Task/Event's description stays
+      // literal plain text (running it through the sanitizer would mangle a
+      // legitimate "<" in something like "score < 70 means fail").
+      description: kind === 'note' ? sanitizeNoteHtml(description) || null : (description || null),
       category: category || null,
       dueDate: dueDate || null,
       dueTime: dueTime || null,
@@ -310,12 +314,18 @@ router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
     if (fieldError) {
       return res.status(400).json({ error: fieldError });
     }
+    // undefined (not touching description at all) has to survive as
+    // undefined — ItemRepo.update's own undefined-means-unchanged check is
+    // what makes an autosave that only sent {title} leave the body alone.
+    const cleanDescription = existing.kind === 'note' && description !== undefined
+      ? sanitizeNoteHtml(description)
+      : description;
 
     const item = await ItemRepo.update({
       itemId: req.params.id,
       userId: req.user.id,
       title: title.trim(),
-      description,
+      description: cleanDescription,
       category,
       dueDate,
       dueTime,

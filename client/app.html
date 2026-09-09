@@ -283,7 +283,34 @@
               </div>
               <div id="notes-plate-picker-grid" class="notes-plate-picker-grid"></div>
             </div>
-            <textarea id="notes-editor-body" class="notes-editor-body-input" placeholder="Write something…"></textarea>
+            <div id="notes-editor-toolbar" class="notes-editor-toolbar">
+              <button type="button" class="notes-toolbar-btn notes-toolbar-btn--bold" data-cmd="bold" title="Bold">B</button>
+              <button type="button" class="notes-toolbar-btn notes-toolbar-btn--italic" data-cmd="italic" title="Italic">I</button>
+              <span class="notes-toolbar-divider"></span>
+              <button type="button" class="notes-toolbar-btn" data-cmd="justifyLeft" title="Align left">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </button>
+              <button type="button" class="notes-toolbar-btn" data-cmd="justifyCenter" title="Align center">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M4 8h8M3 12h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </button>
+              <button type="button" class="notes-toolbar-btn" data-cmd="justifyRight" title="Align right">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M6 8h8M4 12h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </button>
+              <span class="notes-toolbar-divider"></span>
+              <button type="button" class="notes-toolbar-btn" data-cmd="insertUnorderedList" title="Bullet list">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="2.5" cy="4" r="1" fill="currentColor"/><circle cx="2.5" cy="8" r="1" fill="currentColor"/><circle cx="2.5" cy="12" r="1" fill="currentColor"/><path d="M6 4h8M6 8h8M6 12h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </button>
+              <span class="notes-toolbar-divider"></span>
+              <select id="notes-toolbar-size" class="notes-toolbar-size" title="Font size">
+                <option value="">Size</option>
+                <option value="12px">Small</option>
+                <option value="15px">Normal</option>
+                <option value="18px">Large</option>
+                <option value="24px">Huge</option>
+              </select>
+              <input type="color" id="notes-toolbar-color" class="notes-toolbar-color" title="Text color" value="#3a352d">
+            </div>
+            <div id="notes-editor-body" class="notes-editor-body-input" contenteditable="true" data-placeholder="Write something…"></div>
             <div class="notes-editor-footer">
               <span id="notes-word-count"></span>
               <span>Kept to yourself · not visible to any Space</span>
@@ -2979,7 +3006,7 @@
         title.textContent = hidden ? 'Locked note' : note.title;
         const preview = document.createElement('p');
         preview.className = 'notes-list-preview';
-        preview.textContent = hidden ? 'Enter your PIN to view this note.' : (note.description || '');
+        preview.textContent = hidden ? 'Enter your PIN to view this note.' : htmlToPlainText(note.description);
         const meta = document.createElement('span');
         meta.className = 'notes-list-meta';
         meta.textContent = formatNoteMeta(note);
@@ -2998,8 +3025,25 @@
     }
 
     function updateNotesWordCount() {
-      const words = notesBodyInput.value.trim().split(/\s+/).filter(Boolean).length;
+      const text = notesBodyInput.textContent.trim();
+      const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
       notesWordCount.textContent = `${words} word${words === 1 ? '' : 's'}`;
+    }
+
+    // Sanitized server-side before it's ever stored (items.routes.js), so
+    // parsing it back out client-side — even into a detached element never
+    // inserted into the live document — is safe by construction. Used for
+    // the notes-list preview line, which needs the visible text only, no
+    // markup.
+    function htmlToPlainText(html) {
+      if (!html) return '';
+      // textContent alone ignores block boundaries entirely (adjacent
+      // lines/list items would run together with no space) — a space after
+      // each block-closing tag first keeps the preview readable as one line.
+      const withBreaks = html.replace(/<\/(div|p|li|ul)>/gi, '$& ').replace(/<br\s*\/?>/gi, ' ');
+      const tmp = document.createElement('div');
+      tmp.innerHTML = withBreaks;
+      return (tmp.textContent || '').replace(/\s+/g, ' ').trim();
     }
 
     // On narrow screens the list and editor are two separate screens (like a
@@ -3044,7 +3088,7 @@
       notesEditorEmpty.hidden = true;
       notesEditor.hidden = false;
       notesTitleInput.value = note.title;
-      notesBodyInput.value = note.description || '';
+      notesBodyInput.innerHTML = note.description || '';
       notesEditorMeta.textContent = formatNoteMeta(note);
       renderPlateCard(note);
       renderLockToggle(note);
@@ -3055,7 +3099,10 @@
     async function saveSelectedNote() {
       if (!selectedNoteId) return;
       const title = notesTitleInput.value.trim() || 'Untitled';
-      const description = notesBodyInput.value || null;
+      // An empty contenteditable can still hold a stray <br> some browsers
+      // leave behind — textContent is what actually decides "empty", not
+      // innerHTML, so that stray tag never gets saved as if it were content.
+      const description = notesBodyInput.textContent.trim() ? notesBodyInput.innerHTML : null;
       const res = await fetch(`/api/items/${selectedNoteId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
@@ -3073,8 +3120,168 @@
       notesAutoSaveTimer = setTimeout(saveSelectedNote, AUTOSAVE_DEBOUNCE_MS);
     }
     notesTitleInput.addEventListener('input', scheduleNotesAutoSave);
+
+    // A contenteditable can leave a line as bare inline content directly
+    // under the root instead of wrapped in its own block (observed: type a
+    // line, bold it, hit Enter — Chrome leaves the first line unwrapped and
+    // only wraps the new, second line). Left alone, execCommand("indent"/
+    // "insertUnorderedList") called from that second line treats both as
+    // one paragraph and merges them onto the same list item. Wrapping every
+    // bare top-level run in its own <div> keeps each line a real block
+    // boundary, which is what those commands actually key off of.
+    const NOTES_BLOCK_TAGS = new Set(['DIV', 'P', 'UL', 'OL', 'LI', 'BLOCKQUOTE']);
+    function normalizeEditorBlocks() {
+      let node = notesBodyInput.firstChild;
+      while (node) {
+        if (node.nodeType === Node.ELEMENT_NODE && NOTES_BLOCK_TAGS.has(node.tagName)) {
+          node = node.nextSibling;
+          continue;
+        }
+        const wrapper = document.createElement('div');
+        notesBodyInput.insertBefore(wrapper, node);
+        let n = node;
+        while (n && !(n.nodeType === Node.ELEMENT_NODE && NOTES_BLOCK_TAGS.has(n.tagName))) {
+          const after = n.nextSibling;
+          wrapper.appendChild(n);
+          n = after;
+        }
+        node = n;
+      }
+    }
+
+    // Typing "- " or "* " as the very first thing in a text node converts
+    // it to a bullet list, the same shorthand Notion/Docs/etc use — only
+    // fires when that's literally the whole of the text before the cursor
+    // in this node (a reasonable "start of line" approximation without a
+    // full block-boundary walk).
+    function handleAutoBullet() {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return;
+      const node = sel.anchorNode;
+      if (!node || node.nodeType !== Node.TEXT_NODE) return;
+      const offset = sel.anchorOffset;
+      const before = node.textContent.slice(0, offset);
+      // The browser inserts a non-breaking space (U+00A0), not a plain
+      // one, for a space typed at the start of a line — matched here
+      // alongside a regular space so the trigger still fires either way.
+      if (!/^[-*][ \u00A0]$/.test(before)) return;
+      // insertUnorderedList first, prefix removal second — deliberately in
+      // that order. Confirmed live: calling insertUnorderedList with the
+      // cursor in an ALREADY-EMPTY text node (i.e. removing "- " up front)
+      // makes Chrome's own implementation silently target a different,
+      // non-empty sibling block instead of the current line — a genuine
+      // execCommand quirk, not a selection bug on this end (the
+      // Selection/Range state was verified correct at that point).
+      // Converting while the block still has real content sidesteps it.
+      document.execCommand("insertUnorderedList");
+      // insertUnorderedList detaches the original text node and gives the
+      // new <li> a fresh one — re-reading the live selection (rather than
+      // reusing `node`, now orphaned) is what actually finds it.
+      const freshSel = window.getSelection();
+      const freshNode = freshSel && freshSel.anchorNode;
+      if (freshNode && freshNode.nodeType === Node.TEXT_NODE && /^[-*][ \u00A0]/.test(freshNode.textContent)) {
+        const range = document.createRange();
+        range.setStart(freshNode, 0);
+        range.setEnd(freshNode, 2);
+        range.deleteContents();
+      }
+    }
     notesBodyInput.addEventListener('input', () => {
+      normalizeEditorBlocks();
+      handleAutoBullet();
       updateNotesWordCount();
+      scheduleNotesAutoSave();
+    });
+    function isSelectionInList() {
+      const sel = window.getSelection();
+      const node = sel && sel.anchorNode;
+      if (!node) return false;
+      const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+      return !!(el && el.closest('li'));
+    }
+    // Tab/Shift+Tab nests/un-nests the current bullet level — but only
+    // inside a list. Outside one, execCommand('indent') doesn't no-op the
+    // way list-nesting does — it wraps the line in a <blockquote>, which
+    // isn't in the sanitizer's allowlist and would show up as literal
+    // escaped tag text after a round trip. Left alone, Tab keeps its normal
+    // browser behavior (move focus) outside a list.
+    notesBodyInput.addEventListener('keydown', (e) => {
+      if (e.key !== 'Tab' || !isSelectionInList()) return;
+      e.preventDefault();
+      document.execCommand(e.shiftKey ? 'outdent' : 'indent');
+    });
+
+    // Toolbar — mousedown + preventDefault (not click) keeps focus, and so
+    // the live Selection, inside the editor the whole time; execCommand
+    // then runs against whatever's still selected there. Color/size instead
+    // use real form controls that necessarily steal focus to work at all,
+    // so those save/restore the Range explicitly around the interaction.
+    document.querySelectorAll('#notes-editor-toolbar .notes-toolbar-btn[data-cmd]').forEach((btn) => {
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        document.execCommand(btn.dataset.cmd, false, null);
+        scheduleNotesAutoSave();
+      });
+    });
+
+    let notesSavedRange = null;
+    function saveNotesSelection() {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && notesBodyInput.contains(sel.anchorNode)) {
+        notesSavedRange = sel.getRangeAt(0).cloneRange();
+      }
+    }
+    function restoreNotesSelection() {
+      if (!notesSavedRange) return false;
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(notesSavedRange);
+      return true;
+    }
+    // Only meaningful over an actual text selection — same as any of these
+    // toolbar buttons is a no-op with nothing selected, execCommand's own
+    // native behavior for bold/italic already handles a collapsed cursor
+    // (toggling a "what I type next looks like this" state); reproducing
+    // that here for a manually-applied style is a lot more machinery for a
+    // rarely-needed case, so it's out of scope for this pass.
+    function wrapSelectionWithStyle(styleProp, value) {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+      const range = sel.getRangeAt(0);
+      const span = document.createElement('span');
+      span.style[styleProp] = value;
+      try {
+        range.surroundContents(span);
+      } catch (err) {
+        // surroundContents throws when the range's boundaries fall inside
+        // different elements it can't cleanly wrap in one piece (e.g. a
+        // selection spanning two paragraphs) — extract+wrap+reinsert covers
+        // that case instead.
+        const contents = range.extractContents();
+        span.appendChild(contents);
+        range.insertNode(span);
+      }
+      sel.removeAllRanges();
+      const newRange = document.createRange();
+      newRange.selectNodeContents(span);
+      sel.addRange(newRange);
+    }
+    const notesToolbarSize = document.getElementById('notes-toolbar-size');
+    const notesToolbarColor = document.getElementById('notes-toolbar-color');
+    notesToolbarSize.addEventListener('mousedown', saveNotesSelection);
+    notesToolbarSize.addEventListener('change', () => {
+      const value = notesToolbarSize.value;
+      notesToolbarSize.value = '';
+      if (!value || !restoreNotesSelection()) return;
+      notesBodyInput.focus();
+      wrapSelectionWithStyle('fontSize', value);
+      scheduleNotesAutoSave();
+    });
+    notesToolbarColor.addEventListener('mousedown', saveNotesSelection);
+    notesToolbarColor.addEventListener('input', () => {
+      if (!restoreNotesSelection()) return;
+      notesBodyInput.focus();
+      wrapSelectionWithStyle('color', notesToolbarColor.value);
       scheduleNotesAutoSave();
     });
 

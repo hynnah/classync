@@ -101,4 +101,52 @@ test.describe('output escaping — user-controlled titles never execute or rende
       await getPool().query('DELETE FROM users WHERE email = ?', [email]);
     }
   });
+
+  test('a Note description with an XSS payload never executes — sanitized server-side, rendered as inert content in the editor and the preview', async ({ page }) => {
+    const email = `e2e-xss-notebody-${Date.now()}@example.com`;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.request.get('/continue-solo');
+      await page.goto('/app');
+      await page.waitForSelector('#cal-root .calendar-days');
+
+      const created = await page.evaluate(async (payload) => {
+        const r = await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ kind: 'note', title: 'XSS note body test', description: payload }),
+        });
+        return (await r.json()).item;
+      }, XSS_PAYLOAD);
+
+      try {
+        // The <script> tag and its content are fully discarded, not merely
+        // escaped. img isn't in the allowlist either — since it's escaped
+        // to inert text rather than stripped (see sanitizeNoteHtml's own
+        // note on why), what actually matters is that "onerror" never
+        // survives as a live, unescaped attribute — checked by confirming
+        // no raw "<img" tag start made it through.
+        expect(created.description).not.toContain('<script');
+        expect(created.description).not.toMatch(/<img/i);
+
+        await page.locator('#personal-nav-notes').click();
+        await page.locator('.notes-list-item', { hasText: 'XSS note body test' }).click();
+        await expect(page.locator('#notes-editor-body')).toContainText('Malicious');
+        await expect(page.locator('#notes-editor-body img')).toHaveCount(0);
+        await expect(page.locator('#notes-editor-body script')).toHaveCount(0);
+
+        // The list preview extracts plain text from the same sanitized
+        // HTML — no tag soup should ever show up as literal preview text.
+        const preview = page.locator('.notes-list-preview', { hasText: 'Malicious' });
+        await expect(preview).toBeVisible();
+
+        const fired = await page.evaluate(() => window.__xssFired || false);
+        expect(fired).toBe(false);
+      } finally {
+        await getPool().query('DELETE FROM items WHERE id = ?', [created.id]);
+      }
+    } finally {
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
 });
