@@ -2,7 +2,7 @@ const path = require('path');
 const express = require('express');
 const { UserRepo } = require('../db/repositories/UserRepo');
 
-const CLIENT_DIR = path.join(__dirname, '..', '..', '..', 'client');
+const PUBLIC_DIR = path.join(__dirname, '..', '..', '..', 'public');
 
 const router = express.Router();
 
@@ -27,7 +27,7 @@ router.get('/app', async (req, res, next) => {
     if (!user.onboarded_at) {
       return res.redirect('/firstrun.html');
     }
-    res.sendFile(path.join(CLIENT_DIR, 'app.html'));
+    res.sendFile(path.join(PUBLIC_DIR, 'app.html'));
   } catch (err) {
     next(err);
   }
@@ -42,7 +42,7 @@ router.get('/firstrun.html', async (req, res, next) => {
     if (user.onboarded_at) {
       return res.redirect('/app');
     }
-    res.sendFile(path.join(CLIENT_DIR, 'firstrun.html'));
+    res.sendFile(path.join(PUBLIC_DIR, 'firstrun.html'));
   } catch (err) {
     next(err);
   }

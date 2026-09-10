@@ -95,7 +95,17 @@ function createApp() {
   // app.use(sseRouter); // disabled — see the require() above
   app.use(notesPinRouter);
 
-  app.use(express.static(path.join(__dirname, '..', '..', 'client')));
+  // "public" specifically, not just a name choice — Vercel treats a
+  // top-level /public directory as static output served directly, bypassing
+  // the serverless function (and its build-time bundling) entirely for any
+  // matching path. Renamed from "client": with that name, Vercel's function
+  // bundler was sweeping these files into api/index's own build step and
+  // rewriting ESM `export` syntax into broken CommonJS, since it couldn't
+  // tell they were browser assets, not server dependencies, being served
+  // through a dynamic express.static() path it can't trace statically.
+  // Still served through Express here too, for local dev (npm start), where
+  // there's no separate Vercel static layer, only this app.
+  app.use(express.static(path.join(__dirname, '..', '..', 'public')));
 
   app.use(authRouter);
 
