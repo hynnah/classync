@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Classync — App</title>
+<link rel="icon" type="image/png" href="/assets/classync_tabicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=IBM+Plex+Mono:wght@400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
@@ -2063,7 +2064,6 @@
 
     async function renderMonthView() {
       const { year, month } = cal.state;
-      cal.setItems({});
       const from = isoDate(new Date(year, month, 1));
       const to = isoDate(new Date(year, month + 1, 0));
       const items = await fetchItems(from, to);
@@ -4209,7 +4209,6 @@
       if (!currentSpace) return;
       const cal = getSpaceCal();
       const { year, month } = cal.state;
-      cal.setItems({});
       const from = isoDate(new Date(year, month, 1));
       const to = isoDate(new Date(year, month + 1, 0));
       const items = await fetchSpaceItems(from, to);
@@ -4275,7 +4274,6 @@
     async function refreshAllCalendarView() {
       const cal = getAllCal();
       const { year, month } = cal.state;
-      cal.setItems({});
       const from = isoDate(new Date(year, month, 1));
       const to = isoDate(new Date(year, month + 1, 0));
       const items = await fetchAllItems(from, to);
