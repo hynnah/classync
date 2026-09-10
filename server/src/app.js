@@ -14,7 +14,11 @@ const { spacesRouter } = require('./routes/spaces.routes');
 const { accountRouter } = require('./routes/account.routes');
 const { calendarAuthRouter } = require('./routes/calendarAuth.routes');
 const { adminRouter } = require('./routes/admin.routes');
-const { sseRouter } = require('./routes/sse.routes');
+// SSE disabled — see server/src/routes/sse.routes.js and
+// server/src/realtime/sseHub.js for why (Vercel's serverless model can't
+// hold a persistent connection open). Kept, not deleted, in case this ever
+// moves to a host that supports long-lived connections again.
+// const { sseRouter } = require('./routes/sse.routes');
 const { notesPinRouter } = require('./routes/notesPin.routes');
 
 function createApp() {
@@ -88,7 +92,7 @@ function createApp() {
   app.use(accountRouter);
   app.use(calendarAuthRouter);
   app.use(adminRouter);
-  app.use(sseRouter);
+  // app.use(sseRouter); // disabled — see the require() above
   app.use(notesPinRouter);
 
   app.use(express.static(path.join(__dirname, '..', '..', 'client')));

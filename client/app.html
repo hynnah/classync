@@ -4646,6 +4646,40 @@
     }
     crossViewRefresh.handleItemUpdated = handleItemUpdated;
 
+    // Polling's equivalent of the two handlers above, combined — unlike an
+    // SSE push, a poll tick doesn't know what changed, so it just re-checks
+    // everything currently relevant: Personal always, All if it's been
+    // visited, and whichever Space is open (if any), plus that Space's own
+    // role/removal check (the same thing handleRoleChanged did, just
+    // detected by comparing against loadSpaces()'s fresh list instead of
+    // reading it off a pushed event). Registered on crossViewRefresh for the
+    // same reason handleRoleChanged/handleItemUpdated are — this closure is
+    // the one that owns currentSpace, and the poll timer lives outside it.
+    async function pollTick() {
+      const prevSpace = currentSpace ? { id: currentSpace.id, role: currentSpace.role, name: currentSpace.name } : null;
+      await loadSpaces();
+      if (prevSpace) {
+        const fresh = spaces.find((s) => s.id === prevSpace.id);
+        if (!fresh) {
+          showToast(`You've been removed from "${prevSpace.name}."`);
+          selectPersonal();
+        } else if (fresh.role !== prevSpace.role) {
+          currentSpace.role = fresh.role;
+          scopeSub.textContent = fresh.role === 'organizer' ? 'Organizer' : 'Member';
+          if (!spaceMembersView.hidden) showMembersView();
+          showToast(fresh.role === 'organizer'
+            ? `You've been promoted to Organizer in "${prevSpace.name}."`
+            : `You're now a Member (no longer an Organizer) in "${prevSpace.name}."`);
+        }
+      }
+      await Promise.all([
+        crossViewRefresh.personal?.(),
+        refreshAllIfVisited(),
+        currentSpace ? Promise.all([refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshSpaceTodoView()]) : null,
+      ]);
+    }
+    crossViewRefresh.pollTick = pollTick;
+
     function formatSpacePanelDate(dateStr) {
       const [y, m, d] = dateStr.split('-').map(Number);
       const dt = new Date(y, m - 1, d);
@@ -5183,12 +5217,12 @@
     // chance to open.
     const connectivityBanner = document.getElementById('connectivity-banner');
     const connectivityBannerText = document.getElementById('connectivity-banner-text');
-    let sseOpen = true;
+    let livePollOk = true;
     function updateConnectivityBanner() {
       if (!navigator.onLine) {
         connectivityBannerText.textContent = "You're offline — changes won't save until you're back online.";
         connectivityBanner.hidden = false;
-      } else if (!sseOpen) {
+      } else if (!livePollOk) {
         connectivityBannerText.textContent = 'Reconnecting…';
         connectivityBanner.hidden = false;
       } else {
@@ -5198,27 +5232,50 @@
     window.addEventListener('online', updateConnectivityBanner);
     window.addEventListener('offline', updateConnectivityBanner);
 
-    // Live updates over SSE — opened once both closures above have
-    // registered their crossViewRefresh handlers, so nothing can arrive
-    // before there's something to hand it to. EventSource reconnects on
-    // its own after a drop; the server sends a heartbeat comment line
-    // every 25s so nothing in between times the connection out as idle.
-    const liveUpdates = new EventSource('/sse/updates');
-    liveUpdates.addEventListener('open', () => { sseOpen = true; updateConnectivityBanner(); });
-    liveUpdates.addEventListener('error', () => { sseOpen = false; updateConnectivityBanner(); });
-    liveUpdates.addEventListener('role_changed', (e) => {
-      const data = JSON.parse(e.data);
-      const messages = {
-        promoted: `You've been promoted to Organizer in "${data.spaceName}."`,
-        demoted: `You're now a Member (no longer an Organizer) in "${data.spaceName}."`,
-        removed: `You've been removed from "${data.spaceName}."`,
-      };
-      showToast(messages[data.reason] || `Your role in "${data.spaceName}" changed.`);
-      crossViewRefresh.handleRoleChanged?.(data);
-    });
-    liveUpdates.addEventListener('item_updated', (e) => {
-      crossViewRefresh.handleItemUpdated?.(JSON.parse(e.data));
-    });
+    // --- SSE-based live updates, disabled: Vercel's serverless functions
+    // are short-lived and don't share memory across instances, so a
+    // persistent EventSource connection can't be held open reliably, and
+    // sseHub's in-process Map wouldn't reach a connection held by a
+    // different instance anyway. Kept here, commented out rather than
+    // deleted, in case this ever moves to a host that supports long-lived
+    // connections again (see server/src/realtime/sseHub.js and
+    // server/src/routes/sse.routes.js, also disabled). Replaced below with
+    // polling — the fallback docs/CHECKLIST_10_DAY.md's own "if behind"
+    // plan already named for exactly this case.
+    //
+    // const liveUpdates = new EventSource('/sse/updates');
+    // liveUpdates.addEventListener('open', () => { livePollOk = true; updateConnectivityBanner(); });
+    // liveUpdates.addEventListener('error', () => { livePollOk = false; updateConnectivityBanner(); });
+    // liveUpdates.addEventListener('role_changed', (e) => {
+    //   const data = JSON.parse(e.data);
+    //   const messages = {
+    //     promoted: `You've been promoted to Organizer in "${data.spaceName}."`,
+    //     demoted: `You're now a Member (no longer an Organizer) in "${data.spaceName}."`,
+    //     removed: `You've been removed from "${data.spaceName}."`,
+    //   };
+    //   showToast(messages[data.reason] || `Your role in "${data.spaceName}" changed.`);
+    //   crossViewRefresh.handleRoleChanged?.(data);
+    // });
+    // liveUpdates.addEventListener('item_updated', (e) => {
+    //   crossViewRefresh.handleItemUpdated?.(JSON.parse(e.data));
+    // });
+
+    // Live updates via polling instead — every 20s, quietly re-check
+    // whatever's currently visible. crossViewRefresh.pollTick (registered
+    // above, in the closure that owns currentSpace) does the actual work;
+    // this loop just drives it and reuses the same connectivity banner a
+    // failed poll (network drop, server error) now reports through.
+    const POLL_INTERVAL_MS = 20000;
+    async function pollTick() {
+      try {
+        await crossViewRefresh.pollTick?.();
+        livePollOk = true;
+      } catch (err) {
+        livePollOk = false;
+      }
+      updateConnectivityBanner();
+    }
+    setInterval(pollTick, POLL_INTERVAL_MS);
   }
 
   document.getElementById('sign-out').addEventListener('click', async () => {

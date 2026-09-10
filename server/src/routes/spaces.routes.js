@@ -2,7 +2,8 @@ const express = require('express');
 const { requireLogin } = require('../auth/guard');
 const { SpaceRepo } = require('../db/repositories/SpaceRepo');
 const { UserRepo } = require('../db/repositories/UserRepo');
-const sseHub = require('../realtime/sseHub');
+// SSE disabled — see server/src/realtime/sseHub.js for why.
+// const sseHub = require('../realtime/sseHub');
 const { joinCodeLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
@@ -124,10 +125,11 @@ router.post('/api/spaces/:id/members/:userId/promote', requireLogin, async (req,
     if (result.error === 'already_organizer') {
       return res.status(400).json({ error: 'They\'re already an Organizer.' });
     }
-    const space = await SpaceRepo.findById(req.params.id);
-    sseHub.notifyUser(Number(req.params.userId), 'role_changed', {
-      spaceId: space.id, spaceName: space.name, role: 'organizer', reason: 'promoted',
-    });
+    // Only ever read for the (now-disabled) SSE notify below.
+    // const space = await SpaceRepo.findById(req.params.id);
+    // sseHub.notifyUser(Number(req.params.userId), 'role_changed', {
+    //   spaceId: space.id, spaceName: space.name, role: 'organizer', reason: 'promoted',
+    // });
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -153,10 +155,11 @@ router.post('/api/spaces/:id/members/:userId/demote', requireLogin, async (req, 
     if (result.error === 'not_organizer') {
       return res.status(400).json({ error: 'They\'re not an Organizer.' });
     }
-    const space = await SpaceRepo.findById(req.params.id);
-    sseHub.notifyUser(Number(req.params.userId), 'role_changed', {
-      spaceId: space.id, spaceName: space.name, role: 'member', reason: 'demoted',
-    });
+    // Only ever read for the (now-disabled) SSE notify below.
+    // const space = await SpaceRepo.findById(req.params.id);
+    // sseHub.notifyUser(Number(req.params.userId), 'role_changed', {
+    //   spaceId: space.id, spaceName: space.name, role: 'member', reason: 'demoted',
+    // });
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -179,10 +182,11 @@ router.delete('/api/spaces/:id/members/:userId', requireLogin, async (req, res, 
     if (result.error === 'not_found') {
       return res.status(404).json({ error: 'That person isn\'t a member of this Space.' });
     }
-    const space = await SpaceRepo.findById(req.params.id);
-    sseHub.notifyUser(Number(req.params.userId), 'role_changed', {
-      spaceId: space.id, spaceName: space.name, role: null, reason: 'removed',
-    });
+    // Only ever read for the (now-disabled) SSE notify below.
+    // const space = await SpaceRepo.findById(req.params.id);
+    // sseHub.notifyUser(Number(req.params.userId), 'role_changed', {
+    //   spaceId: space.id, spaceName: space.name, role: null, reason: 'removed',
+    // });
     res.status(204).end();
   } catch (err) {
     next(err);

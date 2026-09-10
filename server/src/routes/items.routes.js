@@ -3,18 +3,21 @@ const { requireLogin } = require('../auth/guard');
 const { ItemRepo } = require('../db/repositories/ItemRepo');
 const { SpaceRepo } = require('../db/repositories/SpaceRepo');
 const { ItemCalendarEventRepo } = require('../db/repositories/ItemCalendarEventRepo');
-const sseHub = require('../realtime/sseHub');
+// SSE disabled — see server/src/realtime/sseHub.js for why. Kept, not
+// deleted, in case this ever moves to a host that supports long-lived
+// connections again.
+// const sseHub = require('../realtime/sseHub');
 const { syncItemForUsers, deleteCalendarEventsForItem } = require('../calendar/sync');
 const { sanitizeNoteHtml } = require('../util/sanitizeNoteHtml');
 
-// Notifies everyone with visibility into this item — every open session
-// refreshing whatever view they're already on picks up the change the same
-// way it already does after a local mutation, just without needing it to be
-// their own tab that made the change. Returns the assignee list so callers
-// that also need to sync Google Calendar don't have to look it up twice.
+// Used to also notify everyone with visibility into this item over SSE, so
+// every open session picked up the change without needing it to be their
+// own tab that made it (disabled below, along with the rest of SSE). Still
+// returns the assignee list — callers that sync Google Calendar rely on it,
+// independent of whether SSE is on.
 async function notifyItemUpdated(itemId, spaceId) {
   const assigneeIds = await ItemRepo.listAssigneeUserIds(itemId);
-  sseHub.notifyUsers(assigneeIds, 'item_updated', { itemId, spaceId: spaceId || null });
+  // sseHub.notifyUsers(assigneeIds, 'item_updated', { itemId, spaceId: spaceId || null });
   return assigneeIds;
 }
 
@@ -373,14 +376,15 @@ router.delete('/api/items/:id', requireLogin, async (req, res, next) => {
     if (existing && existing.kind === 'note' && existing.created_by === req.user.id && existing.is_locked && pinUnproven(req)) {
       return res.status(423).json({ error: 'This note is locked.' });
     }
-    const assigneeIds = existing ? await ItemRepo.listAssigneeUserIds(req.params.id) : [];
+    // Only ever read for the (now-disabled) SSE notify below.
+    // const assigneeIds = existing ? await ItemRepo.listAssigneeUserIds(req.params.id) : [];
     const calendarMappings = existing ? await ItemCalendarEventRepo.listForItem(req.params.id) : [];
 
     const deleted = await ItemRepo.remove({ itemId: req.params.id, userId: req.user.id });
     if (!deleted) {
       return res.status(404).json({ error: 'Item not found.' });
     }
-    sseHub.notifyUsers(assigneeIds, 'item_updated', { itemId: Number(req.params.id), spaceId: existing.space_id, deleted: true });
+    // sseHub.notifyUsers(assigneeIds, 'item_updated', { itemId: Number(req.params.id), spaceId: existing.space_id, deleted: true });
     await deleteCalendarEventsForItem(calendarMappings);
     res.status(204).end();
   } catch (err) {

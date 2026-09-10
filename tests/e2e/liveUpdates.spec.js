@@ -5,7 +5,13 @@ const { getPool } = require('../../server/src/db/pool');
 // session, with no reload on the receiving end — this file exercises the
 // real /sse/updates endpoint end-to-end (two real browser contexts, two
 // real EventSource connections), not a mock of the pub/sub hub.
-test.describe('Live updates over SSE', () => {
+//
+// Skipped, not deleted: SSE itself is disabled (see server/src/app.js,
+// items.routes.js, spaces.routes.js, and client/app.html's bottom-of-file
+// EventSource block, all commented out) since Vercel's serverless model
+// can't hold a persistent connection open. Live updates now work by polling
+// instead — restore this suite if SSE is ever turned back on.
+test.describe.skip('Live updates over SSE', () => {
   test('a promotion pushes a toast and updates the role live, with no reload needed', async ({ page, browser }) => {
     const ownerEmail = `e2e-live-owner-${Date.now()}@example.com`;
     const memberEmail = `e2e-live-member-${Date.now()}@example.com`;
