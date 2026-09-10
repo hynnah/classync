@@ -12,6 +12,10 @@ module.exports = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT) || 3000,
   databaseUrl: required('DATABASE_URL'),
+  // Local/CI MySQL has no TLS listener at all, so this must default to off —
+  // only a managed host that actually requires TLS (TiDB Serverless,
+  // PlanetScale, etc.) needs it set.
+  databaseSsl: process.env.DATABASE_SSL === 'true',
   sessionSecret: required('SESSION_SECRET'),
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID || '',

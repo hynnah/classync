@@ -7,7 +7,11 @@ async function migrate() {
   const schemaPath = path.join(__dirname, '..', '..', 'database', 'schema.sql');
   const sql = fs.readFileSync(schemaPath, 'utf8');
 
-  const connection = await mysql.createConnection({ uri: config.databaseUrl, multipleStatements: true });
+  const connection = await mysql.createConnection({
+    uri: config.databaseUrl,
+    multipleStatements: true,
+    ssl: config.databaseSsl ? { minVersion: 'TLSv1.2' } : undefined,
+  });
   try {
     console.log('Running schema.sql against', config.databaseUrl.replace(/:[^:@]+@/, ':***@'));
     await connection.query(sql);

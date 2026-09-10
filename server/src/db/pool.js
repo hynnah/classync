@@ -7,6 +7,11 @@ function getPool() {
   if (!pool) {
     pool = mysql.createPool({
       uri: config.databaseUrl,
+      // TiDB Serverless (and most managed MySQL hosts) refuse a plain
+      // connection outright — TLS is mandatory, not optional. Node's own
+      // built-in CA store is enough to verify these hosts' certificates,
+      // so no CA file needs to ship with the app.
+      ssl: config.databaseSsl ? { minVersion: 'TLSv1.2' } : undefined,
       waitForConnections: true,
       connectionLimit: 10,
       dateStrings: true,

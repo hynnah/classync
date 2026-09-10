@@ -73,7 +73,6 @@ CREATE TABLE items (
   -- create — locking happens after, via the editor's lock toggle.
   is_locked       BOOLEAN NOT NULL DEFAULT FALSE,
   is_open_to_all  BOOLEAN NOT NULL DEFAULT FALSE,
-  admin_status    ENUM('open','closed') NOT NULL DEFAULT 'open',
   created_by      BIGINT UNSIGNED NOT NULL,
   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
