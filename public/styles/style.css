@@ -330,6 +330,7 @@ a.btn-secondary:hover {
   .page-landing .bg-drift-1 { opacity: 0; }
   .page-landing .bg-drift-2 { opacity: 0; }
   .page-landing .bg-drift-3 { opacity: 0; }
+  .page-landing .eyebrow { color: red !important; font-size: 20px !important; }
 
   .page-landing nav {
     flex-wrap: wrap;
