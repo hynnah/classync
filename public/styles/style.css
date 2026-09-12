@@ -331,7 +331,7 @@ a.btn-secondary:hover {
   .page-landing .bg-drift-2,
   .page-landing .bg-drift-3 {
     animation: none;
-    opacity: 0.06;
+    opacity: 0.12;
   }
 
   .page-landing nav {
