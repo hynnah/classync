@@ -22,6 +22,9 @@
 
   const ERROR_MESSAGES = {
     deactivated: 'This account has been deactivated. If you think this is a mistake, contact an admin.',
+    expired: 'That sign-in link expired or was already used. Please sign in again.',
+    cancelled: 'Google sign-in was cancelled. Please try again.',
+    failed: 'Sign-in failed. Please try again.',
   };
 
   const params = new URLSearchParams(window.location.search);

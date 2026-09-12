@@ -27,10 +27,10 @@ router.get('/auth/google/callback', oauthCallbackLimiter, async (req, res) => {
   const { code, state, error } = req.query;
 
   if (error) {
-    return res.status(400).send('Google sign-in was cancelled or denied.');
+    return res.redirect('/signin.html?error=cancelled');
   }
   if (!state || !req.session.oauthState || state !== req.session.oauthState) {
-    return res.status(400).send('Invalid or expired sign-in attempt. Please try again.');
+    return res.redirect('/signin.html?error=expired');
   }
 
   const ageConfirmed = !!req.session.ageConfirmed;
@@ -62,7 +62,7 @@ router.get('/auth/google/callback', oauthCallbackLimiter, async (req, res) => {
     });
   } catch (err) {
     console.error('Google OAuth callback failed:', err.message);
-    res.status(500).send('Sign-in failed. Please try again.');
+    res.redirect('/signin.html?error=failed');
   }
 });
 

@@ -40,12 +40,14 @@ describe('GET /auth/google/callback', () => {
 
   test('rejects a request with no matching oauthState in session', async () => {
     const res = await request(app).get('/auth/google/callback?code=abc&state=whatever');
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/signin.html?error=expired');
   });
 
   test('rejects when Google reports an error', async () => {
     const res = await request(app).get('/auth/google/callback?error=access_denied');
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/signin.html?error=cancelled');
   });
 
   test('a state minted by /auth/google is required for the callback to proceed past validation', async () => {
@@ -54,7 +56,8 @@ describe('GET /auth/google/callback', () => {
     const state = new URL(start.headers.location).searchParams.get('state');
 
     const mismatched = await agent.get(`/auth/google/callback?code=abc&state=${state}not-it`);
-    expect(mismatched.status).toBe(400);
+    expect(mismatched.status).toBe(302);
+    expect(mismatched.headers.location).toBe('/signin.html?error=expired');
   });
 
   test('a deactivated user is redirected back to the sign-in page with a specific error code, not a raw 403 page', async () => {
