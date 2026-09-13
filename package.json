@@ -27,7 +27,7 @@
     "xss": "^1.0.15"
   },
   "devDependencies": {
-    "@playwright/test": "^1.47.0",
+    "@playwright/test": "^1.63.0",
     "jest": "^29.7.0",
     "supertest": "^7.0.0"
   }
