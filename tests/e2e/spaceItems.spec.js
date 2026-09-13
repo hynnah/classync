@@ -208,7 +208,8 @@ test.describe('Space calendar: creating tasks and events', () => {
           body: JSON.stringify({ spaceId, kind: 'event', title: 'Field trip, not a task', dueDate: '2026-09-25', isOpenToAll: true }),
         });
       }, spaceId);
-      await page.locator('#space-todo-tab-active').click();
+      await page.reload();
+      await page.waitForSelector('#space-todo-view:not([hidden])');
 
       const row = page.locator('#space-todo-body .space-todo-row', { hasText: 'Grade the midterms' });
       await expect(row).toBeVisible();
