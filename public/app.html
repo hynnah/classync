@@ -509,12 +509,12 @@
         </div>
         <div class="todo-rail">
           <div class="todo-rail-head">
-            <div class="urgent-kicker">Urgent</div>
-            <div class="urgent-title">Due now</div>
+            <div class="urgent-kicker">Upcoming</div>
+            <div class="urgent-title">Events</div>
           </div>
           <div id="all-todo-due-body" class="todo-due-body"></div>
           <img class="todo-rail-plate" src="/assets/swan.png" alt="" aria-hidden="true">
-          <p class="todo-rail-footer">Personal + every Space you belong to</p>
+          <p class="todo-rail-footer">Every Space you belong to</p>
         </div>
       </div>
     </div>
@@ -4491,7 +4491,7 @@
       popover: document.getElementById('all-spaces-filter-popover'),
       list: document.getElementById('all-spaces-filter-list'),
       fieldId: 'all-spaces-filter-field',
-      onChange: () => refreshAllCalendarView(),
+      onChange: () => Promise.all([refreshAllCalendarView(), loadAllUrgent()]),
     });
     buildAllSpacesFilterWidget({
       btn: document.getElementById('all-todo-spaces-filter-btn'),
@@ -4553,9 +4553,12 @@
     async function loadAllUrgent() {
       const res = await fetch('/api/items/all/urgent');
       if (!res.ok) return;
+      const visible = (raw) => raw.space_id == null || !allHiddenSpaceIds.has(raw.space_id);
       const { dueToday, dueWeek } = await res.json();
+      const dueTodayFiltered = dueToday.filter(visible);
+      const dueWeekFiltered = dueWeek.filter(visible);
 
-      if (!dueToday.length && !dueWeek.length) {
+      if (!dueTodayFiltered.length && !dueWeekFiltered.length) {
         allUrgentBody.innerHTML = '<p class="urgent-empty">Nothing due yet — create a task to see it here.</p>';
         return;
       }
@@ -4583,8 +4586,8 @@
         });
         return group;
       };
-      const todayGroup = buildGroup('Today', dueToday);
-      const weekGroup = buildGroup('This week', dueWeek);
+      const todayGroup = buildGroup('Today', dueTodayFiltered);
+      const weekGroup = buildGroup('This week', dueWeekFiltered);
       if (todayGroup) allUrgentBody.appendChild(todayGroup);
       if (weekGroup) allUrgentBody.appendChild(weekGroup);
     }
@@ -4876,43 +4879,51 @@
       }
       shown.forEach((raw) => allTodoBody.appendChild(buildAllTodoRow(raw)));
     }
-    // Same idea as Personal's own .todo-rail, scoped to Personal + every
-    // Space instead — filtered to tasks only (events don't have a done
-    // state, and this rail only exists to complete things from), matching
-    // the To Do body's own scope right above it.
-    function buildAllTodoDueRow(raw) {
-      const row = document.createElement('button');
-      row.type = 'button';
+    // Unlike Personal's own .todo-rail (still due-soon tasks — Personal can
+    // never have an event, so an events rail there would always be empty),
+    // this one shows upcoming Space events instead of due-soon tasks: the
+    // To Do body right above it already surfaces due-soon/overdue tasks in
+    // its own Active/Overdue tabs, so a second tasks-due-now rail here was
+    // duplicating that; events were the one thing not shown anywhere else
+    // on this tab. Reuses /api/items/all/urgent (dueToday/dueWeek), same
+    // source loadAllUrgent's rail already pulls from, just filtered to
+    // kind: 'event' instead of 'task'. Not interactive — an event has no
+    // done state — so plain <div> rows, not buttons; no click handler.
+    function buildAllTodoDueEventRow(raw) {
+      const row = document.createElement('div');
       row.className = 'todo-due-item';
-      row.dataset.id = raw.id;
-      const meta = [raw.category || 'Task', raw.due_time ? raw.due_time.slice(0, 5) : null, raw.space_id ? raw.space_name : 'Personal']
-        .filter(Boolean).join(' · ');
+      const meta = [raw.due_time ? raw.due_time.slice(0, 5) : null, raw.space_name].filter(Boolean).join(' · ');
       row.innerHTML = `<span class="todo-due-item-check" aria-hidden="true"></span><span class="todo-due-item-body"><span class="todo-due-item-title">${escapeHtml(raw.title)}</span><span class="todo-due-item-meta">${escapeHtml(meta)}</span></span>`;
       return row;
     }
     async function refreshAllTodoRail() {
       const res = await fetch('/api/items/all/urgent');
       if (!res.ok) return;
-      const { dueToday } = await res.json();
-      const dueSoon = dueToday.filter((i) => i.kind === 'task' && (i.space_id == null || !allHiddenSpaceIds.has(i.space_id)));
+      const { dueToday, dueWeek } = await res.json();
+      const isVisibleEvent = (i) => i.kind === 'event' && (i.space_id == null || !allHiddenSpaceIds.has(i.space_id));
+      const todayEvents = dueToday.filter(isVisibleEvent);
+      const weekEvents = dueWeek.filter(isVisibleEvent);
       allTodoDueBody.innerHTML = '';
-      if (!dueSoon.length) {
-        allTodoDueBody.innerHTML = '<p class="urgent-empty">Nothing due today.</p>';
+      if (!todayEvents.length && !weekEvents.length) {
+        allTodoDueBody.innerHTML = '<p class="urgent-empty">No upcoming events.</p>';
         return;
       }
-      dueSoon.forEach((raw) => allTodoDueBody.appendChild(buildAllTodoDueRow(raw)));
+      const buildGroup = (label, list) => {
+        if (!list.length) return null;
+        const group = document.createElement('div');
+        group.className = 'urgent-group';
+        const head = document.createElement('div');
+        head.className = 'urgent-group-head';
+        head.innerHTML = `<span class="urgent-group-label">${label}</span><span class="urgent-group-line"></span><span class="urgent-group-count">${list.length}</span>`;
+        group.appendChild(head);
+        list.forEach((raw) => group.appendChild(buildAllTodoDueEventRow(raw)));
+        return group;
+      };
+      const todayGroup = buildGroup('Today', todayEvents);
+      const weekGroup = buildGroup('This week', weekEvents);
+      if (todayGroup) allTodoDueBody.appendChild(todayGroup);
+      if (weekGroup) allTodoDueBody.appendChild(weekGroup);
     }
-    allTodoDueBody.addEventListener('click', async (e) => {
-      const row = e.target.closest('.todo-due-item');
-      if (!row) return;
-      row.disabled = true;
-      await fetch(`/api/items/${row.dataset.id}/status`, {
-        method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ status: 'completed' }),
-      });
-      await Promise.all([refreshAllTodoView(), refreshAllCalendarView(), loadAllUrgent(), crossViewRefresh.personal?.()]);
-    });
 
     async function refreshAllTodoView() {
       const res = await fetch('/api/items/all/todo');

@@ -325,7 +325,7 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
     }
   });
 
-  test('the To Do sub-view has its own Due-now rail, same as the Calendar sub-view', async ({ page }) => {
+  test('the To Do sub-view\'s own rail shows upcoming Space events, not due-soon tasks (unlike Calendar\'s rail)', async ({ page }) => {
     const email = `e2e-alltodorail-${Date.now()}@example.com`;
     let spaceId;
     try {
@@ -345,15 +345,18 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       });
       await page.evaluate(async ({ id, dueDate }) => {
+        // a task due today — should NOT show in this rail (it's already in
+        // the To Do body's own Active/Overdue tabs; the rail is events-only)
         await fetch('/api/items', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ spaceId: id, kind: 'task', title: 'E2E All To Do rail space task', dueDate, isOpenToAll: true }),
         });
+        // an event due today — should show
         await fetch('/api/items', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ kind: 'task', title: 'E2E All To Do rail personal task', dueDate }),
+          body: JSON.stringify({ spaceId: id, kind: 'event', title: 'E2E All To Do rail space event', dueDate, isOpenToAll: true }),
         });
       }, { id: spaceId, dueDate: todayIso });
 
@@ -363,16 +366,14 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
       await page.locator('.scope-switcher-item[data-scope="all"]').click();
       await page.locator('#all-nav-todo').click();
 
-      const railSpaceRow = page.locator('#all-todo-due-body .todo-due-item', { hasText: 'E2E All To Do rail space task' });
-      const railPersonalRow = page.locator('#all-todo-due-body .todo-due-item', { hasText: 'E2E All To Do rail personal task' });
-      await expect(railSpaceRow).toBeVisible();
-      await expect(railPersonalRow).toBeVisible();
-      await expect(railSpaceRow).toContainText('E2E All To Do Rail Test');
-      await expect(railPersonalRow).toContainText('Personal');
+      await expect(page.locator('#all-todo-view .urgent-title')).toHaveText('Events');
+      const railEventRow = page.locator('#all-todo-due-body .todo-due-item', { hasText: 'E2E All To Do rail space event' });
+      await expect(railEventRow).toBeVisible();
+      await expect(railEventRow).toContainText('E2E All To Do Rail Test');
+      await expect(page.locator('#all-todo-due-body .todo-due-item', { hasText: 'E2E All To Do rail space task' })).toHaveCount(0);
 
-      // completing from the rail actually completes it, same as the main list's check
-      await railPersonalRow.click();
-      await expect(page.locator('#all-todo-due-body .todo-due-item', { hasText: 'E2E All To Do rail personal task' })).toHaveCount(0);
+      // not interactive — no click-to-complete, since an event has no done state
+      await expect(railEventRow.locator('button')).toHaveCount(0);
     } finally {
       const [users] = await getPool().query('SELECT id FROM users WHERE email = ?', [email]);
       const userIds = users.map((u) => u.id);
@@ -735,6 +736,14 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
       await expect(eventRow).toBeVisible();
       expect(await taskRow.evaluate((el) => el.tagName)).toBe('BUTTON');
       expect(await eventRow.evaluate((el) => el.tagName)).toBe('DIV');
+
+      // Calendar's own Due-now rail now respects the Space filter too
+      // (reversed from an earlier decision) — hiding the Space hides its
+      // event here as well, while the personal task stays
+      await page.locator('#all-spaces-filter-btn').click();
+      await page.locator('.spaces-filter-row', { hasText: 'E2E All Urgent Test' }).click();
+      await expect(eventRow).toHaveCount(0);
+      await expect(taskRow).toBeVisible();
 
       await taskRow.click();
       await expect(taskRow).toHaveCount(0);
