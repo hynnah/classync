@@ -821,6 +821,12 @@ test.describe('the Notes view (split from To Do)', () => {
       await page.waitForSelector('#cal-root .calendar-days');
       await page.locator('#personal-nav-notes').click();
       await page.locator('#notes-new-btn').click();
+      // The click handler awaits its own POST /api/items before updating
+      // anything — Playwright's click() only waits for the event to
+      // dispatch, not for that async work to finish. Waiting for this
+      // value is what actually proves the note exists server-side before
+      // the very next line queries for it via a separate fetch.
+      await expect(page.locator('#notes-editor-title')).toHaveValue('Untitled');
 
       const created = await page.evaluate(async () => {
         const r = await fetch('/api/notes');
@@ -882,6 +888,12 @@ test.describe('the Notes view (split from To Do)', () => {
       await page.waitForSelector('#cal-root .calendar-days');
       await page.locator('#personal-nav-notes').click();
       await page.locator('#notes-new-btn').click();
+      // The click handler awaits its own POST /api/items before updating
+      // anything — Playwright's click() only waits for the event to
+      // dispatch, not for that async work to finish. Waiting for this
+      // value is what actually proves the note exists server-side before
+      // the very next line queries for it via a separate fetch.
+      await expect(page.locator('#notes-editor-title')).toHaveValue('Untitled');
 
       const created = await page.evaluate(async () => {
         const r = await fetch('/api/notes');
@@ -933,6 +945,12 @@ test.describe('the Notes view (split from To Do)', () => {
       await page.waitForSelector('#cal-root .calendar-days');
       await page.locator('#personal-nav-notes').click();
       await page.locator('#notes-new-btn').click();
+      // The click handler awaits its own POST /api/items before updating
+      // anything — Playwright's click() only waits for the event to
+      // dispatch, not for that async work to finish. Waiting for this
+      // value is what actually proves the note exists server-side before
+      // the very next line queries for it via a separate fetch.
+      await expect(page.locator('#notes-editor-title')).toHaveValue('Untitled');
 
       const created = await page.evaluate(async () => {
         const r = await fetch('/api/notes');
@@ -1002,6 +1020,12 @@ test.describe('the Notes view (split from To Do)', () => {
       await page.waitForSelector('#cal-root .calendar-days');
       await page.locator('#personal-nav-notes').click();
       await page.locator('#notes-new-btn').click();
+      // The click handler awaits its own POST /api/items before updating
+      // anything — Playwright's click() only waits for the event to
+      // dispatch, not for that async work to finish. Waiting for this
+      // value is what actually proves the note exists server-side before
+      // the very next line queries for it via a separate fetch.
+      await expect(page.locator('#notes-editor-title')).toHaveValue('Untitled');
 
       const created = await page.evaluate(async () => {
         const r = await fetch('/api/notes');
