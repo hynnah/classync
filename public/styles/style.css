@@ -4462,6 +4462,23 @@ a.btn-secondary:hover {
   border: 1px solid var(--color-divider);
   box-shadow: 0 24px 60px -20px rgba(38, 37, 33, 0.4);
 }
+
+/* Wider than the default modal — a roster row (avatar + name + email +
+   role) needs more breathing room than a form, and a Space can have any
+   number of members with no cap, so this is the one modal most likely to
+   actually need its scroll. Sticky header keeps the close button reachable
+   without scrolling back up once the list runs past the modal's own
+   max-height. */
+#admin-space-members-modal .modal {
+  width: 640px;
+  max-height: 82vh;
+}
+#admin-space-members-modal .modal-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-bg-card);
+}
 .page-app .modal-head {
   display: flex;
   align-items: center;
