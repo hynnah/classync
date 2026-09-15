@@ -553,7 +553,7 @@ describe('/api/items/all/todo — the merged All To Do list (FR-M1)', () => {
     expect(anon.status).toBe(401);
   });
 
-  test('merges an undated Personal task with a Space task, excludes a Space event', async () => {
+  test('merges an undated Personal task with a Space task and a Space event, excludes a Space note', async () => {
     const agent = await loggedInAgent('merge');
     const personal = await agent.post('/api/items').send({ kind: 'task', title: 'All-todo-route personal undated' });
     createdIds.push(personal.body.item.id);
@@ -567,13 +567,16 @@ describe('/api/items/all/todo — the merged All To Do list (FR-M1)', () => {
       spaceId: created.body.space.id, kind: 'event', title: 'All-todo-route space event',
       dueDate: '2026-08-12', isOpenToAll: true,
     });
+    const personalNote = await agent.post('/api/items').send({ kind: 'note', title: 'All-todo-route personal note' });
+    createdIds.push(personalNote.body.item.id);
 
     const res = await agent.get('/api/items/all/todo');
     expect(res.status).toBe(200);
     const ids = res.body.items.map((i) => i.id);
     expect(ids).toContain(personal.body.item.id);
     expect(ids).toContain(spaceTask.body.item.id);
-    expect(ids).not.toContain(spaceEvent.body.item.id);
+    expect(ids).toContain(spaceEvent.body.item.id);
+    expect(ids).not.toContain(personalNote.body.item.id);
   });
 });
 

@@ -260,6 +260,71 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
     }
   });
 
+  test('the To Do list includes Space events as non-checkbox rows, and the To Do tab has its own Space filter', async ({ page }) => {
+    const email = `e2e-alltodoevents-${Date.now()}@example.com`;
+    let spaceId;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+      await page.goto('/app');
+      const space = await page.evaluate(async () => {
+        const r = await fetch('/api/spaces', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name: 'E2E All To Do Events Test' }),
+        });
+        return (await r.json()).space;
+      });
+      spaceId = space.id;
+      await page.evaluate(async (id) => {
+        await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ spaceId: id, kind: 'event', title: 'E2E All To Do space event', dueDate: '2026-11-20', isOpenToAll: true }),
+        });
+      }, spaceId);
+      await page.evaluate(() => fetch('/api/items', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ kind: 'task', title: 'E2E All To Do events personal task' }),
+      }));
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#scope-switcher-btn').click();
+      await page.locator('.scope-switcher-item[data-scope="all"]').click();
+      await page.locator('#all-nav-todo').click();
+      await expect(page.locator('#all-todo-view')).toBeVisible();
+
+      // the event shows up, labeled as one, with a spacer instead of a
+      // checkbox — it never gets a done state
+      const eventRow = page.locator('.todo-row', { has: page.locator('.todo-row-title', { hasText: 'E2E All To Do space event' }) });
+      await expect(eventRow).toBeVisible();
+      await expect(eventRow.locator('.todo-row-meta')).toContainText('Event');
+      await expect(eventRow.locator('.todo-row-check-spacer')).toHaveCount(1);
+      await expect(eventRow.locator('.todo-row-check')).toHaveCount(0);
+
+      // the To Do tab has its own filter control, independent element from
+      // Calendar's but backed by the same underlying preference
+      await expect(page.locator('#all-todo-spaces-filter-label')).toHaveText('All Spaces');
+      await page.locator('#all-todo-spaces-filter-btn').click();
+      await page.locator('#all-todo-spaces-filter-popover .spaces-filter-row', { hasText: 'E2E All To Do Events Test' }).click();
+      await expect(page.locator('.todo-row-title', { hasText: 'E2E All To Do space event' })).toHaveCount(0);
+      await expect(page.locator('.todo-row-title', { hasText: 'E2E All To Do events personal task' })).toBeVisible();
+      await expect(page.locator('#all-todo-spaces-filter-label')).toHaveText('0 of 1 Spaces');
+
+      // switching to Calendar shows the same filter state — one shared
+      // preference, not two independent ones
+      await page.locator('#all-nav-calendar').click();
+      await expect(page.locator('#all-spaces-filter-label')).toHaveText('0 of 1 Spaces');
+    } finally {
+      const [users] = await getPool().query('SELECT id FROM users WHERE email = ?', [email]);
+      const userIds = users.map((u) => u.id);
+      if (userIds.length) await getPool().query('DELETE FROM items WHERE created_by IN (?)', [userIds]);
+      if (spaceId) await getPool().query('DELETE FROM spaces WHERE id = ?', [spaceId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [email]);
+    }
+  });
+
   test('the To Do sub-view has its own Due-now rail, same as the Calendar sub-view', async ({ page }) => {
     const email = `e2e-alltodorail-${Date.now()}@example.com`;
     let spaceId;

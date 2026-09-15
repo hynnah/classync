@@ -193,12 +193,15 @@ describe('ItemRepo', () => {
     });
   });
 
-  // Backs the merged All To Do list — every task (never an event; events
-  // have no completion state) across Personal + every Space the user
-  // belongs to, regardless of due date (same BETWEEN-never-matches-NULL
-  // reason listAllForUser/listAllScoped both already document).
+  // Backs the merged All To Do list — every task and event (never a note;
+  // Notes has its own view) across Personal + every Space the user belongs
+  // to, regardless of due date (same BETWEEN-never-matches-NULL reason
+  // listAllForUser/listAllScoped both already document). An event has no
+  // completion state, but is still worth seeing here — client-side gives
+  // it a spacer instead of a checkbox, same as the Space Tasks tab and the
+  // Due-now rail already do.
   describe('listAllScopedTodo', () => {
-    test('merges Personal + Space tasks (undated included), excludes events, another user\'s items, and items assigned to specific others', async () => {
+    test('merges Personal + Space tasks and events (undated included), excludes another user\'s items and items assigned to specific others', async () => {
       const personalUndated = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Personal undated for all-todo' });
       createdIds.push(personalUndated.id);
 
@@ -221,7 +224,7 @@ describe('ItemRepo', () => {
       const ids = items.map((i) => i.id);
       expect(ids).toContain(personalUndated.id);
       expect(ids).toContain(spaceTask.id);
-      expect(ids).not.toContain(spaceEvent.id);
+      expect(ids).toContain(spaceEvent.id);
 
       const intruderItems = await ItemRepo.listAllScopedTodo(intruder.id);
       const intruderIds = intruderItems.map((i) => i.id);
@@ -231,6 +234,8 @@ describe('ItemRepo', () => {
 
       const foundSpaceTask = items.find((i) => i.id === spaceTask.id);
       expect(foundSpaceTask.space_name).toBe('listAllScopedTodo test');
+      const foundSpaceEvent = items.find((i) => i.id === spaceEvent.id);
+      expect(foundSpaceEvent.space_name).toBe('listAllScopedTodo test');
     });
   });
 

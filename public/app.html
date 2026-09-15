@@ -486,6 +486,15 @@
           <div class="toolbar-heading">To Do</div>
         </div>
         <div class="cal-toolbar-right">
+          <div class="picker-field" id="all-todo-spaces-filter-field">
+            <button id="all-todo-spaces-filter-btn" class="picker-btn" type="button" aria-haspopup="true" aria-expanded="false">
+              <span id="all-todo-spaces-filter-label">All Spaces</span>
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div id="all-todo-spaces-filter-popover" class="spaces-filter-popover" hidden>
+              <div id="all-todo-spaces-filter-list"></div>
+            </div>
+          </div>
           <button id="all-todo-new-btn" class="cal-new-task" type="button">+ New</button>
         </div>
       </div>
@@ -4384,16 +4393,22 @@
         allCalYearEl.textContent = allDayDate.getFullYear();
       }
     }
-    // All Calendar's own per-Space filter — display-only (a personal
-    // viewing preference, not a data restriction: the server still sends
-    // every joined Space's items, this just hides some client-side), so it
-    // deliberately doesn't touch /api/items/all or All's own To Do/Due-now
-    // rail, which keep showing every Space regardless. Persisted to
+    // All's own per-Space filter — display-only (a personal viewing
+    // preference, not a data restriction: the server still sends every
+    // joined Space's items, this just hides some client-side). Persisted to
     // localStorage rather than as a real account setting — same tier as
     // saveViewState's last-viewed scope, a convenience the browser
     // remembers rather than a cross-device account preference. A Space ID
     // left over from one you've since left is harmless: it just never
     // matches anything in the current spaces list.
+    //
+    // One shared hidden-space set drives two separate widget instances —
+    // Calendar's own toolbar control and To Do's — since it's the same
+    // underlying preference ("which Spaces do I want represented in All")
+    // rather than two independent filters a user would have to set twice.
+    // Toggling from either updates both (updateLabel on every instance,
+    // not just the one that was open) so whichever tab you switch to next
+    // already shows the current state.
     const ALL_SPACES_FILTER_KEY = 'classync_all_hidden_spaces';
     function loadHiddenSpaceIds() {
       try {
@@ -4407,71 +4422,85 @@
       try { localStorage.setItem(ALL_SPACES_FILTER_KEY, JSON.stringify([...set])); } catch { /* private browsing, etc. */ }
     }
     let allHiddenSpaceIds = loadHiddenSpaceIds();
+    const allSpacesFilterWidgets = [];
 
-    const allSpacesFilterField = document.getElementById('all-spaces-filter-field');
-    const allSpacesFilterBtn = document.getElementById('all-spaces-filter-btn');
-    const allSpacesFilterLabel = document.getElementById('all-spaces-filter-label');
-    const allSpacesFilterPopover = document.getElementById('all-spaces-filter-popover');
-    const allSpacesFilterList = document.getElementById('all-spaces-filter-list');
+    function buildAllSpacesFilterWidget({ btn, label, popover, list, fieldId, onChange }) {
+      function updateLabel() {
+        const hiddenCount = spaces.filter((s) => allHiddenSpaceIds.has(s.id)).length;
+        label.textContent = hiddenCount === 0 ? 'All Spaces' : `${spaces.length - hiddenCount} of ${spaces.length} Spaces`;
+      }
+      function renderList() {
+        if (!spaces.length) {
+          list.innerHTML = `<div class="spaces-filter-empty">Join a Space to filter by it.</div>`;
+          return;
+        }
+        list.innerHTML = spaces.map((s) => `
+          <button type="button" class="spaces-filter-row${allHiddenSpaceIds.has(s.id) ? '' : ' is-checked'}" data-space-id="${s.id}">
+            <span class="spaces-filter-row-check"><svg width="9" height="9" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="spaces-filter-row-name">${escapeHtml(s.name)}</span>
+          </button>
+        `).join('');
+      }
+      function open() {
+        renderList();
+        // position: fixed (see the CSS comment on .spaces-filter-popover
+        // for why) means the browser won't place this relative to the
+        // button on its own — computed here instead, right-aligned under
+        // the button, each time it opens so it stays correct across
+        // window resizes.
+        const rect = btn.getBoundingClientRect();
+        popover.style.top = `${rect.bottom + 6}px`;
+        popover.style.right = `${window.innerWidth - rect.right}px`;
+        popover.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+      }
+      function close() {
+        popover.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+      }
+      btn.addEventListener('click', () => { popover.hidden ? open() : close(); });
+      list.addEventListener('click', (e) => {
+        const row = e.target.closest('.spaces-filter-row');
+        if (!row) return;
+        const spaceId = Number(row.dataset.spaceId);
+        if (allHiddenSpaceIds.has(spaceId)) {
+          allHiddenSpaceIds.delete(spaceId);
+        } else {
+          allHiddenSpaceIds.add(spaceId);
+        }
+        saveHiddenSpaceIds(allHiddenSpaceIds);
+        renderList();
+        allSpacesFilterWidgets.forEach((w) => w.updateLabel());
+        onChange();
+      });
+      document.addEventListener('click', (e) => {
+        if (!popover.hidden && !e.target.closest(`#${fieldId}`)) close();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !popover.hidden) close();
+      });
+      updateLabel();
+      const widget = { updateLabel, renderList };
+      allSpacesFilterWidgets.push(widget);
+      return widget;
+    }
 
-    function updateAllSpacesFilterLabel() {
-      const hiddenCount = spaces.filter((s) => allHiddenSpaceIds.has(s.id)).length;
-      allSpacesFilterLabel.textContent = hiddenCount === 0 ? 'All Spaces' : `${spaces.length - hiddenCount} of ${spaces.length} Spaces`;
-    }
-    function renderAllSpacesFilterList() {
-      if (!spaces.length) {
-        allSpacesFilterList.innerHTML = `<div class="spaces-filter-empty">Join a Space to filter by it.</div>`;
-        return;
-      }
-      allSpacesFilterList.innerHTML = spaces.map((s) => `
-        <button type="button" class="spaces-filter-row${allHiddenSpaceIds.has(s.id) ? '' : ' is-checked'}" data-space-id="${s.id}">
-          <span class="spaces-filter-row-check"><svg width="9" height="9" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-          <span class="spaces-filter-row-name">${escapeHtml(s.name)}</span>
-        </button>
-      `).join('');
-    }
-    function openAllSpacesFilter() {
-      renderAllSpacesFilterList();
-      // position: fixed (see the CSS comment on .spaces-filter-popover for
-      // why) means the browser won't place this relative to the button on
-      // its own — computed here instead, right-aligned under the button,
-      // each time it opens so it stays correct across window resizes.
-      const rect = allSpacesFilterBtn.getBoundingClientRect();
-      allSpacesFilterPopover.style.top = `${rect.bottom + 6}px`;
-      allSpacesFilterPopover.style.right = `${window.innerWidth - rect.right}px`;
-      allSpacesFilterPopover.hidden = false;
-      allSpacesFilterBtn.setAttribute('aria-expanded', 'true');
-    }
-    function closeAllSpacesFilter() {
-      allSpacesFilterPopover.hidden = true;
-      allSpacesFilterBtn.setAttribute('aria-expanded', 'false');
-    }
-    allSpacesFilterBtn.addEventListener('click', () => {
-      allSpacesFilterPopover.hidden ? openAllSpacesFilter() : closeAllSpacesFilter();
+    buildAllSpacesFilterWidget({
+      btn: document.getElementById('all-spaces-filter-btn'),
+      label: document.getElementById('all-spaces-filter-label'),
+      popover: document.getElementById('all-spaces-filter-popover'),
+      list: document.getElementById('all-spaces-filter-list'),
+      fieldId: 'all-spaces-filter-field',
+      onChange: () => refreshAllCalendarView(),
     });
-    allSpacesFilterList.addEventListener('click', (e) => {
-      const row = e.target.closest('.spaces-filter-row');
-      if (!row) return;
-      const spaceId = Number(row.dataset.spaceId);
-      if (allHiddenSpaceIds.has(spaceId)) {
-        allHiddenSpaceIds.delete(spaceId);
-      } else {
-        allHiddenSpaceIds.add(spaceId);
-      }
-      saveHiddenSpaceIds(allHiddenSpaceIds);
-      renderAllSpacesFilterList();
-      updateAllSpacesFilterLabel();
-      refreshAllCalendarView();
+    buildAllSpacesFilterWidget({
+      btn: document.getElementById('all-todo-spaces-filter-btn'),
+      label: document.getElementById('all-todo-spaces-filter-label'),
+      popover: document.getElementById('all-todo-spaces-filter-popover'),
+      list: document.getElementById('all-todo-spaces-filter-list'),
+      fieldId: 'all-todo-spaces-filter-field',
+      onChange: () => refreshAllTodoView(),
     });
-    document.addEventListener('click', (e) => {
-      if (!allSpacesFilterPopover.hidden && !e.target.closest('#all-spaces-filter-field')) {
-        closeAllSpacesFilter();
-      }
-    });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !allSpacesFilterPopover.hidden) closeAllSpacesFilter();
-    });
-    updateAllSpacesFilterLabel();
 
     async function renderAllMonthView() {
       const cal = getAllCal();
@@ -4771,6 +4800,7 @@
 
     function formatAllTodoMeta(raw, isOverdue) {
       const parts = [];
+      if (raw.kind === 'event') parts.push('Event');
       if (isOverdue) parts.push('Overdue');
       if (raw.due_date) parts.push(formatTodoDate(raw.due_date));
       if (raw.due_time) parts.push(raw.due_time.slice(0, 5));
@@ -4781,24 +4811,34 @@
       const row = document.createElement('div');
       row.className = 'todo-row';
 
+      const isEvent = raw.kind === 'event';
       const isDone = raw.status === 'completed';
       const isOverdue = raw.due_date && raw.due_date < isoDate(new Date()) && !isDone;
 
-      const check = document.createElement('button');
-      check.type = 'button';
-      check.className = 'todo-row-check' + (isDone ? ' is-done' : '');
-      check.setAttribute('aria-label', isDone ? 'Mark as not done' : 'Mark as done');
-      check.addEventListener('click', async () => {
-        check.disabled = true;
-        const nextStatus = isDone ? 'pending' : 'completed';
-        await fetch(`/api/items/${raw.id}/status`, {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ status: nextStatus }),
+      // An event carries no done state (setStatus is meaningless for one —
+      // same reason the Due-now rail and Space Tasks tab already give it a
+      // spacer, not a checkbox, instead of a control).
+      if (isEvent) {
+        const spacer = document.createElement('span');
+        spacer.className = 'todo-row-check-spacer';
+        row.appendChild(spacer);
+      } else {
+        const check = document.createElement('button');
+        check.type = 'button';
+        check.className = 'todo-row-check' + (isDone ? ' is-done' : '');
+        check.setAttribute('aria-label', isDone ? 'Mark as not done' : 'Mark as done');
+        check.addEventListener('click', async () => {
+          check.disabled = true;
+          const nextStatus = isDone ? 'pending' : 'completed';
+          await fetch(`/api/items/${raw.id}/status`, {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ status: nextStatus }),
+          });
+          await Promise.all([refreshAllTodoView(), refreshAllCalendarView(), refreshAllDayPanel(), crossViewRefresh.personal?.()]);
         });
-        await Promise.all([refreshAllTodoView(), refreshAllCalendarView(), refreshAllDayPanel(), crossViewRefresh.personal?.()]);
-      });
-      row.appendChild(check);
+        row.appendChild(check);
+      }
 
       const titleEl = document.createElement('span');
       titleEl.className = 'todo-row-title' + (isDone ? ' is-done' : '');
@@ -4854,7 +4894,7 @@
       const res = await fetch('/api/items/all/urgent');
       if (!res.ok) return;
       const { dueToday } = await res.json();
-      const dueSoon = dueToday.filter((i) => i.kind === 'task');
+      const dueSoon = dueToday.filter((i) => i.kind === 'task' && (i.space_id == null || !allHiddenSpaceIds.has(i.space_id)));
       allTodoDueBody.innerHTML = '';
       if (!dueSoon.length) {
         allTodoDueBody.innerHTML = '<p class="urgent-empty">Nothing due today.</p>';
@@ -4878,7 +4918,7 @@
       const res = await fetch('/api/items/all/todo');
       if (!res.ok) return;
       const { items } = await res.json();
-      allTodoTasksCache = items;
+      allTodoTasksCache = items.filter((i) => i.space_id == null || !allHiddenSpaceIds.has(i.space_id));
       renderAllTodoBody();
       await refreshAllTodoRail();
     }

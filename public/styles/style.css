@@ -2722,6 +2722,15 @@ a.btn-secondary:hover {
 .page-app .todo-row-check.is-done {
   background: var(--color-personal);
 }
+/* An event row's stand-in for .todo-row-check — same footprint, no
+   checkbox, since an event has no done state to toggle. */
+.page-app .todo-row-check-spacer {
+  align-self: center;
+  display: block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
 .page-app .todo-row-title {
   flex: 1;
   min-width: 0;

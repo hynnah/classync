@@ -161,16 +161,19 @@ async function listAllScoped({ userId, from, to }) {
   return rows;
 }
 
-// Backs All's own To Do list — every task (not event; events never get a
-// done state) the user can see, personal or across every Space they belong
-// to, regardless of due date (same reason listAllForUser exists for
+// Backs All's own To Do list — every task and event (not note; Notes has
+// its own view) the user can see, personal or across every Space they
+// belong to, regardless of due date (same reason listAllForUser exists for
 // Personal's To Do: BETWEEN never matches a NULL due_date, so an undated
-// task needs a date-range-free query to ever surface at all).
+// task needs a date-range-free query to ever surface at all). Events carry
+// no done state (setStatus is meaningless for one) -- the client renders
+// them without a checkbox, same "spacer, not a control" treatment the
+// Due-now rail and Space Tasks tab already give them.
 async function listAllScopedTodo(userId) {
   const [rows] = await getPool().query(
     `${SELECT_WITH_STATUS_AND_SPACE}
      WHERE item_assignments.user_id = ?
-       AND items.kind = 'task'
+       AND items.kind != 'note'
        AND (items.space_id IS NULL OR items.space_id IN (SELECT space_id FROM space_members WHERE user_id = ?))
      ORDER BY items.due_date IS NULL, items.due_date ASC, items.due_time ASC`,
     [userId, userId]
