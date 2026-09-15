@@ -4282,6 +4282,8 @@
     const spaceItemAudienceField = document.getElementById('space-item-audience-field');
     const spaceItemAssignees = document.getElementById('space-item-assignees');
     const spaceItemFormError = document.getElementById('space-item-form-error');
+    const spaceItemCancelBtn = document.getElementById('space-item-cancel');
+    const spaceItemSubmitBtn = spaceItemForm.querySelector('.add-space-submit');
     let spaceEditingItemId = null;
 
     function toSpaceCalItem(apiItem) {
@@ -5033,6 +5035,7 @@
           metaEl.textContent = meta;
           body.appendChild(metaEl);
         }
+        body.addEventListener('click', () => openSpaceItemModal(raw, null, raw.created_by !== currentUserId));
         row.appendChild(body);
 
         const actions = document.createElement('div');
@@ -5218,6 +5221,7 @@
         dateEl.textContent = parts.join(' · ');
         metaLine.appendChild(dateEl);
       }
+      main.addEventListener('click', () => openSpaceItemModal(raw, null, raw.created_by !== currentUserId));
 
       if (raw.created_by === currentUserId) {
         const actions = document.createElement('div');
@@ -5362,15 +5366,25 @@
     }
     spaceItemForm.querySelectorAll('input[name="space-item-kind"]').forEach((r) => r.addEventListener('change', updateSpaceItemKindUI));
 
-    async function openSpaceItemModal(item, prefillDate) {
+    // readOnly: a non-creator viewing a task/event they can't edit — the
+    // one place their description was previously visible nowhere at all.
+    // Same modal/fields as editing, just every input disabled and no
+    // Save — a Member gets the context an Organizer wrote, not the
+    // ability to change it.
+    async function openSpaceItemModal(item, prefillDate, readOnly = false) {
       spaceItemFormError.hidden = true;
       spaceItemForm.reset();
       spaceEditingItemId = item ? item.id : null;
       const kindRadios = spaceItemForm.querySelectorAll('input[name="space-item-kind"]');
+      const editableFields = [spaceItemTitleInput, spaceItemDescription, spaceItemCategory, spaceItemDueDate, spaceItemDueTime];
 
       if (item) {
-        spaceItemModalTitle.textContent = item.kind === 'event' ? 'Edit event' : 'Edit task';
-        spaceItemForm.querySelector('.add-space-submit').textContent = 'Save';
+        spaceItemModalTitle.textContent = readOnly
+          ? (item.kind === 'event' ? 'Event details' : 'Task details')
+          : (item.kind === 'event' ? 'Edit event' : 'Edit task');
+        spaceItemSubmitBtn.hidden = readOnly;
+        spaceItemSubmitBtn.textContent = 'Save';
+        spaceItemCancelBtn.textContent = readOnly ? 'Close' : 'Cancel';
         kindRadios.forEach((r) => { r.checked = r.value === item.kind; r.disabled = true; });
         spaceItemTitleInput.value = item.title;
         spaceItemDescription.value = item.description || '';
@@ -5378,10 +5392,14 @@
         spaceItemDueDate.value = item.due_date || '';
         spaceItemDueTime.value = item.due_time ? item.due_time.slice(0, 5) : '';
         spaceItemAudienceField.hidden = true;
+        editableFields.forEach((f) => { f.disabled = readOnly; });
       } else {
         spaceItemModalTitle.textContent = 'New task or event';
-        spaceItemForm.querySelector('.add-space-submit').textContent = 'Create';
+        spaceItemSubmitBtn.hidden = false;
+        spaceItemSubmitBtn.textContent = 'Create';
+        spaceItemCancelBtn.textContent = 'Cancel';
         kindRadios.forEach((r) => { r.disabled = false; });
+        editableFields.forEach((f) => { f.disabled = false; });
         if (prefillDate) spaceItemDueDate.value = prefillDate;
         spaceItemAudienceField.hidden = false;
         await populateSpaceAssignees([]);

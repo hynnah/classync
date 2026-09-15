@@ -315,4 +315,88 @@ test.describe('Space calendar: creating tasks and events', () => {
       await getPool().query('DELETE FROM users WHERE email = ?', [ownerEmail]);
     }
   });
+
+  test('a Member can see a task\'s description by clicking the row — read-only, no Save — while the creator still gets the full editable modal', async ({ page, browser }) => {
+    const spaceName = 'E2E Space Detail Test ' + Date.now();
+    let spaceId;
+    let ownerEmail;
+    let memberEmail;
+    let memberContext;
+    try {
+      const setup = await setUpSpaceWithMember(page, browser, spaceName);
+      ownerEmail = setup.ownerEmail;
+      memberEmail = setup.memberEmail;
+      memberContext = setup.memberContext;
+      spaceId = setup.spaceId;
+      const memberPage = setup.memberPage;
+
+      const description = 'Cover chapters 4-6, include a summary slide. Talk to Ana about the diagrams.';
+      const todayIso = await page.evaluate(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+      await page.evaluate(async ({ id, description, dueDate }) => {
+        await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ spaceId: id, kind: 'task', title: 'Prepare slides', description, category: 'Assignment', dueDate, isOpenToAll: true }),
+        });
+      }, { id: spaceId, description, dueDate: todayIso });
+
+      // the Member: row click on the Tasks tab opens a read-only detail view
+      await memberPage.goto('/app');
+      await memberPage.waitForSelector('#cal-root .calendar-days');
+      await memberPage.locator('#scope-switcher-btn').click();
+      await memberPage.locator('.scope-switcher-item', { hasText: spaceName }).click();
+      await memberPage.locator('#space-nav-tasks').click();
+      await memberPage.locator('.space-todo-row-main', { hasText: 'Prepare slides' }).click();
+
+      await expect(memberPage.locator('#space-item-modal-title')).toHaveText('Task details');
+      await expect(memberPage.locator('#space-item-description')).toHaveValue(description);
+      await expect(memberPage.locator('#space-item-description')).toBeDisabled();
+      await expect(memberPage.locator('#space-item-title')).toBeDisabled();
+      await expect(memberPage.locator('#space-item-modal .add-space-submit')).toBeHidden();
+      await expect(memberPage.locator('#space-item-cancel')).toHaveText('Close');
+      await memberPage.locator('#space-item-cancel').click();
+      await expect(memberPage.locator('#space-item-modal')).toBeHidden();
+
+      // same read-only behavior from the Space day panel, not just Tasks
+      await memberPage.locator('#space-nav-calendar').click();
+      await memberPage.waitForSelector('#space-cal-root .calendar-days');
+      await memberPage.locator(`#space-cal-root .calendar-day[data-date="${todayIso}"]`).click({ position: { x: 5, y: 5 } });
+      await memberPage.locator('.day-panel-row-body', { hasText: 'Prepare slides' }).click();
+      await expect(memberPage.locator('#space-item-modal-title')).toHaveText('Task details');
+      await expect(memberPage.locator('#space-item-modal .add-space-submit')).toBeHidden();
+      await memberPage.locator('#space-item-cancel').click();
+      await expect(memberPage.locator('#space-item-modal')).toBeHidden();
+      // the item modal is nested inside the day panel — closing the item
+      // modal alone leaves the day panel itself open underneath it
+      await memberPage.locator('#space-day-panel-close').click();
+      await expect(memberPage.locator('#space-day-panel')).toBeHidden();
+
+      // the checkbox still works for the Member — read-only is about the
+      // detail view, not completion, which was never gated to begin with
+      await memberPage.locator('#space-nav-tasks').click();
+      const memberRow = memberPage.locator('.space-todo-row', { hasText: 'Prepare slides' });
+      await memberRow.locator('.space-todo-row-check').click();
+      await memberPage.locator('#space-todo-tab-done').click();
+      await expect(memberPage.locator('.space-todo-row-title', { hasText: 'Prepare slides' })).toBeVisible();
+
+      // the creator: row click opens the normal editable modal, Save intact
+      await page.locator('#space-nav-tasks').click();
+      await page.locator('#space-todo-tab-active').click();
+      await page.locator('.space-todo-row-main', { hasText: 'Prepare slides' }).click();
+      await expect(page.locator('#space-item-modal-title')).toHaveText('Edit task');
+      await expect(page.locator('#space-item-modal .add-space-submit')).toBeVisible();
+      await expect(page.locator('#space-item-description')).toBeEnabled();
+      await expect(page.locator('#space-item-cancel')).toHaveText('Cancel');
+    } finally {
+      if (memberContext) await memberContext.close();
+      const [users] = await getPool().query('SELECT id FROM users WHERE email IN (?, ?)', [ownerEmail, memberEmail]);
+      const userIds = users.map((u) => u.id);
+      if (userIds.length) await getPool().query('DELETE FROM items WHERE created_by IN (?)', [userIds]);
+      if (spaceId) await getPool().query('DELETE FROM spaces WHERE id = ?', [spaceId]);
+      await getPool().query('DELETE FROM users WHERE email IN (?, ?)', [ownerEmail, memberEmail]);
+    }
+  });
 });

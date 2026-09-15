@@ -260,15 +260,6 @@ a.btn-secondary:hover {
   color: var(--color-text-faint);
   margin-bottom: 20px;
 }
-.page-landing .legal-notice {
-  font-size: 13.5px;
-  line-height: 1.7;
-  color: var(--color-accent-link);
-  background: var(--color-accent-hover-bg);
-  border: 1px solid var(--color-accent);
-  padding: 14px 18px;
-  margin-bottom: 48px;
-}
 .page-landing .legal-content h2 {
   font-family: var(--font-heading);
   font-weight: 400;
@@ -289,11 +280,6 @@ a.btn-secondary:hover {
 .page-landing .legal-content li + li {
   margin-top: 6px;
 }
-.page-landing .legal-placeholder {
-  color: var(--color-accent-link);
-  font-style: italic;
-}
-
 .page-landing footer { background: var(--color-dark-bg); position: relative; }
 .page-landing .footer-inner { max-width: 1200px; margin: 0 auto; padding: 64px 56px 36px; }
 .page-landing .footer-top { display: flex; justify-content: space-between; gap: 60px; flex-wrap: wrap; padding-bottom: 42px; border-bottom: 1px solid #3a352d; }
@@ -1370,13 +1356,6 @@ a.btn-secondary:hover {
 .page-app .rail-item-label {
   flex: 1;
 }
-.page-app .rail-item-soon {
-  font-family: var(--font-mono);
-  font-size: 8.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-text-faintest);
-}
 .page-app .rail-hint {
   font-size: 11px;
   line-height: 1.65;
@@ -1672,34 +1651,6 @@ a.btn-secondary:hover {
 .page-app .space-placeholder {
   flex: 1;
   padding: 40px;
-}
-.page-app .space-placeholder-inner {
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-}
-.page-app .space-placeholder-inner h1 {
-  font-family: var(--font-heading);
-  font-weight: 300;
-  font-size: 22px;
-  margin: 0;
-}
-.page-app .space-placeholder-role {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--color-accent);
-  margin: 0;
-  order: -1;
-}
-.page-app .space-placeholder-inner p {
-  font-size: 12.5px;
-  line-height: 1.7;
-  color: var(--color-text-muted);
-  margin: 0;
 }
 .page-app .space-placeholder-joincode {
   font-family: var(--font-mono);
@@ -2899,6 +2850,7 @@ a.btn-secondary:hover {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  cursor: pointer;
 }
 .page-app .space-todo-row-title-line {
   display: flex;
@@ -4667,6 +4619,13 @@ a.btn-secondary:hover {
 .page-app .field textarea {
   resize: vertical;
 }
+.page-app .field input:disabled,
+.page-app .field select:disabled,
+.page-app .field textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+  background: var(--color-bg-panel);
+}
 .page-app .field input.field-mono {
   font-family: var(--font-mono);
   letter-spacing: 0.24em;
@@ -5176,6 +5135,7 @@ a.btn-secondary:hover {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  cursor: pointer;
 }
 .page-app .day-panel-row-title {
   font-size: 14.5px;
