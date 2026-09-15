@@ -1136,6 +1136,33 @@
     return `${WEEKDAYS[dt.getDay()].slice(0, 3)} ${dt.getDate()} ${MONTHS[dt.getMonth()].slice(0, 3)}`;
   }
 
+  // Shared by all four Due-now/Upcoming rails (Personal, Space, All
+  // Calendar, All To Do) — each renders different row content (task-only
+  // vs. task+event, different meta fields), passed in as buildRow; only the
+  // Today/This-week grouping and empty-state around it is identical.
+  function renderUrgentRail(container, dueToday, dueWeek, buildRow, emptyText) {
+    if (!dueToday.length && !dueWeek.length) {
+      container.innerHTML = `<p class="urgent-empty">${emptyText}</p>`;
+      return;
+    }
+    container.innerHTML = '';
+    const buildGroup = (label, list) => {
+      if (!list.length) return null;
+      const group = document.createElement('div');
+      group.className = 'urgent-group';
+      const head = document.createElement('div');
+      head.className = 'urgent-group-head';
+      head.innerHTML = `<span class="urgent-group-label">${label}</span><span class="urgent-group-line"></span><span class="urgent-group-count">${list.length}</span>`;
+      group.appendChild(head);
+      list.forEach((raw) => group.appendChild(buildRow(raw)));
+      return group;
+    };
+    const todayGroup = buildGroup('Today', dueToday);
+    const weekGroup = buildGroup('This week', dueWeek);
+    if (todayGroup) container.appendChild(todayGroup);
+    if (weekGroup) container.appendChild(weekGroup);
+  }
+
   function toCalItem(apiItem) {
     return {
       id: apiItem.id,
@@ -2210,41 +2237,21 @@
       }
     }
 
+    function buildUrgentRow(raw) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'urgent-item';
+      row.dataset.id = raw.id;
+      const meta = [raw.kind === 'note' ? 'Note' : (raw.category || 'Task'), raw.due_time ? raw.due_time.slice(0, 5) : null]
+        .filter(Boolean).join(' · ');
+      row.innerHTML = `<span class="urgent-item-check" aria-hidden="true"></span><span class="urgent-item-body"><span class="urgent-item-title">${escapeHtml(raw.title)}</span><span class="urgent-item-meta">${escapeHtml(meta)}</span></span>`;
+      return row;
+    }
     async function loadUrgent() {
       const res = await fetch(`/api/items/urgent?today=${isoDate(new Date())}`);
       if (!res.ok) return;
       const { dueToday, dueWeek } = await res.json();
-
-      if (!dueToday.length && !dueWeek.length) {
-        urgentBody.innerHTML = '<p class="urgent-empty">Nothing due yet — create a task to see it here.</p>';
-        return;
-      }
-
-      urgentBody.innerHTML = '';
-      const buildGroup = (label, list) => {
-        if (!list.length) return null;
-        const group = document.createElement('div');
-        group.className = 'urgent-group';
-        const head = document.createElement('div');
-        head.className = 'urgent-group-head';
-        head.innerHTML = `<span class="urgent-group-label">${label}</span><span class="urgent-group-line"></span><span class="urgent-group-count">${list.length}</span>`;
-        group.appendChild(head);
-        list.forEach((raw) => {
-          const row = document.createElement('button');
-          row.type = 'button';
-          row.className = 'urgent-item';
-          row.dataset.id = raw.id;
-          const meta = [raw.kind === 'note' ? 'Note' : (raw.category || 'Task'), raw.due_time ? raw.due_time.slice(0, 5) : null]
-            .filter(Boolean).join(' · ');
-          row.innerHTML = `<span class="urgent-item-check" aria-hidden="true"></span><span class="urgent-item-body"><span class="urgent-item-title">${escapeHtml(raw.title)}</span><span class="urgent-item-meta">${escapeHtml(meta)}</span></span>`;
-          group.appendChild(row);
-        });
-        return group;
-      };
-      const todayGroup = buildGroup('Today', dueToday);
-      const weekGroup = buildGroup('This week', dueWeek);
-      if (todayGroup) urgentBody.appendChild(todayGroup);
-      if (weekGroup) urgentBody.appendChild(weekGroup);
+      renderUrgentRail(urgentBody, dueToday, dueWeek, buildUrgentRow, 'Nothing due yet — create a task to see it here.');
     }
 
     urgentBody.addEventListener('click', async (e) => {
@@ -4341,43 +4348,23 @@
     // (a task is a clickable button, an event a static non-completable
     // div), scoped to just this one Space via /api/items/urgent?spaceId=.
     const spaceUrgentBody = document.getElementById('space-urgent-body');
+    function buildSpaceUrgentRow(raw) {
+      const isTask = raw.kind === 'task';
+      const row = document.createElement(isTask ? 'button' : 'div');
+      if (isTask) row.type = 'button';
+      row.className = 'urgent-item ' + (isTask ? 'urgent-item--task' : 'urgent-item--event');
+      row.dataset.id = raw.id;
+      const meta = [raw.kind === 'event' ? 'Event' : (raw.category || 'Task'), raw.due_time ? raw.due_time.slice(0, 5) : null]
+        .filter(Boolean).join(' · ');
+      row.innerHTML = `<span class="urgent-item-check" aria-hidden="true"></span><span class="urgent-item-body"><span class="urgent-item-title">${escapeHtml(raw.title)}</span><span class="urgent-item-meta">${escapeHtml(meta)}</span></span>`;
+      return row;
+    }
     async function loadSpaceUrgent() {
       if (!currentSpace) return;
       const res = await fetch(`/api/items/urgent?spaceId=${currentSpace.id}&today=${isoDate(new Date())}`);
       if (!res.ok) return;
       const { dueToday, dueWeek } = await res.json();
-
-      if (!dueToday.length && !dueWeek.length) {
-        spaceUrgentBody.innerHTML = '<p class="urgent-empty">Nothing due yet — create a task to see it here.</p>';
-        return;
-      }
-
-      spaceUrgentBody.innerHTML = '';
-      const buildGroup = (label, list) => {
-        if (!list.length) return null;
-        const group = document.createElement('div');
-        group.className = 'urgent-group';
-        const head = document.createElement('div');
-        head.className = 'urgent-group-head';
-        head.innerHTML = `<span class="urgent-group-label">${label}</span><span class="urgent-group-line"></span><span class="urgent-group-count">${list.length}</span>`;
-        group.appendChild(head);
-        list.forEach((raw) => {
-          const isTask = raw.kind === 'task';
-          const row = document.createElement(isTask ? 'button' : 'div');
-          if (isTask) row.type = 'button';
-          row.className = 'urgent-item ' + (isTask ? 'urgent-item--task' : 'urgent-item--event');
-          row.dataset.id = raw.id;
-          const meta = [raw.kind === 'event' ? 'Event' : (raw.category || 'Task'), raw.due_time ? raw.due_time.slice(0, 5) : null]
-            .filter(Boolean).join(' · ');
-          row.innerHTML = `<span class="urgent-item-check" aria-hidden="true"></span><span class="urgent-item-body"><span class="urgent-item-title">${escapeHtml(raw.title)}</span><span class="urgent-item-meta">${escapeHtml(meta)}</span></span>`;
-          group.appendChild(row);
-        });
-        return group;
-      };
-      const todayGroup = buildGroup('Today', dueToday);
-      const weekGroup = buildGroup('This week', dueWeek);
-      if (todayGroup) spaceUrgentBody.appendChild(todayGroup);
-      if (weekGroup) spaceUrgentBody.appendChild(weekGroup);
+      renderUrgentRail(spaceUrgentBody, dueToday, dueWeek, buildSpaceUrgentRow, 'Nothing due yet — create a task to see it here.');
     }
     spaceUrgentBody.addEventListener('click', async (e) => {
       const row = e.target.closest('button.urgent-item');
@@ -4618,46 +4605,24 @@
     // (a <div>, not a <button>) so the click delegation below — scoped to
     // 'button.urgent-item' — never targets it.
     const allUrgentBody = document.getElementById('all-urgent-body');
+    function buildAllUrgentRow(raw) {
+      const isTask = raw.kind === 'task';
+      const scopeClass = !raw.space_id ? 'urgent-item--personal' : raw.kind === 'event' ? 'urgent-item--event' : 'urgent-item--task';
+      const row = document.createElement(isTask ? 'button' : 'div');
+      if (isTask) row.type = 'button';
+      row.className = 'urgent-item ' + scopeClass;
+      row.dataset.id = raw.id;
+      const meta = [raw.space_id ? raw.space_name : 'Personal', raw.kind === 'event' ? 'Event' : (raw.category || 'Task'), raw.due_time ? raw.due_time.slice(0, 5) : null]
+        .filter(Boolean).join(' · ');
+      row.innerHTML = `<span class="urgent-item-check" aria-hidden="true"></span><span class="urgent-item-body"><span class="urgent-item-title">${escapeHtml(raw.title)}</span><span class="urgent-item-meta">${escapeHtml(meta)}</span></span>`;
+      return row;
+    }
     async function loadAllUrgent() {
       const res = await fetch(`/api/items/all/urgent?today=${isoDate(new Date())}`);
       if (!res.ok) return;
       const visible = (raw) => raw.space_id == null || !allHiddenSpaceIds.has(raw.space_id);
       const { dueToday, dueWeek } = await res.json();
-      const dueTodayFiltered = dueToday.filter(visible);
-      const dueWeekFiltered = dueWeek.filter(visible);
-
-      if (!dueTodayFiltered.length && !dueWeekFiltered.length) {
-        allUrgentBody.innerHTML = '<p class="urgent-empty">Nothing due yet — create a task to see it here.</p>';
-        return;
-      }
-
-      allUrgentBody.innerHTML = '';
-      const scopeClass = (raw) => (!raw.space_id ? 'urgent-item--personal' : raw.kind === 'event' ? 'urgent-item--event' : 'urgent-item--task');
-      const buildGroup = (label, list) => {
-        if (!list.length) return null;
-        const group = document.createElement('div');
-        group.className = 'urgent-group';
-        const head = document.createElement('div');
-        head.className = 'urgent-group-head';
-        head.innerHTML = `<span class="urgent-group-label">${label}</span><span class="urgent-group-line"></span><span class="urgent-group-count">${list.length}</span>`;
-        group.appendChild(head);
-        list.forEach((raw) => {
-          const isTask = raw.kind === 'task';
-          const row = document.createElement(isTask ? 'button' : 'div');
-          if (isTask) row.type = 'button';
-          row.className = 'urgent-item ' + scopeClass(raw);
-          row.dataset.id = raw.id;
-          const meta = [raw.space_id ? raw.space_name : 'Personal', raw.kind === 'event' ? 'Event' : (raw.category || 'Task'), raw.due_time ? raw.due_time.slice(0, 5) : null]
-            .filter(Boolean).join(' · ');
-          row.innerHTML = `<span class="urgent-item-check" aria-hidden="true"></span><span class="urgent-item-body"><span class="urgent-item-title">${escapeHtml(raw.title)}</span><span class="urgent-item-meta">${escapeHtml(meta)}</span></span>`;
-          group.appendChild(row);
-        });
-        return group;
-      };
-      const todayGroup = buildGroup('Today', dueTodayFiltered);
-      const weekGroup = buildGroup('This week', dueWeekFiltered);
-      if (todayGroup) allUrgentBody.appendChild(todayGroup);
-      if (weekGroup) allUrgentBody.appendChild(weekGroup);
+      renderUrgentRail(allUrgentBody, dueToday.filter(visible), dueWeek.filter(visible), buildAllUrgentRow, 'Nothing due yet — create a task to see it here.');
     }
     allUrgentBody.addEventListener('click', async (e) => {
       const row = e.target.closest('button.urgent-item');
@@ -4969,28 +4934,7 @@
       if (!res.ok) return;
       const { dueToday, dueWeek } = await res.json();
       const isVisibleEvent = (i) => i.kind === 'event' && (i.space_id == null || !allHiddenSpaceIds.has(i.space_id));
-      const todayEvents = dueToday.filter(isVisibleEvent);
-      const weekEvents = dueWeek.filter(isVisibleEvent);
-      allTodoDueBody.innerHTML = '';
-      if (!todayEvents.length && !weekEvents.length) {
-        allTodoDueBody.innerHTML = '<p class="urgent-empty">No upcoming events.</p>';
-        return;
-      }
-      const buildGroup = (label, list) => {
-        if (!list.length) return null;
-        const group = document.createElement('div');
-        group.className = 'urgent-group';
-        const head = document.createElement('div');
-        head.className = 'urgent-group-head';
-        head.innerHTML = `<span class="urgent-group-label">${label}</span><span class="urgent-group-line"></span><span class="urgent-group-count">${list.length}</span>`;
-        group.appendChild(head);
-        list.forEach((raw) => group.appendChild(buildAllTodoDueEventRow(raw)));
-        return group;
-      };
-      const todayGroup = buildGroup('Today', todayEvents);
-      const weekGroup = buildGroup('This week', weekEvents);
-      if (todayGroup) allTodoDueBody.appendChild(todayGroup);
-      if (weekGroup) allTodoDueBody.appendChild(weekGroup);
+      renderUrgentRail(allTodoDueBody, dueToday.filter(isVisibleEvent), dueWeek.filter(isVisibleEvent), buildAllTodoDueEventRow, 'No upcoming events.');
     }
 
     async function refreshAllTodoView() {
