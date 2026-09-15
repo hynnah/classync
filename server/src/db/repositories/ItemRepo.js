@@ -197,20 +197,28 @@ async function listAllDatedForUser(userId) {
   return rows;
 }
 
-async function listUrgentForUser(userId) {
+// `today` is always the CALLER's actual local date (YYYY-MM-DD, computed
+// client-side from the browser's own clock and passed in as a query param —
+// see items.routes.js), never CURDATE(). TiDB/most managed MySQL hosts run
+// in UTC; a user in a timezone ahead of UTC (e.g. UTC+8) has already turned
+// over to their next calendar day for several hours while the DB server is
+// still on the previous one, so CURDATE() would keep calling yesterday's
+// (their yesterday's) items "due today" during that whole window — this bit
+// live, reported as "an event from yesterday is still showing as due today."
+async function listUrgentForUser(userId, today) {
   const [dueToday] = await getPool().query(
     `${SELECT_WITH_STATUS}
      WHERE items.space_id IS NULL AND items.created_by = ? AND item_assignments.status = 'pending'
-       AND items.due_date = CURDATE()
+       AND items.due_date = ?
      ORDER BY items.due_time ASC`,
-    [userId]
+    [userId, today]
   );
   const [dueWeek] = await getPool().query(
     `${SELECT_WITH_STATUS}
      WHERE items.space_id IS NULL AND items.created_by = ? AND item_assignments.status = 'pending'
-       AND items.due_date > CURDATE() AND items.due_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+       AND items.due_date > ? AND items.due_date <= DATE_ADD(?, INTERVAL 7 DAY)
      ORDER BY items.due_date ASC, items.due_time ASC`,
-    [userId]
+    [userId, today, today]
   );
   return { dueToday, dueWeek };
 }
@@ -221,22 +229,43 @@ async function listUrgentForUser(userId) {
 // reasoning as listAllScoped). No kind filter — a Space event surfaces here
 // same as a task; the client renders it as a non-completable row (events
 // never get a done state) rather than the query excluding it.
-async function listUrgentAllScoped(userId) {
+async function listUrgentAllScoped(userId, today) {
   const [dueToday] = await getPool().query(
     `${SELECT_WITH_STATUS_AND_SPACE}
      WHERE item_assignments.user_id = ? AND item_assignments.status = 'pending'
        AND (items.space_id IS NULL OR items.space_id IN (SELECT space_id FROM space_members WHERE user_id = ?))
-       AND items.due_date = CURDATE()
+       AND items.due_date = ?
      ORDER BY items.due_time ASC`,
-    [userId, userId]
+    [userId, userId, today]
   );
   const [dueWeek] = await getPool().query(
     `${SELECT_WITH_STATUS_AND_SPACE}
      WHERE item_assignments.user_id = ? AND item_assignments.status = 'pending'
        AND (items.space_id IS NULL OR items.space_id IN (SELECT space_id FROM space_members WHERE user_id = ?))
-       AND items.due_date > CURDATE() AND items.due_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+       AND items.due_date > ? AND items.due_date <= DATE_ADD(?, INTERVAL 7 DAY)
      ORDER BY items.due_date ASC, items.due_time ASC`,
-    [userId, userId]
+    [userId, userId, today, today]
+  );
+  return { dueToday, dueWeek };
+}
+
+// A single Space's own Due-now rail (new — Space Calendar previously had
+// none at all). Same today/this-week split and no kind filter, scoped to
+// one Space instead of merged across every Space like listUrgentAllScoped.
+async function listUrgentForSpace(spaceId, userId, today) {
+  const [dueToday] = await getPool().query(
+    `${SELECT_WITH_STATUS}
+     WHERE items.space_id = ? AND item_assignments.user_id = ? AND item_assignments.status = 'pending'
+       AND items.due_date = ?
+     ORDER BY items.due_time ASC`,
+    [spaceId, userId, today]
+  );
+  const [dueWeek] = await getPool().query(
+    `${SELECT_WITH_STATUS}
+     WHERE items.space_id = ? AND item_assignments.user_id = ? AND item_assignments.status = 'pending'
+       AND items.due_date > ? AND items.due_date <= DATE_ADD(?, INTERVAL 7 DAY)
+     ORDER BY items.due_date ASC, items.due_time ASC`,
+    [spaceId, userId, today, today]
   );
   return { dueToday, dueWeek };
 }
@@ -325,5 +354,5 @@ async function unlockAllNotesForUser(userId) {
 }
 
 module.exports = {
-  ItemRepo: { findById, findForUser, listAssigneeUserIds, create, listForUser, listForSpace, listSpaceTodo, listAllForUser, listAllScoped, listAllScopedTodo, listAllDatedForUser, listUrgentForUser, listUrgentAllScoped, setStatus, update, remove, unlockAllNotesForUser },
+  ItemRepo: { findById, findForUser, listAssigneeUserIds, create, listForUser, listForSpace, listSpaceTodo, listAllForUser, listAllScoped, listAllScopedTodo, listAllDatedForUser, listUrgentForUser, listUrgentAllScoped, listUrgentForSpace, setStatus, update, remove, unlockAllNotesForUser },
 };

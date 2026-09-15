@@ -21,6 +21,15 @@ afterAll(async () => {
   await getPool().end();
 });
 
+// /api/items/urgent and /api/items/all/urgent now require an explicit
+// ?today= (the caller's real local date) rather than trusting the DB
+// server's own CURDATE() — see items.routes.js/ItemRepo.js for why. Tests
+// need the same value in both fixture setup and the request under test.
+function todayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 describe('note vs. task validation on /api/items', () => {
   const app = createApp();
   const createdIds = [];
@@ -580,6 +589,73 @@ describe('/api/items/all/todo — the merged All To Do list (FR-M1)', () => {
   });
 });
 
+describe('/api/items/urgent — Personal or, with ?spaceId, one Space\'s own Due-now rail', () => {
+  const app = createApp();
+  const createdIds = [];
+  const createdSpaceIds = [];
+
+  afterAll(async () => {
+    if (createdIds.length) {
+      await getPool().query('DELETE FROM items WHERE id IN (?)', [createdIds]);
+    }
+    if (createdSpaceIds.length) {
+      await getPool().query('DELETE FROM spaces WHERE id IN (?)', [createdSpaceIds]);
+    }
+    await getPool().query("DELETE FROM users WHERE email LIKE 'itemsurgent-%@example.com'");
+  });
+
+  async function loggedInAgent(label) {
+    const email = `itemsurgent-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+    const agent = request.agent(app);
+    await agent.get(`/auth/test-bypass?email=${encodeURIComponent(email)}`);
+    return agent;
+  }
+
+  test('requires login and a valid ?today', async () => {
+    const anon = await request(app).get('/api/items/urgent');
+    expect(anon.status).toBe(401);
+
+    const agent = await loggedInAgent('validation');
+    const missing = await agent.get('/api/items/urgent');
+    expect(missing.status).toBe(400);
+    const malformed = await agent.get('/api/items/urgent?today=13-45-9999');
+    expect(malformed.status).toBe(400);
+  });
+
+  test('with no spaceId, returns only the caller\'s own Personal items', async () => {
+    const agent = await loggedInAgent('personal');
+    const today = todayIso();
+    const personal = await agent.post('/api/items').send({ kind: 'task', title: 'Urgent-route personal today' });
+    createdIds.push(personal.body.item.id);
+    await getPool().query('UPDATE items SET due_date = ? WHERE id = ?', [today, personal.body.item.id]);
+
+    const res = await agent.get(`/api/items/urgent?today=${today}`);
+    expect(res.status).toBe(200);
+    expect(res.body.dueToday.map((i) => i.id)).toContain(personal.body.item.id);
+  });
+
+  test('?spaceId scopes to that Space, and a non-member gets 404, not a data leak', async () => {
+    const agent = await loggedInAgent('space');
+    const outsider = await loggedInAgent('outsider');
+    const today = todayIso();
+
+    const created = await agent.post('/api/spaces').send({ name: 'Urgent-route space' });
+    createdSpaceIds.push(created.body.space.id);
+    const spaceEvent = await agent.post('/api/items').send({
+      spaceId: created.body.space.id, kind: 'event', title: 'Urgent-route space event', isOpenToAll: true, dueDate: '2026-08-12',
+    });
+    createdIds.push(spaceEvent.body.item.id);
+    await getPool().query('UPDATE items SET due_date = ? WHERE id = ?', [today, spaceEvent.body.item.id]);
+
+    const res = await agent.get(`/api/items/urgent?spaceId=${created.body.space.id}&today=${today}`);
+    expect(res.status).toBe(200);
+    expect(res.body.dueToday.map((i) => i.id)).toContain(spaceEvent.body.item.id);
+
+    const blocked = await outsider.get(`/api/items/urgent?spaceId=${created.body.space.id}&today=${today}`);
+    expect(blocked.status).toBe(404);
+  });
+});
+
 describe('/api/items/all/urgent — the merged All Due-now rail', () => {
   const app = createApp();
   const createdIds = [];
@@ -607,11 +683,20 @@ describe('/api/items/all/urgent — the merged All Due-now rail', () => {
     expect(anon.status).toBe(401);
   });
 
+  test('requires a valid ?today', async () => {
+    const agent = await loggedInAgent('missingtoday');
+    const missing = await agent.get('/api/items/all/urgent');
+    expect(missing.status).toBe(400);
+    const malformed = await agent.get('/api/items/all/urgent?today=not-a-date');
+    expect(malformed.status).toBe(400);
+  });
+
   test('merges a Personal task due today with a Space event due this week', async () => {
     const agent = await loggedInAgent('merge');
+    const today = todayIso();
     const personal = await agent.post('/api/items').send({ kind: 'task', title: 'All-urgent-route personal today' });
     createdIds.push(personal.body.item.id);
-    await getPool().query('UPDATE items SET due_date = CURDATE() WHERE id = ?', [personal.body.item.id]);
+    await getPool().query('UPDATE items SET due_date = ? WHERE id = ?', [today, personal.body.item.id]);
 
     const created = await agent.post('/api/spaces').send({ name: 'All-urgent-route space' });
     createdSpaceIds.push(created.body.space.id);
@@ -620,9 +705,9 @@ describe('/api/items/all/urgent — the merged All Due-now rail', () => {
       dueDate: '2026-08-12',
     });
     createdIds.push(spaceEvent.body.item.id);
-    await getPool().query('UPDATE items SET due_date = DATE_ADD(CURDATE(), INTERVAL 2 DAY) WHERE id = ?', [spaceEvent.body.item.id]);
+    await getPool().query('UPDATE items SET due_date = DATE_ADD(?, INTERVAL 2 DAY) WHERE id = ?', [today, spaceEvent.body.item.id]);
 
-    const res = await agent.get('/api/items/all/urgent');
+    const res = await agent.get(`/api/items/all/urgent?today=${today}`);
     expect(res.status).toBe(200);
     expect(res.body.dueToday.map((i) => i.id)).toContain(personal.body.item.id);
     expect(res.body.dueWeek.map((i) => i.id)).toContain(spaceEvent.body.item.id);

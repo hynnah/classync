@@ -253,4 +253,66 @@ test.describe('Space calendar: creating tasks and events', () => {
       await getPool().query('DELETE FROM users WHERE email IN (?, ?)', [ownerEmail, memberEmail]);
     }
   });
+
+  test('the Space Calendar has its own Due-now rail — a task is completable, an event is not, and a due-yesterday item never shows under Today', async ({ page, browser }) => {
+    const spaceName = 'E2E Space Urgent Test ' + Date.now();
+    let spaceId;
+    let ownerEmail;
+    try {
+      const setup = await setUpSpaceWithMember(page, browser, spaceName);
+      ownerEmail = setup.ownerEmail;
+      spaceId = setup.spaceId;
+      await setup.memberContext.close();
+
+      const { todayIso, yesterdayIso, weekIso } = await page.evaluate(() => {
+        const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const today = new Date();
+        const yesterday = new Date(today.getTime() - 86400000);
+        const week = new Date(today.getTime() + 2 * 86400000);
+        return { todayIso: fmt(today), yesterdayIso: fmt(yesterday), weekIso: fmt(week) };
+      });
+      await page.evaluate(async ({ id, todayIso, yesterdayIso, weekIso }) => {
+        await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ spaceId: id, kind: 'task', title: 'Space urgent task today', dueDate: todayIso, isOpenToAll: true }),
+        });
+        await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ spaceId: id, kind: 'event', title: 'Space urgent event this week', dueDate: weekIso, isOpenToAll: true }),
+        });
+        // the regression this whole rail addition surfaced: an item due
+        // yesterday must never show up under Today
+        await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ spaceId: id, kind: 'task', title: 'Space urgent task yesterday', dueDate: yesterdayIso, isOpenToAll: true }),
+        });
+      }, { id: spaceId, todayIso, yesterdayIso, weekIso });
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#scope-switcher-btn').click();
+      await page.locator('.scope-switcher-item', { hasText: spaceName }).click();
+      await page.waitForSelector('#space-cal-root .calendar-days');
+
+      const taskRow = page.locator('#space-urgent-body .urgent-item', { hasText: 'Space urgent task today' });
+      const eventRow = page.locator('#space-urgent-body .urgent-item', { hasText: 'Space urgent event this week' });
+      await expect(taskRow).toBeVisible();
+      await expect(eventRow).toBeVisible();
+      expect(await taskRow.evaluate((el) => el.tagName)).toBe('BUTTON');
+      expect(await eventRow.evaluate((el) => el.tagName)).toBe('DIV');
+      await expect(page.locator('#space-urgent-body .urgent-item', { hasText: 'Space urgent task yesterday' })).toHaveCount(0);
+
+      await taskRow.click();
+      await expect(taskRow).toHaveCount(0);
+    } finally {
+      const [users] = await getPool().query('SELECT id FROM users WHERE email = ?', [ownerEmail]);
+      const userIds = users.map((u) => u.id);
+      if (userIds.length) await getPool().query('DELETE FROM items WHERE created_by IN (?)', [userIds]);
+      if (spaceId) await getPool().query('DELETE FROM spaces WHERE id = ?', [spaceId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [ownerEmail]);
+    }
+  });
 });

@@ -200,9 +200,26 @@ router.get('/api/items/all/todo', requireLogin, async (req, res, next) => {
   }
 });
 
+// today is required, not defaulted to CURDATE() server-side — the caller's
+// own browser clock is the only thing that actually knows their real local
+// date; a DB server running in a different timezone (TiDB/most managed
+// hosts default to UTC) would silently call yesterday's-for-the-user items
+// "due today" for several hours around their midnight otherwise.
 router.get('/api/items/urgent', requireLogin, async (req, res, next) => {
   try {
-    const { dueToday, dueWeek } = await ItemRepo.listUrgentForUser(req.user.id);
+    const { today, spaceId } = req.query;
+    if (!DATE_RE.test(today || '')) {
+      return res.status(400).json({ error: 'today (YYYY-MM-DD) is required.' });
+    }
+    if (spaceId) {
+      const membership = await SpaceRepo.getMembership(spaceId, req.user.id);
+      if (!membership) {
+        return res.status(404).json({ error: 'Space not found.' });
+      }
+      const { dueToday, dueWeek } = await ItemRepo.listUrgentForSpace(spaceId, req.user.id, today);
+      return res.json({ dueToday, dueWeek });
+    }
+    const { dueToday, dueWeek } = await ItemRepo.listUrgentForUser(req.user.id, today);
     res.json({ dueToday, dueWeek });
   } catch (err) {
     next(err);
@@ -211,7 +228,11 @@ router.get('/api/items/urgent', requireLogin, async (req, res, next) => {
 
 router.get('/api/items/all/urgent', requireLogin, async (req, res, next) => {
   try {
-    const { dueToday, dueWeek } = await ItemRepo.listUrgentAllScoped(req.user.id);
+    const { today } = req.query;
+    if (!DATE_RE.test(today || '')) {
+      return res.status(400).json({ error: 'today (YYYY-MM-DD) is required.' });
+    }
+    const { dueToday, dueWeek } = await ItemRepo.listUrgentAllScoped(req.user.id, today);
     res.json({ dueToday, dueWeek });
   } catch (err) {
     next(err);

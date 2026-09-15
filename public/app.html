@@ -348,6 +348,16 @@
             <span id="space-cal-legend-note">Live</span>
           </div>
         </div>
+
+        <div class="urgent-panel">
+          <div class="urgent-head">
+            <div class="urgent-kicker">Urgent</div>
+            <div class="urgent-title">Due now</div>
+          </div>
+          <div id="space-urgent-body" class="urgent-body">
+            <p class="urgent-empty">Loading…</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2201,7 +2211,7 @@
     }
 
     async function loadUrgent() {
-      const res = await fetch('/api/items/urgent');
+      const res = await fetch(`/api/items/urgent?today=${isoDate(new Date())}`);
       if (!res.ok) return;
       const { dueToday, dueWeek } = await res.json();
 
@@ -2953,7 +2963,7 @@
     }
 
     async function refreshTodoRail() {
-      const res = await fetch('/api/items/urgent');
+      const res = await fetch(`/api/items/urgent?today=${isoDate(new Date())}`);
       if (!res.ok) return;
       const { dueToday } = await res.json();
       const dueSoon = dueToday.filter((i) => i.kind === 'task');
@@ -3861,6 +3871,7 @@
       spaceCalKicker.textContent = `${currentSpace.name} · calendar`;
       saveViewState({ scope: 'space', spaceId: currentSpace.id, view: 'calendar' });
       refreshSpaceCalendarView();
+      loadSpaceUrgent();
     }
     async function showSpaceTasks() {
       leaveSettingsView();
@@ -4323,6 +4334,63 @@
       });
       cal.setItems(itemsByDate);
     }
+    // Space's own Due-now rail — previously the only Calendar view without
+    // one (Personal and All both already had one; a single Space's own
+    // items just had nowhere to surface a due-soon summary). Same
+    // today/this-week grouping and kind-aware row treatment as All's rail
+    // (a task is a clickable button, an event a static non-completable
+    // div), scoped to just this one Space via /api/items/urgent?spaceId=.
+    const spaceUrgentBody = document.getElementById('space-urgent-body');
+    async function loadSpaceUrgent() {
+      if (!currentSpace) return;
+      const res = await fetch(`/api/items/urgent?spaceId=${currentSpace.id}&today=${isoDate(new Date())}`);
+      if (!res.ok) return;
+      const { dueToday, dueWeek } = await res.json();
+
+      if (!dueToday.length && !dueWeek.length) {
+        spaceUrgentBody.innerHTML = '<p class="urgent-empty">Nothing due yet — create a task to see it here.</p>';
+        return;
+      }
+
+      spaceUrgentBody.innerHTML = '';
+      const buildGroup = (label, list) => {
+        if (!list.length) return null;
+        const group = document.createElement('div');
+        group.className = 'urgent-group';
+        const head = document.createElement('div');
+        head.className = 'urgent-group-head';
+        head.innerHTML = `<span class="urgent-group-label">${label}</span><span class="urgent-group-line"></span><span class="urgent-group-count">${list.length}</span>`;
+        group.appendChild(head);
+        list.forEach((raw) => {
+          const isTask = raw.kind === 'task';
+          const row = document.createElement(isTask ? 'button' : 'div');
+          if (isTask) row.type = 'button';
+          row.className = 'urgent-item ' + (isTask ? 'urgent-item--task' : 'urgent-item--event');
+          row.dataset.id = raw.id;
+          const meta = [raw.kind === 'event' ? 'Event' : (raw.category || 'Task'), raw.due_time ? raw.due_time.slice(0, 5) : null]
+            .filter(Boolean).join(' · ');
+          row.innerHTML = `<span class="urgent-item-check" aria-hidden="true"></span><span class="urgent-item-body"><span class="urgent-item-title">${escapeHtml(raw.title)}</span><span class="urgent-item-meta">${escapeHtml(meta)}</span></span>`;
+          group.appendChild(row);
+        });
+        return group;
+      };
+      const todayGroup = buildGroup('Today', dueToday);
+      const weekGroup = buildGroup('This week', dueWeek);
+      if (todayGroup) spaceUrgentBody.appendChild(todayGroup);
+      if (weekGroup) spaceUrgentBody.appendChild(weekGroup);
+    }
+    spaceUrgentBody.addEventListener('click', async (e) => {
+      const row = e.target.closest('button.urgent-item');
+      if (!row) return;
+      row.disabled = true;
+      await fetch(`/api/items/${row.dataset.id}/status`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' }),
+      });
+      await Promise.all([loadSpaceUrgent(), refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshSpaceTodoView(), refreshAllIfVisited()]);
+    });
+
     document.getElementById('space-cal-prev').addEventListener('click', () => { getSpaceCal().prev(); refreshSpaceCalendarView(); });
     document.getElementById('space-cal-next').addEventListener('click', () => { getSpaceCal().next(); refreshSpaceCalendarView(); });
     document.getElementById('space-cal-today').addEventListener('click', () => { getSpaceCal().today(); refreshSpaceCalendarView(); });
@@ -4551,7 +4619,7 @@
     // 'button.urgent-item' — never targets it.
     const allUrgentBody = document.getElementById('all-urgent-body');
     async function loadAllUrgent() {
-      const res = await fetch('/api/items/all/urgent');
+      const res = await fetch(`/api/items/all/urgent?today=${isoDate(new Date())}`);
       if (!res.ok) return;
       const visible = (raw) => raw.space_id == null || !allHiddenSpaceIds.has(raw.space_id);
       const { dueToday, dueWeek } = await res.json();
@@ -4897,7 +4965,7 @@
       return row;
     }
     async function refreshAllTodoRail() {
-      const res = await fetch('/api/items/all/urgent');
+      const res = await fetch(`/api/items/all/urgent?today=${isoDate(new Date())}`);
       if (!res.ok) return;
       const { dueToday, dueWeek } = await res.json();
       const isVisibleEvent = (i) => i.kind === 'event' && (i.space_id == null || !allHiddenSpaceIds.has(i.space_id));
@@ -4971,7 +5039,7 @@
     async function handleItemUpdated({ spaceId }) {
       if (spaceId) {
         if (currentSpace && currentSpace.id === spaceId) {
-          await Promise.all([refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshSpaceTodoView()]);
+          await Promise.all([refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshSpaceTodoView(), loadSpaceUrgent()]);
         }
         await refreshAllIfVisited();
       } else {
@@ -5078,7 +5146,7 @@
             if (!(await confirmDialog(`Delete "${raw.title}"? This can't be undone.`))) return;
             deleteBtn.disabled = true;
             await fetch(`/api/items/${raw.id}`, { method: 'DELETE' });
-            await Promise.all([refreshSpaceTodoView(), refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshAllIfVisited()]);
+            await Promise.all([refreshSpaceTodoView(), refreshSpaceCalendarView(), refreshSpaceDayPanel(), loadSpaceUrgent(), refreshAllIfVisited()]);
           });
           actions.appendChild(deleteBtn);
         }
@@ -5093,7 +5161,7 @@
               headers: { 'content-type': 'application/json' },
               body: JSON.stringify({ status: nextStatus }),
             });
-            await Promise.all([refreshSpaceTodoView(), refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshAllIfVisited()]);
+            await Promise.all([refreshSpaceTodoView(), refreshSpaceCalendarView(), refreshSpaceDayPanel(), loadSpaceUrgent(), refreshAllIfVisited()]);
           });
         }
 
@@ -5135,11 +5203,11 @@
 
     // --- Space's own Tasks tab: every task in this one Space (never an
     // event — events don't get a done state), same Active/Overdue/Completed
-    // layout as Personal's/All's To Do, minus a Due-now rail (same reason
-    // All's omits one — that rail is fed by the Personal-only
-    // /api/items/urgent endpoint, not something this Space's data flows
-    // through). Edit/delete only render for the item's own creator, same
-    // rule the Space day panel already enforces.
+    // layout as Personal's/All's To Do, minus a rail of its own — the
+    // Space's Calendar sub-view already has one (loadSpaceUrgent, its own
+    // Due-now rail), no need for a second copy one nav item over. Edit/
+    // delete only render for the item's own creator, same rule the Space
+    // day panel already enforces.
     const spaceTodoBody = document.getElementById('space-todo-body');
     const spaceTodoKicker = document.getElementById('space-todo-kicker');
     const spaceTodoTabActive = document.getElementById('space-todo-tab-active');
@@ -5193,7 +5261,7 @@
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify({ status: nextStatus }),
           });
-          await Promise.all([refreshSpaceTodoView(), refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshAllIfVisited()]);
+          await Promise.all([refreshSpaceTodoView(), refreshSpaceCalendarView(), refreshSpaceDayPanel(), loadSpaceUrgent(), refreshAllIfVisited()]);
         });
       }
       top.appendChild(check);
@@ -5263,7 +5331,7 @@
           if (!(await confirmDialog(`Delete "${raw.title}"? This can't be undone.`))) return;
           deleteBtn.disabled = true;
           await fetch(`/api/items/${raw.id}`, { method: 'DELETE' });
-          await Promise.all([refreshSpaceTodoView(), refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshAllIfVisited()]);
+          await Promise.all([refreshSpaceTodoView(), refreshSpaceCalendarView(), refreshSpaceDayPanel(), loadSpaceUrgent(), refreshAllIfVisited()]);
         });
         actions.appendChild(deleteBtn);
         row.appendChild(actions);
@@ -5467,7 +5535,7 @@
           return;
         }
         closeSpaceItemModal();
-        await Promise.all([refreshSpaceTodoView(), refreshSpaceCalendarView(), refreshSpaceDayPanel(), refreshAllIfVisited()]);
+        await Promise.all([refreshSpaceTodoView(), refreshSpaceCalendarView(), refreshSpaceDayPanel(), loadSpaceUrgent(), refreshAllIfVisited()]);
       } finally {
         submitBtn.disabled = false;
       }

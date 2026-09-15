@@ -7,6 +7,16 @@ afterAll(async () => {
   await getPool().end();
 });
 
+// listUrgentForUser/listUrgentAllScoped/listUrgentForSpace now take an
+// explicit `today` (see their own comments for why: the caller's real
+// local date, never CURDATE(), since the DB server's own timezone can
+// disagree with it). Tests need the exact same value in both the SQL
+// UPDATE that sets up fixture rows and the function call under test.
+function todayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 describe('ItemRepo', () => {
   let owner;
   let intruder;
@@ -281,19 +291,20 @@ describe('ItemRepo', () => {
 
   describe('listUrgentForUser', () => {
     test('groups pending items into due-today and due-this-week, excluding completed items', async () => {
+      const today = todayIso();
       const todayItem = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Due today unit' });
-      await getPool().query('UPDATE items SET due_date = CURDATE() WHERE id = ?', [todayItem.id]);
+      await getPool().query('UPDATE items SET due_date = ? WHERE id = ?', [today, todayItem.id]);
 
       const weekItem = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Due in 3 days unit' });
-      await getPool().query('UPDATE items SET due_date = DATE_ADD(CURDATE(), INTERVAL 3 DAY) WHERE id = ?', [weekItem.id]);
+      await getPool().query('UPDATE items SET due_date = DATE_ADD(?, INTERVAL 3 DAY) WHERE id = ?', [today, weekItem.id]);
 
       const doneItem = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Completed, due today unit' });
-      await getPool().query('UPDATE items SET due_date = CURDATE() WHERE id = ?', [doneItem.id]);
+      await getPool().query('UPDATE items SET due_date = ? WHERE id = ?', [today, doneItem.id]);
       await ItemRepo.setStatus({ itemId: doneItem.id, userId: owner.id, status: 'completed' });
 
       createdIds.push(todayItem.id, weekItem.id, doneItem.id);
 
-      const { dueToday, dueWeek } = await ItemRepo.listUrgentForUser(owner.id);
+      const { dueToday, dueWeek } = await ItemRepo.listUrgentForUser(owner.id, today);
 
       expect(dueToday.map((i) => i.id)).toContain(todayItem.id);
       expect(dueToday.map((i) => i.id)).not.toContain(doneItem.id);
@@ -304,11 +315,12 @@ describe('ItemRepo', () => {
 
   describe('listUrgentAllScoped', () => {
     test('merges Personal with every Space the user belongs to, still excluding completed items and another Space\'s items', async () => {
+      const today = todayIso();
       const space = await SpaceRepo.createSpace({ name: 'listUrgentAllScoped test', creatorUserId: owner.id });
       createdSpaceIds.push(space.id);
 
       const personalToday = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Personal due today, urgent-all' });
-      await getPool().query('UPDATE items SET due_date = CURDATE() WHERE id = ?', [personalToday.id]);
+      await getPool().query('UPDATE items SET due_date = ? WHERE id = ?', [today, personalToday.id]);
 
       // A Space event still surfaces (the client renders it as a
       // non-completable row) — this query has no kind filter, unlike
@@ -316,10 +328,10 @@ describe('ItemRepo', () => {
       const spaceEventWeek = await ItemRepo.create({
         createdBy: owner.id, spaceId: space.id, kind: 'event', title: 'Space event due this week, urgent-all', isOpenToAll: true,
       });
-      await getPool().query('UPDATE items SET due_date = DATE_ADD(CURDATE(), INTERVAL 2 DAY) WHERE id = ?', [spaceEventWeek.id]);
+      await getPool().query('UPDATE items SET due_date = DATE_ADD(?, INTERVAL 2 DAY) WHERE id = ?', [today, spaceEventWeek.id]);
 
       const doneToday = await ItemRepo.create({ createdBy: owner.id, kind: 'task', title: 'Completed, due today, urgent-all' });
-      await getPool().query('UPDATE items SET due_date = CURDATE() WHERE id = ?', [doneToday.id]);
+      await getPool().query('UPDATE items SET due_date = ? WHERE id = ?', [today, doneToday.id]);
       await ItemRepo.setStatus({ itemId: doneToday.id, userId: owner.id, status: 'completed' });
 
       const otherSpace = await SpaceRepo.createSpace({ name: 'listUrgentAllScoped other space', creatorUserId: intruder.id });
@@ -327,11 +339,11 @@ describe('ItemRepo', () => {
       const otherSpaceToday = await ItemRepo.create({
         createdBy: intruder.id, spaceId: otherSpace.id, kind: 'task', title: 'Other Space task, urgent-all', isOpenToAll: true,
       });
-      await getPool().query('UPDATE items SET due_date = CURDATE() WHERE id = ?', [otherSpaceToday.id]);
+      await getPool().query('UPDATE items SET due_date = ? WHERE id = ?', [today, otherSpaceToday.id]);
 
       createdIds.push(personalToday.id, spaceEventWeek.id, doneToday.id, otherSpaceToday.id);
 
-      const { dueToday, dueWeek } = await ItemRepo.listUrgentAllScoped(owner.id);
+      const { dueToday, dueWeek } = await ItemRepo.listUrgentAllScoped(owner.id, today);
 
       expect(dueToday.map((i) => i.id)).toContain(personalToday.id);
       expect(dueToday.map((i) => i.id)).not.toContain(doneToday.id);
@@ -340,6 +352,46 @@ describe('ItemRepo', () => {
 
       const foundEvent = dueWeek.find((i) => i.id === spaceEventWeek.id);
       expect(foundEvent.space_name).toBe('listUrgentAllScoped test');
+    });
+  });
+
+  describe('listUrgentForSpace', () => {
+    test('scopes to one Space, includes both tasks and events, excludes another Space and completed items', async () => {
+      const today = todayIso();
+      const space = await SpaceRepo.createSpace({ name: 'listUrgentForSpace test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+
+      const spaceTaskToday = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'task', title: 'Space task due today, urgent-space', isOpenToAll: true,
+      });
+      await getPool().query('UPDATE items SET due_date = ? WHERE id = ?', [today, spaceTaskToday.id]);
+
+      const spaceEventWeek = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'event', title: 'Space event due this week, urgent-space', isOpenToAll: true,
+      });
+      await getPool().query('UPDATE items SET due_date = DATE_ADD(?, INTERVAL 2 DAY) WHERE id = ?', [today, spaceEventWeek.id]);
+
+      const doneToday = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'task', title: 'Space task, completed, urgent-space', isOpenToAll: true,
+      });
+      await getPool().query('UPDATE items SET due_date = ? WHERE id = ?', [today, doneToday.id]);
+      await ItemRepo.setStatus({ itemId: doneToday.id, userId: owner.id, status: 'completed' });
+
+      const otherSpace = await SpaceRepo.createSpace({ name: 'listUrgentForSpace other space', creatorUserId: owner.id });
+      createdSpaceIds.push(otherSpace.id);
+      const otherSpaceToday = await ItemRepo.create({
+        createdBy: owner.id, spaceId: otherSpace.id, kind: 'task', title: 'Other Space task, urgent-space', isOpenToAll: true,
+      });
+      await getPool().query('UPDATE items SET due_date = ? WHERE id = ?', [today, otherSpaceToday.id]);
+
+      createdIds.push(spaceTaskToday.id, spaceEventWeek.id, doneToday.id, otherSpaceToday.id);
+
+      const { dueToday, dueWeek } = await ItemRepo.listUrgentForSpace(space.id, owner.id, today);
+
+      expect(dueToday.map((i) => i.id)).toContain(spaceTaskToday.id);
+      expect(dueToday.map((i) => i.id)).not.toContain(doneToday.id);
+      expect(dueToday.map((i) => i.id)).not.toContain(otherSpaceToday.id);
+      expect(dueWeek.map((i) => i.id)).toContain(spaceEventWeek.id);
     });
   });
 
