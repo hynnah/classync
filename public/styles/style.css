@@ -4721,14 +4721,16 @@ a.btn-secondary:hover {
 }
 
 /* All Calendar's own Space filter — same floating-panel treatment as
-   date/time popovers, anchored right (not left, like those two) since this
-   sits at the toolbar's right edge and a left-anchored popover here would
-   overflow off-screen. */
+   date/time popovers, but position: fixed with JS-computed coordinates
+   (set at open time, see openAllSpacesFilter) rather than position:
+   absolute anchored to .picker-field like those two: this control lives
+   inside .cal-toolbar, which has its own overflow: hidden (to clip the
+   decorative background cloud behind every toolbar in the app) that would
+   otherwise clip this popover too, cutting it off before it ever showed
+   anything. Fixed positioning escapes that ancestor clipping entirely. */
 .page-app .spaces-filter-popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 10;
+  position: fixed;
+  z-index: 30;
   width: 240px;
   max-height: 280px;
   overflow-y: auto;

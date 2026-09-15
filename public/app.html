@@ -4404,6 +4404,13 @@
     }
     function openAllSpacesFilter() {
       renderAllSpacesFilterList();
+      // position: fixed (see the CSS comment on .spaces-filter-popover for
+      // why) means the browser won't place this relative to the button on
+      // its own — computed here instead, right-aligned under the button,
+      // each time it opens so it stays correct across window resizes.
+      const rect = allSpacesFilterBtn.getBoundingClientRect();
+      allSpacesFilterPopover.style.top = `${rect.bottom + 6}px`;
+      allSpacesFilterPopover.style.right = `${window.innerWidth - rect.right}px`;
       allSpacesFilterPopover.hidden = false;
       allSpacesFilterBtn.setAttribute('aria-expanded', 'true');
     }
