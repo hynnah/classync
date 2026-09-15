@@ -4719,6 +4719,82 @@ a.btn-secondary:hover {
   width: 240px;
   padding: 10px;
 }
+
+/* All Calendar's own Space filter — same floating-panel treatment as
+   date/time popovers, anchored right (not left, like those two) since this
+   sits at the toolbar's right edge and a left-anchored popover here would
+   overflow off-screen. */
+.page-app .spaces-filter-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 10;
+  width: 240px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--color-bg-card);
+  border: 1px solid #d8cfbc;
+  box-shadow: 0 12px 28px -10px rgba(38, 37, 33, 0.25);
+}
+.page-app .spaces-filter-popover[hidden] {
+  display: none;
+}
+.page-app .spaces-filter-empty {
+  padding: 10px 8px;
+  font-size: 12.5px;
+  color: var(--color-text-faint);
+}
+.page-app .spaces-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--font-body);
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: normal;
+  text-align: left;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.page-app .spaces-filter-row:hover {
+  box-shadow: none;
+  transform: none;
+  background: rgba(182, 130, 53, 0.06);
+}
+.page-app .spaces-filter-row-check {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-personal-border);
+  background: var(--color-bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.page-app .spaces-filter-row-check svg {
+  opacity: 0;
+}
+.page-app .spaces-filter-row.is-checked .spaces-filter-row-check {
+  background: var(--color-personal);
+  border-color: var(--color-personal-border);
+}
+.page-app .spaces-filter-row.is-checked .spaces-filter-row-check svg {
+  opacity: 1;
+}
+.page-app .spaces-filter-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .page-app .date-popover-nav {
   display: flex;
   align-items: center;

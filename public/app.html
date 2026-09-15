@@ -430,6 +430,15 @@
           </div>
         </div>
         <div class="cal-toolbar-right">
+          <div class="picker-field" id="all-spaces-filter-field">
+            <button id="all-spaces-filter-btn" class="picker-btn" type="button" aria-haspopup="true" aria-expanded="false">
+              <span id="all-spaces-filter-label">All Spaces</span>
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div id="all-spaces-filter-popover" class="spaces-filter-popover" hidden>
+              <div id="all-spaces-filter-list"></div>
+            </div>
+          </div>
           <button id="all-new-task-btn" class="cal-new-task" type="button">+ New</button>
         </div>
       </div>
@@ -4347,6 +4356,88 @@
       }
       return allCal;
     }
+    // All Calendar's own per-Space filter — display-only (a personal
+    // viewing preference, not a data restriction: the server still sends
+    // every joined Space's items, this just hides some client-side), so it
+    // deliberately doesn't touch /api/items/all or All's own To Do/Due-now
+    // rail, which keep showing every Space regardless. Persisted to
+    // localStorage rather than as a real account setting — same tier as
+    // saveViewState's last-viewed scope, a convenience the browser
+    // remembers rather than a cross-device account preference. A Space ID
+    // left over from one you've since left is harmless: it just never
+    // matches anything in the current spaces list.
+    const ALL_SPACES_FILTER_KEY = 'classync_all_hidden_spaces';
+    function loadHiddenSpaceIds() {
+      try {
+        const raw = localStorage.getItem(ALL_SPACES_FILTER_KEY);
+        return raw ? new Set(JSON.parse(raw)) : new Set();
+      } catch {
+        return new Set();
+      }
+    }
+    function saveHiddenSpaceIds(set) {
+      try { localStorage.setItem(ALL_SPACES_FILTER_KEY, JSON.stringify([...set])); } catch { /* private browsing, etc. */ }
+    }
+    let allHiddenSpaceIds = loadHiddenSpaceIds();
+
+    const allSpacesFilterField = document.getElementById('all-spaces-filter-field');
+    const allSpacesFilterBtn = document.getElementById('all-spaces-filter-btn');
+    const allSpacesFilterLabel = document.getElementById('all-spaces-filter-label');
+    const allSpacesFilterPopover = document.getElementById('all-spaces-filter-popover');
+    const allSpacesFilterList = document.getElementById('all-spaces-filter-list');
+
+    function updateAllSpacesFilterLabel() {
+      const hiddenCount = spaces.filter((s) => allHiddenSpaceIds.has(s.id)).length;
+      allSpacesFilterLabel.textContent = hiddenCount === 0 ? 'All Spaces' : `${spaces.length - hiddenCount} of ${spaces.length} Spaces`;
+    }
+    function renderAllSpacesFilterList() {
+      if (!spaces.length) {
+        allSpacesFilterList.innerHTML = `<div class="spaces-filter-empty">Join a Space to filter by it.</div>`;
+        return;
+      }
+      allSpacesFilterList.innerHTML = spaces.map((s) => `
+        <button type="button" class="spaces-filter-row${allHiddenSpaceIds.has(s.id) ? '' : ' is-checked'}" data-space-id="${s.id}">
+          <span class="spaces-filter-row-check"><svg width="9" height="9" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="spaces-filter-row-name">${escapeHtml(s.name)}</span>
+        </button>
+      `).join('');
+    }
+    function openAllSpacesFilter() {
+      renderAllSpacesFilterList();
+      allSpacesFilterPopover.hidden = false;
+      allSpacesFilterBtn.setAttribute('aria-expanded', 'true');
+    }
+    function closeAllSpacesFilter() {
+      allSpacesFilterPopover.hidden = true;
+      allSpacesFilterBtn.setAttribute('aria-expanded', 'false');
+    }
+    allSpacesFilterBtn.addEventListener('click', () => {
+      allSpacesFilterPopover.hidden ? openAllSpacesFilter() : closeAllSpacesFilter();
+    });
+    allSpacesFilterList.addEventListener('click', (e) => {
+      const row = e.target.closest('.spaces-filter-row');
+      if (!row) return;
+      const spaceId = Number(row.dataset.spaceId);
+      if (allHiddenSpaceIds.has(spaceId)) {
+        allHiddenSpaceIds.delete(spaceId);
+      } else {
+        allHiddenSpaceIds.add(spaceId);
+      }
+      saveHiddenSpaceIds(allHiddenSpaceIds);
+      renderAllSpacesFilterList();
+      updateAllSpacesFilterLabel();
+      refreshAllCalendarView();
+    });
+    document.addEventListener('click', (e) => {
+      if (!allSpacesFilterPopover.hidden && !e.target.closest('#all-spaces-filter-field')) {
+        closeAllSpacesFilter();
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !allSpacesFilterPopover.hidden) closeAllSpacesFilter();
+    });
+    updateAllSpacesFilterLabel();
+
     async function refreshAllCalendarView() {
       const cal = getAllCal();
       const { year, month } = cal.state;
@@ -4354,9 +4445,11 @@
       const to = isoDate(new Date(year, month + 1, 0));
       const items = await fetchAllItems(from, to);
       const itemsByDate = {};
-      items.forEach((raw) => {
-        (itemsByDate[raw.due_date] ||= []).push(toAllCalItem(raw));
-      });
+      items
+        .filter((raw) => raw.space_id == null || !allHiddenSpaceIds.has(raw.space_id))
+        .forEach((raw) => {
+          (itemsByDate[raw.due_date] ||= []).push(toAllCalItem(raw));
+        });
       cal.setItems(itemsByDate);
     }
 

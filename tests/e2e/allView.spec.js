@@ -68,6 +68,81 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
     }
   });
 
+  test('the All Calendar Space filter hides a Space\'s items client-side, and the choice survives a reload', async ({ page }) => {
+    const ownerEmail = `e2e-allview-filter-${Date.now()}@example.com`;
+    let spaceId;
+    try {
+      await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(ownerEmail)}`);
+      await page.goto('/app');
+      const space = await page.evaluate(async () => {
+        const r = await fetch('/api/spaces', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name: 'E2E All Filter Test' }),
+        });
+        return (await r.json()).space;
+      });
+      spaceId = space.id;
+
+      const todayIso = await page.evaluate(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+      await page.evaluate(async ({ id, dueDate }) => {
+        await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ spaceId: id, kind: 'event', title: 'E2E filter space event', dueDate, isOpenToAll: true }),
+        });
+        await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ kind: 'task', title: 'E2E filter personal task', dueDate }),
+        });
+      }, { id: spaceId, dueDate: todayIso });
+
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#scope-switcher-btn').click();
+      await page.locator('.scope-switcher-item[data-scope="all"]').click();
+      await expect(page.locator('#all-view')).toBeVisible();
+
+      // both visible with no filter applied yet
+      await expect(page.locator('#all-cal-root .cal-item-title', { hasText: 'E2E filter space event' })).toBeVisible();
+      await expect(page.locator('#all-cal-root .cal-item-title', { hasText: 'E2E filter personal task' })).toBeVisible();
+      await expect(page.locator('#all-spaces-filter-label')).toHaveText('All Spaces');
+
+      // uncheck the Space — its item hides, the personal task doesn't
+      await page.locator('#all-spaces-filter-btn').click();
+      await page.locator('.spaces-filter-row', { hasText: 'E2E All Filter Test' }).click();
+      await expect(page.locator('#all-cal-root .cal-item-title', { hasText: 'E2E filter space event' })).toBeHidden();
+      await expect(page.locator('#all-cal-root .cal-item-title', { hasText: 'E2E filter personal task' })).toBeVisible();
+      await expect(page.locator('#all-spaces-filter-label')).toHaveText('0 of 1 Spaces');
+
+      // survives a reload — this is a saved preference, not a one-off toggle
+      await page.reload();
+      await page.waitForSelector('#cal-root .calendar-days');
+      await page.locator('#scope-switcher-btn').click();
+      await page.locator('.scope-switcher-item[data-scope="all"]').click();
+      await expect(page.locator('#all-view')).toBeVisible();
+      await expect(page.locator('#all-spaces-filter-label')).toHaveText('0 of 1 Spaces');
+      await expect(page.locator('#all-cal-root .cal-item-title', { hasText: 'E2E filter space event' })).toBeHidden();
+      await expect(page.locator('#all-cal-root .cal-item-title', { hasText: 'E2E filter personal task' })).toBeVisible();
+
+      // re-checking it brings the Space's item back
+      await page.locator('#all-spaces-filter-btn').click();
+      await page.locator('.spaces-filter-row', { hasText: 'E2E All Filter Test' }).click();
+      await expect(page.locator('#all-cal-root .cal-item-title', { hasText: 'E2E filter space event' })).toBeVisible();
+      await expect(page.locator('#all-spaces-filter-label')).toHaveText('All Spaces');
+    } finally {
+      const [users] = await getPool().query('SELECT id FROM users WHERE email = ?', [ownerEmail]);
+      const userIds = users.map((u) => u.id);
+      if (userIds.length) await getPool().query('DELETE FROM items WHERE created_by IN (?)', [userIds]);
+      if (spaceId) await getPool().query('DELETE FROM spaces WHERE id = ?', [spaceId]);
+      await getPool().query('DELETE FROM users WHERE email = ?', [ownerEmail]);
+    }
+  });
+
   test('a member removed from a Space no longer sees that Space\'s item in All view', async ({ page, browser }) => {
     const ownerEmail = `e2e-allviewremove-owner-${Date.now()}@example.com`;
     const memberEmail = `e2e-allviewremove-member-${Date.now()}@example.com`;
