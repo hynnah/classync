@@ -161,14 +161,10 @@ async function listAllScoped({ userId, from, to }) {
   return rows;
 }
 
-// Backs All's own To Do list — every task and event (not note; Notes has
-// its own view) the user can see, personal or across every Space they
-// belong to, regardless of due date (same reason listAllForUser exists for
-// Personal's To Do: BETWEEN never matches a NULL due_date, so an undated
-// task needs a date-range-free query to ever surface at all). Events carry
-// no done state (setStatus is meaningless for one) -- the client renders
-// them without a checkbox, same "spacer, not a control" treatment the
-// Due-now rail and Space Tasks tab already give them.
+// Backs All's own To Do list — every task and event (not note), personal
+// or across every Space, regardless of due date (BETWEEN never matches a
+// NULL due_date, so undated items need a range-free query). Events render
+// without a checkbox client-side — no done state to toggle.
 async function listAllScopedTodo(userId) {
   const [rows] = await getPool().query(
     `${SELECT_WITH_STATUS_AND_SPACE}
@@ -197,14 +193,9 @@ async function listAllDatedForUser(userId) {
   return rows;
 }
 
-// `today` is always the CALLER's actual local date (YYYY-MM-DD, computed
-// client-side from the browser's own clock and passed in as a query param —
-// see items.routes.js), never CURDATE(). TiDB/most managed MySQL hosts run
-// in UTC; a user in a timezone ahead of UTC (e.g. UTC+8) has already turned
-// over to their next calendar day for several hours while the DB server is
-// still on the previous one, so CURDATE() would keep calling yesterday's
-// (their yesterday's) items "due today" during that whole window — this bit
-// live, reported as "an event from yesterday is still showing as due today."
+// `today` is the caller's real local date, passed in — never CURDATE().
+// The DB runs in UTC; a user ahead of UTC could see yesterday's items
+// still marked due-today for hours after their own midnight otherwise.
 async function listUrgentForUser(userId, today) {
   const [dueToday] = await getPool().query(
     `${SELECT_WITH_STATUS}
@@ -249,9 +240,8 @@ async function listUrgentAllScoped(userId, today) {
   return { dueToday, dueWeek };
 }
 
-// A single Space's own Due-now rail (new — Space Calendar previously had
-// none at all). Same today/this-week split and no kind filter, scoped to
-// one Space instead of merged across every Space like listUrgentAllScoped.
+// A single Space's own Due-now rail (Space Calendar had none before).
+// Same shape as listUrgentAllScoped, scoped to one Space instead of merged.
 async function listUrgentForSpace(spaceId, userId, today) {
   const [dueToday] = await getPool().query(
     `${SELECT_WITH_STATUS}

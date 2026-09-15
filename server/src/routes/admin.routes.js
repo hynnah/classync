@@ -119,11 +119,9 @@ router.get('/api/admin/spaces', ...adminOnly, async (req, res, next) => {
   }
 });
 
-// Reuses SpaceRepo.listMembers directly rather than duplicating its query
-// here — that function has no membership check baked into it (the regular
-// GET /api/spaces/:id/members route does its own gate via getMembership
-// before calling it), so it's already exactly what an admin, who isn't
-// necessarily a member of the Space they're looking at, needs.
+// Reuses SpaceRepo.listMembers directly — it has no membership check
+// baked in (the regular route gates via getMembership before calling it),
+// so it already fits an admin who isn't necessarily a member.
 router.get('/api/admin/spaces/:id/members', ...adminOnly, async (req, res, next) => {
   try {
     const space = await SpaceRepo.findById(req.params.id);

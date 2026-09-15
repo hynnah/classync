@@ -1136,10 +1136,8 @@
     return `${WEEKDAYS[dt.getDay()].slice(0, 3)} ${dt.getDate()} ${MONTHS[dt.getMonth()].slice(0, 3)}`;
   }
 
-  // Shared by all four Due-now/Upcoming rails (Personal, Space, All
-  // Calendar, All To Do) — each renders different row content (task-only
-  // vs. task+event, different meta fields), passed in as buildRow; only the
-  // Today/This-week grouping and empty-state around it is identical.
+  // Shared by all four Due-now/Upcoming rails — each has different row
+  // content (buildRow), only the Today/This-week grouping is identical.
   function renderUrgentRail(container, dueToday, dueWeek, buildRow, emptyText) {
     if (!dueToday.length && !dueWeek.length) {
       container.innerHTML = `<p class="urgent-empty">${emptyText}</p>`;
@@ -1745,14 +1743,9 @@
       `).join('');
     }
 
-    // Admin's own read-only view of a Space's roster — a separate endpoint
-    // (GET /api/admin/spaces/:id/members) from the regular
-    // GET /api/spaces/:id/members, since that one requires the caller to
-    // actually be a member of the Space; an admin looking at someone else's
-    // Space wouldn't pass that check. No promote/demote/remove here on
-    // purpose — this is visibility, not another surface for Space
-    // management, which already exists (as the Space itself) for whoever's
-    // actually in it.
+    // Admin's own read-only view of a Space's roster — separate from GET
+    // /api/spaces/:id/members, which requires actual membership. No
+    // promote/demote/remove — visibility only, not a second management surface.
     const adminSpaceMembersModal = document.getElementById('admin-space-members-modal');
     const adminSpaceMembersClose = document.getElementById('admin-space-members-close');
     const adminSpaceMembersTitle = document.getElementById('admin-space-members-title');
@@ -4341,12 +4334,9 @@
       });
       cal.setItems(itemsByDate);
     }
-    // Space's own Due-now rail — previously the only Calendar view without
-    // one (Personal and All both already had one; a single Space's own
-    // items just had nowhere to surface a due-soon summary). Same
-    // today/this-week grouping and kind-aware row treatment as All's rail
-    // (a task is a clickable button, an event a static non-completable
-    // div), scoped to just this one Space via /api/items/urgent?spaceId=.
+    // Space's own Due-now rail — the one Calendar view that had none before.
+    // Same task-vs-event row treatment as All's rail, scoped to one Space
+    // via /api/items/urgent?spaceId=.
     const spaceUrgentBody = document.getElementById('space-urgent-body');
     function buildSpaceUrgentRow(raw) {
       const isTask = raw.kind === 'task';
@@ -4419,9 +4409,8 @@
     // crossViewRefresh.all was wired to fire on every mutation).
     let allViewVisited = false;
     let allCal = null;
-    // Month/Day toggle, same shape as Personal's own viewMode/dayDate pair
-    // (initApp's closure, above) — kept separate so switching Personal to
-    // Day doesn't also flip All, or vice versa.
+    // Month/Day toggle, mirrors Personal's own viewMode/dayDate — kept
+    // separate so switching one scope's view doesn't flip the other.
     let allViewMode = 'month';
     let allDayDate = new Date();
     function getAllCal() {
@@ -4448,22 +4437,11 @@
         allCalYearEl.textContent = allDayDate.getFullYear();
       }
     }
-    // All's own per-Space filter — display-only (a personal viewing
-    // preference, not a data restriction: the server still sends every
-    // joined Space's items, this just hides some client-side). Persisted to
-    // localStorage rather than as a real account setting — same tier as
-    // saveViewState's last-viewed scope, a convenience the browser
-    // remembers rather than a cross-device account preference. A Space ID
-    // left over from one you've since left is harmless: it just never
-    // matches anything in the current spaces list.
-    //
-    // One shared hidden-space set drives two separate widget instances —
-    // Calendar's own toolbar control and To Do's — since it's the same
-    // underlying preference ("which Spaces do I want represented in All")
-    // rather than two independent filters a user would have to set twice.
-    // Toggling from either updates both (updateLabel on every instance,
-    // not just the one that was open) so whichever tab you switch to next
-    // already shows the current state.
+    // All's own per-Space filter — display-only (server still sends every
+    // Space's items; this hides some client-side), persisted to localStorage
+    // like saveViewState's last-viewed scope, not a synced account setting.
+    // One shared hidden-space set drives both Calendar's and To Do's widget
+    // instances — same preference, not two independent filters.
     const ALL_SPACES_FILTER_KEY = 'classync_all_hidden_spaces';
     function loadHiddenSpaceIds() {
       try {
@@ -4498,11 +4476,8 @@
       }
       function open() {
         renderList();
-        // position: fixed (see the CSS comment on .spaces-filter-popover
-        // for why) means the browser won't place this relative to the
-        // button on its own — computed here instead, right-aligned under
-        // the button, each time it opens so it stays correct across
-        // window resizes.
+        // position: fixed (see .spaces-filter-popover's CSS comment) needs
+        // coordinates computed manually — right-aligned under the button.
         const rect = btn.getBoundingClientRect();
         popover.style.top = `${rect.bottom + 6}px`;
         popover.style.right = `${window.innerWidth - rect.right}px`;
@@ -4584,10 +4559,8 @@
         items,
       });
     }
-    // The single entry point every existing caller (poll tick, item
-    // mutation handlers, the Space filter, prev/next/today below) already
-    // calls — kept as one function so none of them need to know or care
-    // which view mode is currently active.
+    // Single entry point every caller already uses (poll tick, mutations,
+    // the filter, nav) — dispatches by view mode so none of them need to care.
     async function refreshAllCalendarView() {
       updateAllHeading();
       if (allViewMode === 'month') {
@@ -4795,10 +4768,8 @@
     allDayPanel.addEventListener('click', (e) => {
       if (e.target === allDayPanel) closeAllDayPanel();
     });
-    // Mirrors Personal's own openDayPanelFromTarget/catRoot handlers — a
-    // month-view cell opens that cell's date; anywhere within the day view
-    // (there's no per-item pill target there, same as Personal) opens
-    // whichever date is currently showing.
+    // Mirrors Personal's openDayPanelFromTarget — a month cell opens its
+    // date; anywhere in day view opens whatever date is showing.
     async function openAllDayPanelFromTarget(target) {
       const dayCell = target.closest('.calendar-day');
       if (dayCell) {
@@ -4851,9 +4822,8 @@
       const isDone = raw.status === 'completed';
       const isOverdue = raw.due_date && raw.due_date < isoDate(new Date()) && !isDone;
 
-      // An event carries no done state (setStatus is meaningless for one —
-      // same reason the Due-now rail and Space Tasks tab already give it a
-      // spacer, not a checkbox, instead of a control).
+      // An event has no done state — same spacer treatment the Due-now
+      // rail and Space Tasks tab already give it, instead of a checkbox.
       if (isEvent) {
         const spacer = document.createElement('span');
         spacer.className = 'todo-row-check-spacer';
@@ -4912,16 +4882,11 @@
       }
       shown.forEach((raw) => allTodoBody.appendChild(buildAllTodoRow(raw)));
     }
-    // Unlike Personal's own .todo-rail (still due-soon tasks — Personal can
-    // never have an event, so an events rail there would always be empty),
-    // this one shows upcoming Space events instead of due-soon tasks: the
-    // To Do body right above it already surfaces due-soon/overdue tasks in
-    // its own Active/Overdue tabs, so a second tasks-due-now rail here was
-    // duplicating that; events were the one thing not shown anywhere else
-    // on this tab. Reuses /api/items/all/urgent (dueToday/dueWeek), same
-    // source loadAllUrgent's rail already pulls from, just filtered to
-    // kind: 'event' instead of 'task'. Not interactive — an event has no
-    // done state — so plain <div> rows, not buttons; no click handler.
+    // Shows upcoming Space events, not due-soon tasks — those already
+    // surface in the Active/Overdue tabs above, so a due-now rail here
+    // would just duplicate that; events were the one thing missing.
+    // Personal's own rail still shows tasks (Personal can't have events).
+    // Non-interactive — no done state to toggle, so plain divs.
     function buildAllTodoDueEventRow(raw) {
       const row = document.createElement('div');
       row.className = 'todo-due-item';
@@ -5147,11 +5112,9 @@
 
     // --- Space's own Tasks tab: every task in this one Space (never an
     // event — events don't get a done state), same Active/Overdue/Completed
-    // layout as Personal's/All's To Do, minus a rail of its own — the
-    // Space's Calendar sub-view already has one (loadSpaceUrgent, its own
-    // Due-now rail), no need for a second copy one nav item over. Edit/
-    // delete only render for the item's own creator, same rule the Space
-    // day panel already enforces.
+    // layout as Personal's/All's To Do. No rail of its own — the Calendar
+    // sub-view already has one. Edit/delete only render for the item's own
+    // creator, same rule the Space day panel already enforces.
     const spaceTodoBody = document.getElementById('space-todo-body');
     const spaceTodoKicker = document.getElementById('space-todo-kicker');
     const spaceTodoTabActive = document.getElementById('space-todo-tab-active');

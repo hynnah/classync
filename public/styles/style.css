@@ -4472,12 +4472,9 @@ a.btn-secondary:hover {
   box-shadow: 0 24px 60px -20px rgba(38, 37, 33, 0.4);
 }
 
-/* Wider than the default modal — a roster row (avatar + name + email +
-   role) needs more breathing room than a form, and a Space can have any
-   number of members with no cap, so this is the one modal most likely to
-   actually need its scroll. Sticky header keeps the close button reachable
-   without scrolling back up once the list runs past the modal's own
-   max-height. */
+/* Wider than the default modal — roster rows need more room than a form,
+   and Spaces have no member cap, so this one's likely to scroll. Sticky
+   header keeps the close button reachable while it does. */
 #admin-space-members-modal .modal {
   width: 640px;
   max-height: 82vh;
@@ -4729,14 +4726,10 @@ a.btn-secondary:hover {
   padding: 10px;
 }
 
-/* All Calendar's own Space filter — same floating-panel treatment as
-   date/time popovers, but position: fixed with JS-computed coordinates
-   (set at open time, see openAllSpacesFilter) rather than position:
-   absolute anchored to .picker-field like those two: this control lives
-   inside .cal-toolbar, which has its own overflow: hidden (to clip the
-   decorative background cloud behind every toolbar in the app) that would
-   otherwise clip this popover too, cutting it off before it ever showed
-   anything. Fixed positioning escapes that ancestor clipping entirely. */
+/* Same floating-panel treatment as date/time popovers, but position:
+   fixed with JS-computed coordinates instead of absolute — .cal-toolbar
+   has overflow: hidden (clips the decorative background cloud), which
+   was silently clipping this popover too until switched to fixed. */
 .page-app .spaces-filter-popover {
   position: fixed;
   z-index: 30;

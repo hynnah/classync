@@ -21,10 +21,8 @@ afterAll(async () => {
   await getPool().end();
 });
 
-// /api/items/urgent and /api/items/all/urgent now require an explicit
-// ?today= (the caller's real local date) rather than trusting the DB
-// server's own CURDATE() — see items.routes.js/ItemRepo.js for why. Tests
-// need the same value in both fixture setup and the request under test.
+// /api/items(/all)/urgent require an explicit ?today= now (see
+// items.routes.js) — tests need the same value in fixture setup and the request.
 function todayIso() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

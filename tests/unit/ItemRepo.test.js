@@ -7,11 +7,8 @@ afterAll(async () => {
   await getPool().end();
 });
 
-// listUrgentForUser/listUrgentAllScoped/listUrgentForSpace now take an
-// explicit `today` (see their own comments for why: the caller's real
-// local date, never CURDATE(), since the DB server's own timezone can
-// disagree with it). Tests need the exact same value in both the SQL
-// UPDATE that sets up fixture rows and the function call under test.
+// listUrgent*/listUrgentForSpace take an explicit `today` now (see their
+// own comments) — tests need the same value in fixture setup and the call.
 function todayIso() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

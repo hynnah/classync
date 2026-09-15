@@ -200,11 +200,8 @@ router.get('/api/items/all/todo', requireLogin, async (req, res, next) => {
   }
 });
 
-// today is required, not defaulted to CURDATE() server-side — the caller's
-// own browser clock is the only thing that actually knows their real local
-// date; a DB server running in a different timezone (TiDB/most managed
-// hosts default to UTC) would silently call yesterday's-for-the-user items
-// "due today" for several hours around their midnight otherwise.
+// today is required, never defaulted to CURDATE() server-side — only the
+// browser knows the caller's real local date (see listUrgentForUser).
 router.get('/api/items/urgent', requireLogin, async (req, res, next) => {
   try {
     const { today, spaceId } = req.query;
