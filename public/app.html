@@ -1044,6 +1044,22 @@
   </div>
 </div>
 
+<div id="admin-space-members-modal" class="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="admin-space-members-title">
+    <div class="modal-head">
+      <h2 id="admin-space-members-title">Members</h2>
+      <button id="admin-space-members-close" class="modal-close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="space-members-body">
+      <div class="space-roster-head">
+        <span class="kicker">Roster</span>
+        <span id="admin-space-members-count" class="space-roster-count"></span>
+      </div>
+      <div id="admin-space-members-list" class="space-roster-list"></div>
+    </div>
+  </div>
+</div>
+
 <div id="confirm-dialog" class="modal-backdrop" hidden>
   <div class="modal confirm-modal" role="alertdialog" aria-modal="true" aria-describedby="confirm-dialog-message">
     <p id="confirm-dialog-message" class="confirm-dialog-message"></p>
@@ -1650,7 +1666,7 @@
           <div class="admin-row-text">
             <span class="admin-row-title">${escapeHtml(s.name)}</span>
             <span class="admin-row-meta">
-              ${s.memberCount} member${s.memberCount === 1 ? '' : 's'} · code ${escapeHtml(s.joinCode)} · created ${formatAdminDate(s.createdAt)}
+              <button class="admin-row-meta-link" type="button" data-action="view-members" data-space-id="${s.id}" data-space-name="${escapeHtml(s.name)}">${s.memberCount} member${s.memberCount === 1 ? '' : 's'}</button> · code ${escapeHtml(s.joinCode)} · created ${formatAdminDate(s.createdAt)}
               <button class="admin-copy-btn ${adminCopiedSpaceId === s.id ? 'is-copied' : ''}" type="button" data-action="copy" data-code="${escapeHtml(s.joinCode)}" data-space-id="${s.id}" title="Copy join code">
                 <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="9" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M2.5 10.5V3a1 1 0 0 1 1-1H10" stroke="currentColor" stroke-width="1.2"/></svg>
               </button>
@@ -1662,6 +1678,61 @@
         </div>
       `).join('');
     }
+
+    // Admin's own read-only view of a Space's roster — a separate endpoint
+    // (GET /api/admin/spaces/:id/members) from the regular
+    // GET /api/spaces/:id/members, since that one requires the caller to
+    // actually be a member of the Space; an admin looking at someone else's
+    // Space wouldn't pass that check. No promote/demote/remove here on
+    // purpose — this is visibility, not another surface for Space
+    // management, which already exists (as the Space itself) for whoever's
+    // actually in it.
+    const adminSpaceMembersModal = document.getElementById('admin-space-members-modal');
+    const adminSpaceMembersClose = document.getElementById('admin-space-members-close');
+    const adminSpaceMembersTitle = document.getElementById('admin-space-members-title');
+    const adminSpaceMembersCount = document.getElementById('admin-space-members-count');
+    const adminSpaceMembersList = document.getElementById('admin-space-members-list');
+
+    async function openAdminSpaceMembersModal(spaceId, spaceName) {
+      adminSpaceMembersTitle.textContent = spaceName;
+      adminSpaceMembersCount.textContent = '';
+      adminSpaceMembersList.innerHTML = '';
+      adminSpaceMembersModal.hidden = false;
+      trapFocus(adminSpaceMembersModal);
+
+      const res = await fetch(`/api/admin/spaces/${spaceId}/members`);
+      if (!res.ok) {
+        adminSpaceMembersList.innerHTML = `<div class="admin-empty"><span>Could not load members.</span></div>`;
+        return;
+      }
+      const { members } = await res.json();
+      adminSpaceMembersCount.textContent = members.length;
+      adminSpaceMembersList.innerHTML = members.map((member) => {
+        const displayName = `${member.firstName} ${member.lastName}`.trim() || member.email;
+        const initial = (member.firstName?.[0] || member.email[0] || '?').toUpperCase();
+        return `
+          <div class="space-roster-row${member.role === 'organizer' ? ' is-organizer' : ''}">
+            <span class="space-roster-avatar">${escapeHtml(initial)}</span>
+            <div class="space-roster-identity">
+              <span class="space-roster-name">${escapeHtml(displayName)}</span>
+              <span class="space-roster-email">${escapeHtml(member.email)}</span>
+            </div>
+            <span class="space-roster-role${member.role === 'organizer' ? ' is-organizer' : ''}">${member.role === 'organizer' ? 'Organizer' : 'Member'}</span>
+          </div>
+        `;
+      }).join('') || `<div class="admin-empty"><span>No members.</span></div>`;
+    }
+    function closeAdminSpaceMembersModal() {
+      adminSpaceMembersModal.hidden = true;
+      releaseFocus();
+    }
+    adminSpaceMembersClose.addEventListener('click', closeAdminSpaceMembersModal);
+    adminSpaceMembersModal.addEventListener('click', (e) => {
+      if (e.target === adminSpaceMembersModal) closeAdminSpaceMembersModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !adminSpaceMembersModal.hidden) closeAdminSpaceMembersModal();
+    });
 
     async function refreshAdminUsers() {
       const search = adminUsersSearch.value.trim();
@@ -1962,6 +2033,11 @@
     });
 
     adminSpacesList.addEventListener('click', (e) => {
+      const viewMembersBtn = e.target.closest('[data-action="view-members"]');
+      if (viewMembersBtn) {
+        openAdminSpaceMembersModal(viewMembersBtn.dataset.spaceId, viewMembersBtn.dataset.spaceName);
+        return;
+      }
       const copyBtn = e.target.closest('[data-action="copy"]');
       if (copyBtn) {
         navigator.clipboard.writeText(copyBtn.dataset.code).then(() => {

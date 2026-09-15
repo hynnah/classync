@@ -2302,6 +2302,25 @@ a.btn-secondary:hover {
   align-items: center;
   gap: 6px;
 }
+.page-app .admin-row-meta-link {
+  font-family: var(--font-body);
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--color-accent-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: none;
+}
+.page-app .admin-row-meta-link:hover {
+  color: var(--color-accent);
+  box-shadow: none;
+  transform: none;
+}
 .page-app .admin-status-pill {
   display: inline-flex;
   align-items: center;

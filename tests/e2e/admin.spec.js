@@ -110,6 +110,63 @@ test.describe('Admin console', () => {
     }
   });
 
+  test('an admin can view a Space\'s member roster without being a member of it themselves', async ({ browser }) => {
+    const adminEmail = `e2e-admin-viewmembers-${Date.now()}@example.com`;
+    const ownerEmail = `e2e-admin-vm-owner-${Date.now()}@example.com`;
+    const memberEmail = `e2e-admin-vm-member-${Date.now()}@example.com`;
+    const spaceName = `E2E Admin View Members ${Date.now()}`;
+    const adminCtx = await browser.newContext();
+    const ownerCtx = await browser.newContext();
+    const memberCtx = await browser.newContext();
+    let spaceId;
+    try {
+      const adminPage = await adminCtx.newPage();
+      const ownerPage = await ownerCtx.newPage();
+      const memberPage = await memberCtx.newPage();
+
+      await adminPage.request.get(`/auth/test-bypass?email=${encodeURIComponent(adminEmail)}&admin=true`);
+      await adminPage.request.get('/continue-solo');
+
+      await ownerPage.request.get(`/auth/test-bypass?email=${encodeURIComponent(ownerEmail)}`);
+      const created = await ownerPage.request.post('/api/spaces', { data: { name: spaceName } });
+      const space = (await created.json()).space;
+      spaceId = space.id;
+
+      await memberPage.request.get(`/auth/test-bypass?email=${encodeURIComponent(memberEmail)}`);
+      await memberPage.request.post('/api/spaces/join', { data: { joinCode: space.joinCode } });
+
+      await adminPage.goto('/app');
+      await adminPage.waitForSelector('#cal-root .calendar-days');
+      await adminPage.locator('#rail-admin-btn').click();
+      await adminPage.locator('#admin-tab-spaces').click();
+      await adminPage.locator('#admin-spaces-search').fill(spaceName);
+      const row = adminPage.locator('#admin-spaces-list .admin-row', { hasText: spaceName });
+      await row.locator('[data-action="view-members"]').click();
+
+      await expect(adminPage.locator('#admin-space-members-modal')).toBeVisible();
+      await expect(adminPage.locator('#admin-space-members-title')).toHaveText(spaceName);
+      await expect(adminPage.locator('#admin-space-members-count')).toHaveText('2');
+      const ownerRow = adminPage.locator('#admin-space-members-list .space-roster-row', { hasText: ownerEmail });
+      await expect(ownerRow).toBeVisible();
+      await expect(ownerRow.locator('.space-roster-role')).toHaveText('Organizer');
+      const memberRow = adminPage.locator('#admin-space-members-list .space-roster-row', { hasText: memberEmail });
+      await expect(memberRow).toBeVisible();
+      await expect(memberRow.locator('.space-roster-role')).toHaveText('Member');
+      // read-only — no promote/demote/remove controls, unlike the regular
+      // (member-only) Manage Space roster this reuses styling from
+      await expect(adminPage.locator('#admin-space-members-list .space-roster-action-btn')).toHaveCount(0);
+
+      await adminPage.locator('#admin-space-members-close').click();
+      await expect(adminPage.locator('#admin-space-members-modal')).toBeHidden();
+    } finally {
+      await adminCtx.close();
+      await ownerCtx.close();
+      await memberCtx.close();
+      if (spaceId) await getPool().query('DELETE FROM spaces WHERE id = ?', [spaceId]);
+      await getPool().query('DELETE FROM users WHERE email IN (?, ?, ?)', [adminEmail, ownerEmail, memberEmail]);
+    }
+  });
+
   test('deactivate/activate actions appear in the Activity tab', async ({ page }) => {
     const adminEmail = `e2e-admin-activity-${Date.now()}@example.com`;
     const targetEmail = `e2e-admin-activitytarget-${Date.now()}@example.com`;

@@ -1,6 +1,7 @@
 const express = require('express');
 const { requireRole } = require('../auth/guard');
 const { AdminRepo } = require('../db/repositories/AdminRepo');
+const { SpaceRepo } = require('../db/repositories/SpaceRepo');
 
 const router = express.Router();
 
@@ -113,6 +114,33 @@ router.get('/api/admin/spaces', ...adminOnly, async (req, res, next) => {
   try {
     const spaces = await AdminRepo.listSpaces({ search: req.query.search });
     res.json({ spaces: spaces.map(serializeSpace) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Reuses SpaceRepo.listMembers directly rather than duplicating its query
+// here — that function has no membership check baked into it (the regular
+// GET /api/spaces/:id/members route does its own gate via getMembership
+// before calling it), so it's already exactly what an admin, who isn't
+// necessarily a member of the Space they're looking at, needs.
+router.get('/api/admin/spaces/:id/members', ...adminOnly, async (req, res, next) => {
+  try {
+    const space = await SpaceRepo.findById(req.params.id);
+    if (!space) {
+      return res.status(404).json({ error: 'Space not found.' });
+    }
+    const members = await SpaceRepo.listMembers(req.params.id);
+    res.json({
+      members: members.map((m) => ({
+        id: m.id,
+        firstName: m.first_name,
+        lastName: m.last_name,
+        email: m.email,
+        role: m.role,
+        joinedAt: m.joined_at,
+      })),
+    });
   } catch (err) {
     next(err);
   }
