@@ -1028,6 +1028,7 @@
       <p id="space-item-form-error" class="form-error" hidden></p>
       <div class="modal-actions">
         <button type="button" id="space-item-cancel" class="modal-cancel">Cancel</button>
+        <button type="button" id="space-item-edit-btn" hidden>Edit</button>
         <button type="submit" class="add-space-submit">Create</button>
       </div>
     </form>
@@ -4307,8 +4308,12 @@
     const spaceItemAssignees = document.getElementById('space-item-assignees');
     const spaceItemFormError = document.getElementById('space-item-form-error');
     const spaceItemCancelBtn = document.getElementById('space-item-cancel');
-    const spaceItemSubmitBtn = spaceItemForm.querySelector('.add-space-submit');
+    const spaceItemSubmitBtn = spaceItemForm.querySelector('button[type="submit"]');
+    const spaceItemEditBtn = document.getElementById('space-item-edit-btn');
     let spaceEditingItemId = null;
+    // The raw item currently shown, kept so the read-only view's Edit button
+    // can reopen the modal in editable mode without a re-fetch.
+    let spaceItemCurrentRaw = null;
 
     function toSpaceCalItem(apiItem) {
       return {
@@ -4726,7 +4731,7 @@
         // the same two modals the Edit button below already uses.
         body.addEventListener('click', () => {
           if (raw.space_id) {
-            openSpaceItemModal(raw, null, !canEditItem(raw));
+            openSpaceItemModal(raw, null, true);
           } else {
             crossViewRefresh.openModal(raw);
           }
@@ -4905,7 +4910,7 @@
       // not even for the creator.
       row.addEventListener('click', () => {
         if (raw.space_id) {
-          openSpaceItemModal(raw, null, !canEditItem(raw));
+          openSpaceItemModal(raw, null, true);
         } else {
           crossViewRefresh.openModal(raw);
         }
@@ -5126,7 +5131,7 @@
           metaEl.textContent = meta;
           body.appendChild(metaEl);
         }
-        body.addEventListener('click', () => openSpaceItemModal(raw, null, !canEditItem(raw)));
+        body.addEventListener('click', () => openSpaceItemModal(raw, null, true));
         row.appendChild(body);
 
         const actions = document.createElement('div');
@@ -5315,7 +5320,7 @@
         dateEl.textContent = parts.join(' · ');
         metaLine.appendChild(dateEl);
       }
-      main.addEventListener('click', () => openSpaceItemModal(raw, null, !canEditItem(raw)));
+      main.addEventListener('click', () => openSpaceItemModal(raw, null, true));
 
       if (canEditItem(raw)) {
         const actions = document.createElement('div');
@@ -5460,15 +5465,18 @@
     }
     spaceItemForm.querySelectorAll('input[name="space-item-kind"]').forEach((r) => r.addEventListener('change', updateSpaceItemKindUI));
 
-    // readOnly: a non-creator viewing a task/event they can't edit — the
-    // one place their description was previously visible nowhere at all.
-    // Same modal/fields as editing, just every input disabled and no
-    // Save — a Member gets the context an Organizer wrote, not the
-    // ability to change it.
+    // readOnly: viewing a task/event via a row click — the default for
+    // everyone now, edit rights included, so a click never mutates anything
+    // by accident. Same modal/fields as editing, just every input disabled
+    // and no Save; canEditItem(item) decides whether the Edit button below
+    // offers a deliberate way in. The dedicated row-level edit (pencil)
+    // button still calls this with readOnly=false directly, skipping the
+    // detail view — that's already an explicit edit action.
     async function openSpaceItemModal(item, prefillDate, readOnly = false) {
       spaceItemFormError.hidden = true;
       spaceItemForm.reset();
       spaceEditingItemId = item ? item.id : null;
+      spaceItemCurrentRaw = item;
       const kindRadios = spaceItemForm.querySelectorAll('input[name="space-item-kind"]');
       const editableFields = [spaceItemTitleInput, spaceItemDescription, spaceItemCategory, spaceItemDueDate, spaceItemDueTime];
 
@@ -5478,6 +5486,7 @@
           : (item.kind === 'event' ? 'Edit event' : 'Edit task');
         spaceItemSubmitBtn.hidden = readOnly;
         spaceItemSubmitBtn.textContent = 'Save';
+        spaceItemEditBtn.hidden = !(readOnly && canEditItem(item));
         spaceItemCancelBtn.textContent = readOnly ? 'Close' : 'Cancel';
         kindRadios.forEach((r) => { r.checked = r.value === item.kind; r.disabled = true; });
         spaceItemTitleInput.value = item.title;
@@ -5491,6 +5500,7 @@
         spaceItemModalTitle.textContent = 'New task or event';
         spaceItemSubmitBtn.hidden = false;
         spaceItemSubmitBtn.textContent = 'Create';
+        spaceItemEditBtn.hidden = true;
         spaceItemCancelBtn.textContent = 'Cancel';
         kindRadios.forEach((r) => { r.disabled = false; });
         editableFields.forEach((f) => { f.disabled = false; });
@@ -5508,9 +5518,13 @@
       spaceItemModal.hidden = true;
       releaseFocus();
       spaceEditingItemId = null;
+      spaceItemCurrentRaw = null;
     }
     document.getElementById('space-item-modal-close').addEventListener('click', closeSpaceItemModal);
     document.getElementById('space-item-cancel').addEventListener('click', closeSpaceItemModal);
+    spaceItemEditBtn.addEventListener('click', () => {
+      if (spaceItemCurrentRaw) openSpaceItemModal(spaceItemCurrentRaw, null, false);
+    });
     spaceItemModal.addEventListener('click', (e) => {
       if (e.target === spaceItemModal) closeSpaceItemModal();
     });
@@ -5537,7 +5551,7 @@
         }
       }
 
-      const submitBtn = spaceItemForm.querySelector('.add-space-submit');
+      const submitBtn = spaceItemSubmitBtn;
       submitBtn.disabled = true;
       try {
         const url = spaceEditingItemId ? `/api/items/${spaceEditingItemId}` : '/api/items';

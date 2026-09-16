@@ -4923,6 +4923,24 @@ a.btn-secondary:hover {
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* The read-only detail view's Edit button — same look as .add-space-submit,
+   kept as its own id instead of sharing that class so `.add-space-submit`
+   selectors inside the modal (JS and tests) stay unambiguous now that both
+   buttons can exist in the DOM (one hidden) at once. */
+.page-app #space-item-edit-btn {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--color-accent);
+  color: var(--color-text);
+  padding: 12px 22px;
+  cursor: pointer;
+}
+.page-app #space-item-edit-btn:hover {
+  background: var(--color-accent-hover-bg);
+}
 
 @media (max-width: 640px) {
   .page-app .field-grid {

@@ -356,6 +356,9 @@ test.describe('Space calendar: creating tasks and events', () => {
       await expect(memberPage.locator('#space-item-description')).toBeDisabled();
       await expect(memberPage.locator('#space-item-title')).toBeDisabled();
       await expect(memberPage.locator('#space-item-modal .add-space-submit')).toBeHidden();
+      // no way into edit mode at all for a plain Member — not just no Save,
+      // but no Edit button either
+      await expect(memberPage.locator('#space-item-edit-btn')).toBeHidden();
       await expect(memberPage.locator('#space-item-cancel')).toHaveText('Close');
       await memberPage.locator('#space-item-cancel').click();
       await expect(memberPage.locator('#space-item-modal')).toBeHidden();
@@ -382,12 +385,22 @@ test.describe('Space calendar: creating tasks and events', () => {
       await memberPage.locator('#space-todo-tab-done').click();
       await expect(memberPage.locator('.space-todo-row-title', { hasText: 'Prepare slides' })).toBeVisible();
 
-      // the creator: row click opens the normal editable modal, Save intact
+      // the creator: row click opens the same read-only detail view first —
+      // even someone with edit rights shouldn't mutate anything by
+      // accident — but they get an Edit button the Member never saw, and
+      // clicking it switches to the normal editable modal, Save intact.
       await page.locator('#space-nav-tasks').click();
       await page.locator('#space-todo-tab-active').click();
       await page.locator('.space-todo-row-main', { hasText: 'Prepare slides' }).click();
+      await expect(page.locator('#space-item-modal-title')).toHaveText('Task details');
+      await expect(page.locator('#space-item-modal .add-space-submit')).toBeHidden();
+      await expect(page.locator('#space-item-description')).toBeDisabled();
+      await expect(page.locator('#space-item-edit-btn')).toBeVisible();
+
+      await page.locator('#space-item-edit-btn').click();
       await expect(page.locator('#space-item-modal-title')).toHaveText('Edit task');
       await expect(page.locator('#space-item-modal .add-space-submit')).toBeVisible();
+      await expect(page.locator('#space-item-edit-btn')).toBeHidden();
       await expect(page.locator('#space-item-description')).toBeEnabled();
       await expect(page.locator('#space-item-cancel')).toHaveText('Cancel');
     } finally {
@@ -487,8 +500,13 @@ test.describe('Space calendar: creating tasks and events', () => {
       await expect(promotedRow.locator('.space-todo-row-check')).toHaveCount(0);
       await expect(promotedRow.locator('.space-todo-row-action-btn')).toHaveCount(2);
 
-      // row click opens the full editable modal, not the read-only detail view
+      // row click opens the read-only detail view first, same as anyone
+      // else — but the promoted Organizer gets an Edit button (a plain
+      // Member never would) into the full editable modal
       await promotedRow.locator('.space-todo-row-main').click();
+      await expect(promotedPage.locator('#space-item-modal-title')).toHaveText('Task details');
+      await expect(promotedPage.locator('#space-item-edit-btn')).toBeVisible();
+      await promotedPage.locator('#space-item-edit-btn').click();
       await expect(promotedPage.locator('#space-item-modal-title')).toHaveText('Edit task');
       await expect(promotedPage.locator('#space-item-modal .add-space-submit')).toBeVisible();
       await promotedPage.locator('#space-item-title').fill('Retitled by promoted organizer');
