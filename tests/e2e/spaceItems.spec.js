@@ -399,4 +399,124 @@ test.describe('Space calendar: creating tasks and events', () => {
       await getPool().query('DELETE FROM users WHERE email IN (?, ?)', [ownerEmail, memberEmail]);
     }
   });
+
+  // FR-O2: only an Organizer can create a Space item at all, so the
+  // real-world trigger for "an Organizer with no assignment row on an item"
+  // is promotion — the original Organizer assigns a task to one Member, then
+  // promotes a DIFFERENT Member to Organizer. That promoted Organizer should
+  // see, edit, and delete the item despite never being assigned to it — the
+  // full unified behavior from ItemRepo's findEditable/canEditItem, exercised
+  // through the real UI instead of raw fetch calls.
+  test('a newly promoted Organizer gets edit rights on an item assigned only to someone else, across the Tasks tab and day panel', async ({ page, browser }) => {
+    const spaceName = 'E2E Organizer Promotion Test ' + Date.now();
+    let spaceId;
+    let ownerEmail;
+    let assigneeEmail;
+    let promotedEmail;
+    let assigneeContext;
+    let promotedContext;
+    try {
+      const setup = await setUpSpaceWithMember(page, browser, spaceName);
+      ownerEmail = setup.ownerEmail;
+      assigneeEmail = setup.memberEmail;
+      spaceId = setup.spaceId;
+      assigneeContext = setup.memberContext;
+
+      const todayIso = await page.evaluate(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      });
+
+      // a second Member, who will be promoted, joins the Space
+      promotedEmail = `e2e-spaceitems-promoted-${Date.now()}@example.com`;
+      promotedContext = await browser.newContext();
+      const promotedPage = await promotedContext.newPage();
+      await promotedPage.request.get(`/auth/test-bypass?email=${encodeURIComponent(promotedEmail)}`);
+      await promotedPage.goto('/app');
+      const joinCode = await page.evaluate(async (id) => {
+        const r = await fetch('/api/spaces');
+        const body = await r.json();
+        return body.spaces.find((s) => s.id === id).joinCode;
+      }, spaceId);
+      await promotedPage.evaluate(async (joinCode) => {
+        await fetch('/api/spaces/join', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ joinCode }),
+        });
+      }, joinCode);
+
+      // the Organizer assigns a task to the (not-to-be-promoted) assignee
+      // only, then looks up the promoted user's id off the members list —
+      // same lookup pattern used for the assignee itself
+      const { assigneeId, promotedUserId } = await page.evaluate(async ({ id, assigneeEmail, promotedEmail }) => {
+        const membersRes = await fetch(`/api/spaces/${id}/members`);
+        const { members } = await membersRes.json();
+        return {
+          assigneeId: members.find((m) => m.email === assigneeEmail).id,
+          promotedUserId: members.find((m) => m.email === promotedEmail).id,
+        };
+      }, { id: spaceId, assigneeEmail, promotedEmail });
+
+      await page.evaluate(async ({ id, dueDate, assigneeId }) => {
+        await fetch('/api/items', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            spaceId: id, kind: 'task', title: 'Assigned to one Member only', dueDate,
+            isOpenToAll: false, assigneeUserIds: [assigneeId],
+          }),
+        });
+      }, { id: spaceId, dueDate: todayIso, assigneeId });
+
+      // promote the second Member to Organizer
+      await page.evaluate(async ({ id, userId }) => {
+        await fetch(`/api/spaces/${id}/members/${userId}/promote`, { method: 'POST' });
+      }, { id: spaceId, userId: promotedUserId });
+
+      // the promoted Organizer: Tasks tab shows the item with a spacer (no
+      // assignment of their own), and edit/delete despite not being the creator
+      await promotedPage.goto('/app');
+      await promotedPage.waitForSelector('#cal-root .calendar-days');
+      await promotedPage.locator('#scope-switcher-btn').click();
+      await promotedPage.locator('.scope-switcher-item', { hasText: spaceName }).click();
+      await promotedPage.locator('#space-nav-tasks').click();
+      const promotedRow = promotedPage.locator('.space-todo-row', { hasText: 'Assigned to one Member only' });
+      await expect(promotedRow).toBeVisible();
+      await expect(promotedRow.locator('.space-todo-row-check-spacer')).toHaveCount(1);
+      await expect(promotedRow.locator('.space-todo-row-check')).toHaveCount(0);
+      await expect(promotedRow.locator('.space-todo-row-action-btn')).toHaveCount(2);
+
+      // row click opens the full editable modal, not the read-only detail view
+      await promotedRow.locator('.space-todo-row-main').click();
+      await expect(promotedPage.locator('#space-item-modal-title')).toHaveText('Edit task');
+      await expect(promotedPage.locator('#space-item-modal .add-space-submit')).toBeVisible();
+      await promotedPage.locator('#space-item-title').fill('Retitled by promoted organizer');
+      await promotedPage.locator('#space-item-form button[type=submit]').click();
+      await expect(promotedPage.locator('#space-item-modal')).toBeHidden();
+      await expect(promotedPage.locator('.space-todo-row', { hasText: 'Retitled by promoted organizer' })).toBeVisible();
+
+      // same in the day panel
+      await promotedPage.locator('#space-nav-calendar').click();
+      await promotedPage.waitForSelector('#space-cal-root .calendar-days');
+      await promotedPage.locator(`#space-cal-root .calendar-day[data-date="${todayIso}"]`).click({ position: { x: 5, y: 5 } });
+      const promotedDayRow = promotedPage.locator('.day-panel-row', { has: promotedPage.locator('.day-panel-row-title', { hasText: 'Retitled by promoted organizer' }) });
+      await expect(promotedDayRow.locator('.day-panel-row-check-spacer')).toHaveCount(1);
+      await expect(promotedDayRow.locator('.day-panel-edit-btn')).toBeVisible();
+
+      // the promoted Organizer can delete it too
+      await promotedDayRow.locator('.day-panel-delete-btn').click();
+      await promotedPage.locator('#confirm-dialog-ok').click();
+      await expect(promotedPage.locator('.day-panel-row', { hasText: 'Retitled by promoted organizer' })).toHaveCount(0);
+    } finally {
+      if (assigneeContext) await assigneeContext.close().catch(() => {});
+      if (promotedContext) await promotedContext.close().catch(() => {});
+      const emails = [ownerEmail, assigneeEmail, promotedEmail].filter(Boolean);
+      const [users] = await getPool().query('SELECT id FROM users WHERE email IN (?)', [emails]);
+      const userIds = users.map((u) => u.id);
+      if (userIds.length) await getPool().query('DELETE FROM items WHERE created_by IN (?)', [userIds]);
+      if (spaceId) await getPool().query('DELETE FROM spaces WHERE id = ?', [spaceId]);
+      if (emails.length) await getPool().query('DELETE FROM users WHERE email IN (?)', [emails]);
+    }
+  });
 });

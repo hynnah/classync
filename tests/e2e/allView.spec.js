@@ -476,11 +476,17 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
   // Ownership still gates it exactly like everywhere else — this test
   // covers a Personal item, a Space item you created, and a Space item
   // someone else created (should show nothing).
-  test('the All day panel lets you edit/delete your own items — Personal or Space — but not someone else\'s', async ({ page, browser }) => {
+  // FR-O2: an Organizer can edit/delete every item in their Space, even one
+  // a co-Organizer created — so a co-Organizer's item is now an edit-rights
+  // case, not a "someone else's" case. A plain Member's item elsewhere is
+  // the actual "someone else's" boundary, exercised with plainMember below.
+  test('the All day panel lets you edit/delete your own items and every item in a Space you organize — but not a plain Member\'s', async ({ page, browser }) => {
     const orgEmail = `e2e-alldaypanel-org-${Date.now()}@example.com`;
     const coOrgEmail = `e2e-alldaypanel-coorg-${Date.now()}@example.com`;
+    const plainMemberEmail = `e2e-alldaypanel-member-${Date.now()}@example.com`;
     let spaceId;
     let coOrgContext;
+    let plainMemberContext;
     try {
       await page.request.get(`/auth/test-bypass?email=${encodeURIComponent(orgEmail)}`);
       await page.request.get('/continue-solo');
@@ -515,6 +521,18 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
       await page.evaluate(async ({ spaceId, userId }) => {
         await fetch(`/api/spaces/${spaceId}/members/${userId}/promote`, { method: 'POST' });
       }, { spaceId, userId: coOrgInfo.id });
+
+      plainMemberContext = await browser.newContext();
+      const plainMemberPage = await plainMemberContext.newPage();
+      await plainMemberPage.request.get(`/auth/test-bypass?email=${encodeURIComponent(plainMemberEmail)}`);
+      await plainMemberPage.request.get('/continue-solo');
+      await plainMemberPage.goto('/app');
+      await plainMemberPage.waitForSelector('#cal-root .calendar-days');
+      await plainMemberPage.evaluate(async (joinCode) => {
+        await fetch('/api/spaces/join', {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ joinCode }),
+        });
+      }, space.joinCode);
 
       // a Personal task, a Space task the viewer created, and a Space task
       // the co-Organizer created — all due today, all open-to-all
@@ -552,8 +570,11 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
       await expect(personalRow.locator('.day-panel-delete-btn')).toHaveCount(1);
       await expect(spaceRow.locator('.day-panel-edit-btn')).toHaveCount(1);
       await expect(spaceRow.locator('.day-panel-delete-btn')).toHaveCount(1);
-      await expect(coOrgRow.locator('.day-panel-edit-btn')).toHaveCount(0);
-      await expect(coOrgRow.locator('.day-panel-delete-btn')).toHaveCount(0);
+      // FR-O2: both are Organizers of the same Space now — the viewer gets
+      // edit/delete on the co-Organizer's item too, despite not creating it
+      // and never being assigned to it.
+      await expect(coOrgRow.locator('.day-panel-edit-btn')).toHaveCount(1);
+      await expect(coOrgRow.locator('.day-panel-delete-btn')).toHaveCount(1);
 
       // editing the Personal item opens Personal's own modal, prefilled,
       // and saving updates it in place without leaving the All view
@@ -575,18 +596,42 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
       await expect(page.locator('#space-item-modal')).toBeHidden();
       await expect(page.locator('#all-day-panel .day-panel-row', { hasText: 'My Space item, edited' })).toBeVisible();
 
+      // editing the co-Organizer's item — the actual new behavior this test
+      // was rewritten for — also works through the same modal and saves
+      await coOrgRow.locator('.day-panel-edit-btn').click();
+      await expect(page.locator('#space-item-modal')).toBeVisible();
+      await expect(page.locator('#space-item-title')).toHaveValue('Co-organizer\'s item');
+      await page.locator('#space-item-title').fill('Co-organizer\'s item, edited by other organizer');
+      await page.locator('#space-item-form button[type=submit]').click();
+      await expect(page.locator('#space-item-modal')).toBeHidden();
+      await expect(page.locator('#all-day-panel .day-panel-row', { hasText: 'Co-organizer\'s item, edited by other organizer' })).toBeVisible();
+
       // deleting the Space item removes it from the panel
       await page.locator('#all-day-panel .day-panel-row', { hasText: 'My Space item, edited' }).locator('.day-panel-delete-btn').click();
       await page.locator('#confirm-dialog-ok').click();
       await expect(page.locator('#all-day-panel .day-panel-row', { hasText: 'My Space item, edited' })).toHaveCount(0);
 
+      // the actual "someone else's" boundary: a plain (non-Organizer) Member
+      // sees the open-to-all item but gets no edit/delete on it at all
+      await plainMemberPage.reload();
+      await plainMemberPage.waitForSelector('#cal-root .calendar-days');
+      await plainMemberPage.locator('#scope-switcher-btn').click();
+      await plainMemberPage.locator('.scope-switcher-item[data-scope="all"]').click();
+      await plainMemberPage.locator(`#all-cal-root .calendar-day[data-date="${todayIso}"]`).click();
+      await expect(plainMemberPage.locator('#all-day-panel')).toBeVisible();
+      const memberViewOfCoOrgRow = plainMemberPage.locator('#all-day-panel .day-panel-row', { has: plainMemberPage.locator('.day-panel-row-title', { hasText: 'Co-organizer\'s item, edited by other organizer' }) });
+      await expect(memberViewOfCoOrgRow).toBeVisible();
+      await expect(memberViewOfCoOrgRow.locator('.day-panel-edit-btn')).toHaveCount(0);
+      await expect(memberViewOfCoOrgRow.locator('.day-panel-delete-btn')).toHaveCount(0);
+
       await coOrgContext.close();
+      await plainMemberContext.close();
     } finally {
-      const [users] = await getPool().query('SELECT id FROM users WHERE email IN (?, ?)', [orgEmail, coOrgEmail]);
+      const [users] = await getPool().query('SELECT id FROM users WHERE email IN (?, ?, ?)', [orgEmail, coOrgEmail, plainMemberEmail]);
       const userIds = users.map((u) => u.id);
       if (userIds.length) await getPool().query('DELETE FROM items WHERE created_by IN (?)', [userIds]);
       if (spaceId) await getPool().query('DELETE FROM spaces WHERE id = ?', [spaceId]);
-      await getPool().query('DELETE FROM users WHERE email IN (?, ?)', [orgEmail, coOrgEmail]);
+      await getPool().query('DELETE FROM users WHERE email IN (?, ?, ?)', [orgEmail, coOrgEmail, plainMemberEmail]);
     }
   });
 

@@ -2740,6 +2740,10 @@
           metaEl.textContent = meta;
           body.appendChild(metaEl);
         }
+        // Click the row to open it — unified with Space/All's own day
+        // panels. Always the editable modal: a Personal item's only
+        // possible viewer is its owner.
+        body.addEventListener('click', () => openModal(raw));
         row.appendChild(body);
 
         const actions = document.createElement('div');
@@ -2872,7 +2876,8 @@
       check.type = 'button';
       check.className = 'todo-row-check' + (isDone ? ' is-done' : '');
       check.setAttribute('aria-label', isDone ? 'Mark as not done' : 'Mark as done');
-      check.addEventListener('click', async () => {
+      check.addEventListener('click', async (e) => {
+        e.stopPropagation();
         check.disabled = true;
         const nextStatus = isDone ? 'pending' : 'completed';
         await fetch(`/api/items/${raw.id}/status`, {
@@ -2894,6 +2899,11 @@
       metaEl.textContent = formatTodoMeta(raw, isOverdue);
       row.appendChild(metaEl);
 
+      // Click the row to open it — unified with Space/All's own To Do lists.
+      // A Personal item only ever has one possible viewer (its owner), so
+      // unlike those other views this is always the editable modal.
+      row.addEventListener('click', () => openModal(raw));
+
       const actions = document.createElement('div');
       actions.className = 'todo-row-actions';
       const editBtn = document.createElement('button');
@@ -2901,14 +2911,15 @@
       editBtn.className = 'todo-row-action-btn';
       editBtn.setAttribute('aria-label', 'Edit');
       editBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.3 2.3a1.5 1.5 0 0 1 2.1 2.1L5.5 12.3l-2.8.7.7-2.8 7.9-7.9Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
-      editBtn.addEventListener('click', () => openModal(raw));
+      editBtn.addEventListener('click', (e) => { e.stopPropagation(); openModal(raw); });
       actions.appendChild(editBtn);
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button';
       deleteBtn.className = 'todo-row-action-btn';
       deleteBtn.setAttribute('aria-label', 'Delete');
       deleteBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5v8a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7v4M9.5 7v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
-      deleteBtn.addEventListener('click', async () => {
+      deleteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
         if (!(await confirmDialog(`Delete "${raw.title}"? This can't be undone.`))) return;
         deleteBtn.disabled = true;
         await fetch(`/api/items/${raw.id}`, { method: 'DELETE' });
@@ -3857,6 +3868,19 @@
     }
     await loadSpaces();
 
+    // Single source of truth for edit rights on a task/event, everywhere it's
+    // shown: Personal, a Space's own views, and All. The creator can always
+    // edit; an Organizer of the item's Space can too, even one they didn't
+    // create or get assigned to (see FR-O2, ItemRepo's findEditable) — the
+    // `spaces` array (kept fresh by loadSpaces/pollTick) is the same role
+    // source pollTick already trusts for currentSpace.role.
+    function canEditItem(raw) {
+      if (raw.created_by === currentUserId) return true;
+      if (!raw.space_id) return false;
+      const space = spaces.find((s) => s.id === raw.space_id);
+      return !!space && space.role === 'organizer';
+    }
+
     function clearActive() {
       switcherPanel.querySelectorAll('.scope-switcher-item').forEach((el) => el.classList.remove('is-active'));
     }
@@ -4670,11 +4694,16 @@
         const row = document.createElement('div');
         row.className = 'day-panel-row';
 
+        // A task shows a real checkbox only if the caller has an assignment
+        // on it (raw.status non-null) — same reasoning as the Space day
+        // panel/Tasks tab: an Organizer browsing All who isn't personally
+        // assigned to this one has no completion state of their own to toggle.
         const isTask = raw.kind === 'task';
-        const check = document.createElement(isTask ? 'button' : 'span');
-        if (isTask) check.type = 'button';
-        check.className = (isTask ? 'day-panel-row-check' : 'day-panel-row-check-spacer') + (raw.status === 'completed' ? ' is-done' : '');
-        if (isTask) {
+        const showCheck = isTask && raw.status != null;
+        const check = document.createElement(showCheck ? 'button' : 'span');
+        if (showCheck) check.type = 'button';
+        check.className = (showCheck ? 'day-panel-row-check' : 'day-panel-row-check-spacer') + (raw.status === 'completed' ? ' is-done' : '');
+        if (showCheck) {
           check.setAttribute('aria-label', raw.status === 'completed' ? 'Mark as not done' : 'Mark as done');
           check.innerHTML = '<svg class="day-panel-row-check-icon" width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.3l3.3 3.3L13 4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         }
@@ -4692,17 +4721,26 @@
         metaEl.className = 'day-panel-row-meta';
         metaEl.textContent = meta;
         body.appendChild(metaEl);
+        // Click the row to view it — read-only unless canEditItem says
+        // otherwise (creator, or an Organizer of its Space). Dispatches to
+        // the same two modals the Edit button below already uses.
+        body.addEventListener('click', () => {
+          if (raw.space_id) {
+            openSpaceItemModal(raw, null, !canEditItem(raw));
+          } else {
+            crossViewRefresh.openModal(raw);
+          }
+        });
         row.appendChild(body);
 
-        // Edit/delete only for your own items — same ownership rule as
-        // everywhere else. Editing opens the same modal that scope's own
-        // view already uses (openSpaceItemModal is in this same closure;
-        // a Personal item's modal lives in initApp()'s, reached the same
-        // way every other cross-closure call already goes through
-        // crossViewRefresh) — neither one needs you to actually switch
-        // into that Space/Personal first, they just save and this panel
-        // (and whatever else is open) refreshes in place afterward.
-        if (raw.created_by === currentUserId) {
+        // Editing opens the same modal that scope's own view already uses
+        // (openSpaceItemModal is in this same closure; a Personal item's
+        // modal lives in initApp()'s, reached the same way every other
+        // cross-closure call already goes through crossViewRefresh) —
+        // neither one needs you to actually switch into that Space/Personal
+        // first, they just save and this panel (and whatever else is open)
+        // refreshes in place afterward.
+        if (canEditItem(raw)) {
           const actions = document.createElement('div');
           actions.className = 'day-panel-row-actions';
           const editBtn = document.createElement('button');
@@ -4734,7 +4772,7 @@
           row.appendChild(actions);
         }
 
-        if (isTask) {
+        if (showCheck) {
           check.addEventListener('click', async () => {
             check.disabled = true;
             const nextStatus = raw.status === 'completed' ? 'pending' : 'completed';
@@ -4823,10 +4861,13 @@
       const isEvent = raw.kind === 'event';
       const isDone = raw.status === 'completed';
       const isOverdue = raw.due_date && raw.due_date < isoDate(new Date()) && !isDone;
+      // An event has no done state, and neither does a task the caller has
+      // no assignment on (raw.status null — e.g. an Organizer browsing All
+      // who wasn't personally assigned) — both get the same non-interactive
+      // spacer the Due-now rail and Space Tasks tab already give an event.
+      const showCheck = !isEvent && raw.status != null;
 
-      // An event has no done state — same spacer treatment the Due-now
-      // rail and Space Tasks tab already give it, instead of a checkbox.
-      if (isEvent) {
+      if (!showCheck) {
         const spacer = document.createElement('span');
         spacer.className = 'todo-row-check-spacer';
         row.appendChild(spacer);
@@ -4835,7 +4876,8 @@
         check.type = 'button';
         check.className = 'todo-row-check' + (isDone ? ' is-done' : '');
         check.setAttribute('aria-label', isDone ? 'Mark as not done' : 'Mark as done');
-        check.addEventListener('click', async () => {
+        check.addEventListener('click', async (e) => {
+          e.stopPropagation();
           check.disabled = true;
           const nextStatus = isDone ? 'pending' : 'completed';
           await fetch(`/api/items/${raw.id}/status`, {
@@ -4857,6 +4899,50 @@
       metaEl.className = 'todo-row-meta' + (isOverdue ? ' is-overdue' : '');
       metaEl.textContent = formatAllTodoMeta(raw, isOverdue);
       row.appendChild(metaEl);
+
+      // Click the row to view it — read-only unless canEditItem says
+      // otherwise. This list had no edit/view entry point at all before,
+      // not even for the creator.
+      row.addEventListener('click', () => {
+        if (raw.space_id) {
+          openSpaceItemModal(raw, null, !canEditItem(raw));
+        } else {
+          crossViewRefresh.openModal(raw);
+        }
+      });
+
+      if (canEditItem(raw)) {
+        const actions = document.createElement('div');
+        actions.className = 'todo-row-actions';
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'todo-row-action-btn';
+        editBtn.setAttribute('aria-label', 'Edit');
+        editBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.3 2.3a1.5 1.5 0 0 1 2.1 2.1L5.5 12.3l-2.8.7.7-2.8 7.9-7.9Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (raw.space_id) {
+            openSpaceItemModal(raw);
+          } else {
+            crossViewRefresh.openModal(raw);
+          }
+        });
+        actions.appendChild(editBtn);
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'todo-row-action-btn';
+        deleteBtn.setAttribute('aria-label', 'Delete');
+        deleteBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5v8a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 7v4M9.5 7v4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+        deleteBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!(await confirmDialog(`Delete "${raw.title}"? This can't be undone.`))) return;
+          deleteBtn.disabled = true;
+          await fetch(`/api/items/${raw.id}`, { method: 'DELETE' });
+          await Promise.all([refreshAllTodoView(), refreshAllCalendarView(), refreshAllDayPanel(), crossViewRefresh.personal?.()]);
+        });
+        actions.appendChild(deleteBtn);
+        row.appendChild(actions);
+      }
 
       return row;
     }
@@ -5011,11 +5097,16 @@
         const row = document.createElement('div');
         row.className = 'day-panel-row';
 
+        // A task shows a real checkbox only if the caller has an assignment
+        // on it (raw.status non-null) — an Organizer viewing a task assigned
+        // only to someone else has no personal completion state to toggle,
+        // same spacer treatment an event already gets.
         const isTask = raw.kind === 'task';
-        const check = document.createElement(isTask ? 'button' : 'span');
-        if (isTask) check.type = 'button';
-        check.className = (isTask ? 'day-panel-row-check' : 'day-panel-row-check-spacer') + (raw.status === 'completed' ? ' is-done' : '');
-        if (isTask) {
+        const showCheck = isTask && raw.status != null;
+        const check = document.createElement(showCheck ? 'button' : 'span');
+        if (showCheck) check.type = 'button';
+        check.className = (showCheck ? 'day-panel-row-check' : 'day-panel-row-check-spacer') + (raw.status === 'completed' ? ' is-done' : '');
+        if (showCheck) {
           check.setAttribute('aria-label', raw.status === 'completed' ? 'Mark as not done' : 'Mark as done');
           check.innerHTML = '<svg class="day-panel-row-check-icon" width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.3l3.3 3.3L13 4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         }
@@ -5035,12 +5126,12 @@
           metaEl.textContent = meta;
           body.appendChild(metaEl);
         }
-        body.addEventListener('click', () => openSpaceItemModal(raw, null, raw.created_by !== currentUserId));
+        body.addEventListener('click', () => openSpaceItemModal(raw, null, !canEditItem(raw)));
         row.appendChild(body);
 
         const actions = document.createElement('div');
         actions.className = 'day-panel-row-actions';
-        if (raw.created_by === currentUserId) {
+        if (canEditItem(raw)) {
           const editBtn = document.createElement('button');
           editBtn.type = 'button';
           editBtn.className = 'day-panel-edit-btn';
@@ -5064,7 +5155,7 @@
         }
         row.appendChild(actions);
 
-        if (isTask) {
+        if (showCheck) {
           check.addEventListener('click', async () => {
             check.disabled = true;
             const nextStatus = raw.status === 'completed' ? 'pending' : 'completed';
@@ -5156,11 +5247,14 @@
 
       // Events don't get a done state (same reason the day panel gives them a
       // spacer instead of a checkbox there) — a plain non-interactive span
-      // holds the same width so the title still lines up with task rows.
-      const check = document.createElement(isTask ? 'button' : 'span');
-      if (isTask) check.type = 'button';
-      check.className = (isTask ? 'space-todo-row-check' : 'space-todo-row-check-spacer') + (isDone ? ' is-done' : '');
-      if (isTask) {
+      // holds the same width so the title still lines up with task rows. Same
+      // for a task the caller has no assignment on (raw.status null) — e.g.
+      // an Organizer viewing a task assigned only to someone else.
+      const showCheck = isTask && raw.status != null;
+      const check = document.createElement(showCheck ? 'button' : 'span');
+      if (showCheck) check.type = 'button';
+      check.className = (showCheck ? 'space-todo-row-check' : 'space-todo-row-check-spacer') + (isDone ? ' is-done' : '');
+      if (showCheck) {
         check.setAttribute('aria-label', isDone ? 'Mark as not done' : 'Mark as done');
         check.innerHTML = '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 8.5l3.5 3.5 7.5-8" stroke="#fdfcf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         check.addEventListener('click', async () => {
@@ -5221,9 +5315,9 @@
         dateEl.textContent = parts.join(' · ');
         metaLine.appendChild(dateEl);
       }
-      main.addEventListener('click', () => openSpaceItemModal(raw, null, raw.created_by !== currentUserId));
+      main.addEventListener('click', () => openSpaceItemModal(raw, null, !canEditItem(raw)));
 
-      if (raw.created_by === currentUserId) {
+      if (canEditItem(raw)) {
         const actions = document.createElement('div');
         actions.className = 'space-todo-row-actions';
         const editBtn = document.createElement('button');

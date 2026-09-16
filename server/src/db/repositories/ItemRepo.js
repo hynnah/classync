@@ -36,6 +36,29 @@ async function findForUser(itemId, userId) {
   return rows[0] || null;
 }
 
+// Who's allowed to edit/delete this item: its creator, or an Organizer of
+// its Space (an Organizer can manage a Space item even if a Member created
+// it and never assigned it to them — see FR-O2). Personal items have no
+// space_id, so the Organizer clause never applies to them; creator is the
+// only path, same as before. The LEFT JOIN is correlated to the caller, so
+// .status comes back for them if they happen to also be an assignee, NULL
+// otherwise — an Organizer editing someone else's task has no personal
+// completion state to report, same as listForSpace's non-assigned rows.
+async function findEditable(itemId, userId) {
+  const [rows] = await getPool().query(
+    `SELECT items.*, item_assignments.status
+     FROM items
+     LEFT JOIN item_assignments ON item_assignments.item_id = items.id AND item_assignments.user_id = ?
+     WHERE items.id = ?
+       AND (
+         items.created_by = ?
+         OR EXISTS (SELECT 1 FROM space_members WHERE space_members.space_id = items.space_id AND space_members.user_id = ? AND space_members.role = 'organizer')
+       )`,
+    [userId, itemId, userId, userId]
+  );
+  return rows[0] || null;
+}
+
 // For a personal item, the creator is the only assignee. For a Space item,
 // assignees are either the caller's explicit pick or — for "open to all" —
 // every current member at creation time (a member who joins later won't get
@@ -113,16 +136,30 @@ async function listAllForUser(userId) {
   return rows;
 }
 
-// A member sees a Space item only once they have an assignment row on it —
+// A Member sees a Space item only once they have an assignment row on it —
 // joinSpace backfills one for every existing "open to all" item so a late
 // joiner isn't missing items created before they arrived (see its own note).
+// An Organizer sees every item in their Space regardless of assignment (a
+// Member could otherwise assign a task to specific people excluding the
+// Organizer entirely, leaving it invisible to the person meant to oversee
+// the Space) — the LEFT JOIN is correlated to the caller specifically, so
+// each item still comes back as exactly one row; .status is NULL for an
+// item the caller can see only via the Organizer clause, not personally
+// assigned to (rendered client-side the same "no done state" way an event
+// already is, since there's no per-them completion to show).
 async function listForSpace({ spaceId, userId, from, to }) {
   const [rows] = await getPool().query(
-    `${SELECT_WITH_STATUS}
-     WHERE items.space_id = ? AND item_assignments.user_id = ?
+    `SELECT items.*, item_assignments.status
+     FROM items
+     LEFT JOIN item_assignments ON item_assignments.item_id = items.id AND item_assignments.user_id = ?
+     WHERE items.space_id = ?
        AND items.due_date BETWEEN ? AND ?
+       AND (
+         item_assignments.user_id IS NOT NULL
+         OR EXISTS (SELECT 1 FROM space_members WHERE space_members.space_id = ? AND space_members.user_id = ? AND space_members.role = 'organizer')
+       )
      ORDER BY items.due_date ASC, items.due_time ASC`,
-    [spaceId, userId, from, to]
+    [userId, spaceId, from, to, spaceId, userId]
   );
   return rows;
 }
@@ -133,12 +170,19 @@ async function listForSpace({ spaceId, userId, from, to }) {
 // but it's still worth seeing here alongside the tasks). Same reason
 // listAllForUser/listAllScopedTodo exist: BETWEEN never matches a NULL
 // due_date, so an undated item needs a date-range-free query to ever surface.
+// Organizer visibility: same as listForSpace, see its own comment.
 async function listSpaceTodo({ spaceId, userId }) {
   const [rows] = await getPool().query(
-    `${SELECT_WITH_STATUS}
-     WHERE items.space_id = ? AND item_assignments.user_id = ? AND items.kind IN ('task', 'event')
+    `SELECT items.*, item_assignments.status
+     FROM items
+     LEFT JOIN item_assignments ON item_assignments.item_id = items.id AND item_assignments.user_id = ?
+     WHERE items.space_id = ? AND items.kind IN ('task', 'event')
+       AND (
+         item_assignments.user_id IS NOT NULL
+         OR EXISTS (SELECT 1 FROM space_members WHERE space_members.space_id = ? AND space_members.user_id = ? AND space_members.role = 'organizer')
+       )
      ORDER BY items.due_date IS NULL, items.due_date ASC, items.due_time ASC`,
-    [spaceId, userId]
+    [userId, spaceId, spaceId, userId]
   );
   return rows;
 }
@@ -149,14 +193,23 @@ async function listSpaceTodo({ spaceId, userId }) {
 // assignment-row check — removeMember/leaveSpace also clean up a departed
 // member's item_assignments rows directly, but this guards against ever
 // surfacing a stale one if that cleanup were ever missed on some path.
+// Organizer visibility: same reasoning as listForSpace — an item in a Space
+// they organize is visible even without a personal assignment row, across
+// every Space they organize at once (not just whichever one's "current").
 async function listAllScoped({ userId, from, to }) {
   const [rows] = await getPool().query(
-    `${SELECT_WITH_STATUS_AND_SPACE}
-     WHERE item_assignments.user_id = ?
-       AND (items.space_id IS NULL OR items.space_id IN (SELECT space_id FROM space_members WHERE user_id = ?))
+    `SELECT items.*, item_assignments.status, spaces.name AS space_name
+     FROM items
+     LEFT JOIN item_assignments ON item_assignments.item_id = items.id AND item_assignments.user_id = ?
+     LEFT JOIN spaces ON spaces.id = items.space_id
+     WHERE (items.space_id IS NULL OR items.space_id IN (SELECT space_id FROM space_members WHERE user_id = ?))
        AND items.due_date BETWEEN ? AND ?
+       AND (
+         item_assignments.user_id IS NOT NULL
+         OR items.space_id IN (SELECT space_id FROM space_members WHERE user_id = ? AND role = 'organizer')
+       )
      ORDER BY items.due_date ASC, items.due_time ASC`,
-    [userId, userId, from, to]
+    [userId, userId, from, to, userId]
   );
   return rows;
 }
@@ -164,15 +217,22 @@ async function listAllScoped({ userId, from, to }) {
 // Backs All's own To Do list — every task and event (not note), personal
 // or across every Space, regardless of due date (BETWEEN never matches a
 // NULL due_date, so undated items need a range-free query). Events render
-// without a checkbox client-side — no done state to toggle.
+// without a checkbox client-side — no done state to toggle. Organizer
+// visibility: same as listAllScoped, see its own comment.
 async function listAllScopedTodo(userId) {
   const [rows] = await getPool().query(
-    `${SELECT_WITH_STATUS_AND_SPACE}
-     WHERE item_assignments.user_id = ?
-       AND items.kind != 'note'
+    `SELECT items.*, item_assignments.status, spaces.name AS space_name
+     FROM items
+     LEFT JOIN item_assignments ON item_assignments.item_id = items.id AND item_assignments.user_id = ?
+     LEFT JOIN spaces ON spaces.id = items.space_id
+     WHERE items.kind != 'note'
        AND (items.space_id IS NULL OR items.space_id IN (SELECT space_id FROM space_members WHERE user_id = ?))
+       AND (
+         item_assignments.user_id IS NOT NULL
+         OR items.space_id IN (SELECT space_id FROM space_members WHERE user_id = ? AND role = 'organizer')
+       )
      ORDER BY items.due_date IS NULL, items.due_date ASC, items.due_time ASC`,
-    [userId, userId]
+    [userId, userId, userId]
   );
   return rows;
 }
@@ -290,17 +350,13 @@ async function setStatus({ itemId, userId, status }) {
 // collapses "omitted" and "explicitly cleared" into the same thing, silently
 // wiping every field a caller didn't mean to touch.
 //
-// The explicit created_by check below is load-bearing, not redundant with the
-// UPDATE's own WHERE created_by = ?: for a personal item the creator was always
-// the item's only assignee, so findForUser (assignee-gated) and the UPDATE
-// (creator-gated) never disagreed. A Space item can have assignees who aren't
-// its creator — an assigned Member who isn't the creator now passes
-// findForUser but would fail the UPDATE's WHERE, and without this check the
-// function would silently no-op the write and still return the (unchanged)
-// item via the re-fetch below, reporting success on a blocked edit.
+// findEditable's own WHERE clause is the real authorization check (creator
+// OR Organizer of the item's Space) — the UPDATE's WHERE below just has to
+// match it exactly, since findEditable finding the row doesn't by itself
+// guarantee the write goes through if the two ever drifted out of sync.
 async function update({ itemId, userId, title, description, category, dueDate, dueTime, color, plate, isLocked }) {
-  const current = await findForUser(itemId, userId);
-  if (!current || current.created_by !== userId) return null;
+  const current = await findEditable(itemId, userId);
+  if (!current) return null;
   const next = {
     title: title !== undefined ? title : current.title,
     description: description !== undefined ? description : current.description,
@@ -318,16 +374,20 @@ async function update({ itemId, userId, title, description, category, dueDate, d
   await getPool().query(
     `UPDATE items
      SET title = ?, description = ?, category = ?, due_date = ?, due_time = ?, color = ?, plate = ?, is_locked = ?
-     WHERE id = ? AND created_by = ?`,
-    [next.title, next.description, next.category, next.dueDate, next.dueTime, next.color, next.plate, next.isLocked, itemId, userId]
+     WHERE id = ? AND (created_by = ? OR EXISTS (
+       SELECT 1 FROM space_members WHERE space_members.space_id = items.space_id AND space_members.user_id = ? AND space_members.role = 'organizer'
+     ))`,
+    [next.title, next.description, next.category, next.dueDate, next.dueTime, next.color, next.plate, next.isLocked, itemId, userId, userId]
   );
-  return findForUser(itemId, userId);
+  return findEditable(itemId, userId);
 }
 
 async function remove({ itemId, userId }) {
   const [result] = await getPool().query(
-    'DELETE FROM items WHERE id = ? AND created_by = ?',
-    [itemId, userId]
+    `DELETE FROM items WHERE id = ? AND (created_by = ? OR EXISTS (
+       SELECT 1 FROM space_members WHERE space_members.space_id = items.space_id AND space_members.user_id = ? AND space_members.role = 'organizer'
+     ))`,
+    [itemId, userId, userId]
   );
   return result.affectedRows > 0;
 }
@@ -344,5 +404,5 @@ async function unlockAllNotesForUser(userId) {
 }
 
 module.exports = {
-  ItemRepo: { findById, findForUser, listAssigneeUserIds, create, listForUser, listForSpace, listSpaceTodo, listAllForUser, listAllScoped, listAllScopedTodo, listAllDatedForUser, listUrgentForUser, listUrgentAllScoped, listUrgentForSpace, setStatus, update, remove, unlockAllNotesForUser },
+  ItemRepo: { findById, findForUser, findEditable, listAssigneeUserIds, create, listForUser, listForSpace, listSpaceTodo, listAllForUser, listAllScoped, listAllScopedTodo, listAllDatedForUser, listUrgentForUser, listUrgentAllScoped, listUrgentForSpace, setStatus, update, remove, unlockAllNotesForUser },
 };

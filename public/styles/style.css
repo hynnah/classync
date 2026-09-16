@@ -2650,6 +2650,7 @@ a.btn-secondary:hover {
   gap: 14px;
   padding: 13px 0;
   border-bottom: 1px solid var(--color-divider-soft);
+  cursor: pointer;
 }
 .page-app .todo-row:last-child {
   border-bottom: 0;

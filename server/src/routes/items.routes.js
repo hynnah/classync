@@ -315,7 +315,11 @@ router.patch('/api/items/:id', requireLogin, async (req, res, next) => {
   try {
     const { title, description, category, dueDate, dueTime, color, plate, isLocked } = req.body || {};
 
-    const existing = await ItemRepo.findForUser(req.params.id, req.user.id);
+    // findEditable, not findForUser — an Organizer editing a Space item a
+    // Member created (and didn't assign to them) has no assignment row on
+    // it at all; findForUser would 404 before ItemRepo.update's own
+    // (already Organizer-aware) check ever got a chance to run.
+    const existing = await ItemRepo.findEditable(req.params.id, req.user.id);
     if (!existing) {
       return res.status(404).json({ error: 'Item not found.' });
     }

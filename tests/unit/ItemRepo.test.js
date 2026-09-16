@@ -198,6 +198,31 @@ describe('ItemRepo', () => {
       const foundPersonal = items.find((i) => i.id === personal.id);
       expect(foundPersonal.space_name).toBeNull();
     });
+
+    test('an Organizer sees a Member-only-assigned Space item across every Space they organize', async () => {
+      const organizer = await UserRepo.create({
+        googleSub: 'itemrepo-las-org-' + Date.now(), email: `itemrepo-las-org-${Date.now()}@example.com`, firstName: 'Org', lastName: 'Test',
+      });
+      const member = await UserRepo.create({
+        googleSub: 'itemrepo-las-member-' + Date.now(), email: `itemrepo-las-member-${Date.now()}@example.com`, firstName: 'Member', lastName: 'Test',
+      });
+      const space = await SpaceRepo.createSpace({ name: 'listAllScoped organizer-visibility test', creatorUserId: organizer.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: member.id });
+
+      const selfOnlyItem = await ItemRepo.create({
+        createdBy: member.id, spaceId: space.id, kind: 'task', title: 'listAllScoped self-only task', dueDate: '2026-12-06',
+        isOpenToAll: false, assigneeUserIds: [member.id],
+      });
+
+      const organizerItems = await ItemRepo.listAllScoped({ userId: organizer.id, from: '2026-12-01', to: '2026-12-31' });
+      const found = organizerItems.find((i) => i.id === selfOnlyItem.id);
+      expect(found).toBeDefined();
+      expect(found.status).toBeNull();
+
+      await getPool().query('DELETE FROM items WHERE id = ?', [selfOnlyItem.id]);
+      await getPool().query('DELETE FROM users WHERE id IN (?, ?)', [organizer.id, member.id]);
+    });
   });
 
   // Backs the merged All To Do list — every task and event (never a note;
@@ -244,6 +269,31 @@ describe('ItemRepo', () => {
       const foundSpaceEvent = items.find((i) => i.id === spaceEvent.id);
       expect(foundSpaceEvent.space_name).toBe('listAllScopedTodo test');
     });
+
+    test('an Organizer sees a Member-only-assigned Space task', async () => {
+      const organizer = await UserRepo.create({
+        googleSub: 'itemrepo-last-org-' + Date.now(), email: `itemrepo-last-org-${Date.now()}@example.com`, firstName: 'Org', lastName: 'Test',
+      });
+      const member = await UserRepo.create({
+        googleSub: 'itemrepo-last-member-' + Date.now(), email: `itemrepo-last-member-${Date.now()}@example.com`, firstName: 'Member', lastName: 'Test',
+      });
+      const space = await SpaceRepo.createSpace({ name: 'listAllScopedTodo organizer-visibility test', creatorUserId: organizer.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: member.id });
+
+      const selfOnlyTask = await ItemRepo.create({
+        createdBy: member.id, spaceId: space.id, kind: 'task', title: 'listAllScopedTodo self-only task',
+        isOpenToAll: false, assigneeUserIds: [member.id],
+      });
+
+      const organizerItems = await ItemRepo.listAllScopedTodo(organizer.id);
+      const found = organizerItems.find((i) => i.id === selfOnlyTask.id);
+      expect(found).toBeDefined();
+      expect(found.status).toBeNull();
+
+      await getPool().query('DELETE FROM items WHERE id = ?', [selfOnlyTask.id]);
+      await getPool().query('DELETE FROM users WHERE id IN (?, ?)', [organizer.id, member.id]);
+    });
   });
 
   describe('listSpaceTodo', () => {
@@ -283,6 +333,98 @@ describe('ItemRepo', () => {
       const intruderIds = intruderItems.map((i) => i.id);
       expect(intruderIds).toContain(undatedTask.id);
       expect(intruderIds).not.toContain(targetedTask.id);
+    });
+
+    test('an Organizer sees a task a Member assigned only to themselves — invisible to another plain Member', async () => {
+      const organizer = await UserRepo.create({
+        googleSub: 'itemrepo-org-' + Date.now(), email: `itemrepo-org-${Date.now()}@example.com`, firstName: 'Org', lastName: 'Test',
+      });
+      const member = await UserRepo.create({
+        googleSub: 'itemrepo-member-' + Date.now(), email: `itemrepo-member-${Date.now()}@example.com`, firstName: 'Member', lastName: 'Test',
+      });
+      const otherMember = await UserRepo.create({
+        googleSub: 'itemrepo-othermember-' + Date.now(), email: `itemrepo-othermember-${Date.now()}@example.com`, firstName: 'Other', lastName: 'Test',
+      });
+      const space = await SpaceRepo.createSpace({ name: 'listSpaceTodo organizer-visibility test', creatorUserId: organizer.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: member.id });
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: otherMember.id });
+
+      // A Member creates a task assigned only to themselves — the Organizer
+      // is never in item_assignments for it at all.
+      const selfOnlyTask = await ItemRepo.create({
+        createdBy: member.id, spaceId: space.id, kind: 'task', title: 'Member self-only task',
+        isOpenToAll: false, assigneeUserIds: [member.id],
+      });
+      createdIds.push(selfOnlyTask.id);
+
+      const organizerItems = await ItemRepo.listSpaceTodo({ spaceId: space.id, userId: organizer.id });
+      const organizerFound = organizerItems.find((i) => i.id === selfOnlyTask.id);
+      expect(organizerFound).toBeDefined();
+      // no assignment row for the Organizer on this one — nothing to report
+      // as their own completion state, same treatment an event already gets
+      expect(organizerFound.status).toBeNull();
+
+      const otherMemberItems = await ItemRepo.listSpaceTodo({ spaceId: space.id, userId: otherMember.id });
+      expect(otherMemberItems.find((i) => i.id === selfOnlyTask.id)).toBeUndefined();
+
+      // items.created_by has no ON DELETE cascade — clear it before the users
+      await getPool().query('DELETE FROM items WHERE id = ?', [selfOnlyTask.id]);
+      await getPool().query('DELETE FROM users WHERE id IN (?, ?, ?)', [organizer.id, member.id, otherMember.id]);
+    });
+  });
+
+  describe('listForSpace', () => {
+    test('every dated item in this Space assigned to the caller, excludes another Space and items assigned to specific others', async () => {
+      const space = await SpaceRepo.createSpace({ name: 'listForSpace test', creatorUserId: owner.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: intruder.id });
+
+      const openTask = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'task', title: 'listForSpace open task', dueDate: '2026-11-10', isOpenToAll: true,
+      });
+      const targetedTask = await ItemRepo.create({
+        createdBy: owner.id, spaceId: space.id, kind: 'task', title: 'listForSpace targeted task', dueDate: '2026-11-11',
+        isOpenToAll: false, assigneeUserIds: [owner.id],
+      });
+      createdIds.push(openTask.id, targetedTask.id);
+
+      const items = await ItemRepo.listForSpace({ spaceId: space.id, userId: owner.id, from: '2026-11-01', to: '2026-11-30' });
+      const ids = items.map((i) => i.id);
+      expect(ids).toContain(openTask.id);
+      expect(ids).toContain(targetedTask.id);
+
+      const intruderItems = await ItemRepo.listForSpace({ spaceId: space.id, userId: intruder.id, from: '2026-11-01', to: '2026-11-30' });
+      const intruderIds = intruderItems.map((i) => i.id);
+      expect(intruderIds).toContain(openTask.id);
+      expect(intruderIds).not.toContain(targetedTask.id);
+    });
+
+    test('an Organizer sees a dated item a Member assigned only to themselves', async () => {
+      const organizer = await UserRepo.create({
+        googleSub: 'itemrepo-lfs-org-' + Date.now(), email: `itemrepo-lfs-org-${Date.now()}@example.com`, firstName: 'Org', lastName: 'Test',
+      });
+      const member = await UserRepo.create({
+        googleSub: 'itemrepo-lfs-member-' + Date.now(), email: `itemrepo-lfs-member-${Date.now()}@example.com`, firstName: 'Member', lastName: 'Test',
+      });
+      const space = await SpaceRepo.createSpace({ name: 'listForSpace organizer-visibility test', creatorUserId: organizer.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: member.id });
+
+      const selfOnlyTask = await ItemRepo.create({
+        createdBy: member.id, spaceId: space.id, kind: 'task', title: 'listForSpace self-only task', dueDate: '2026-11-15',
+        isOpenToAll: false, assigneeUserIds: [member.id],
+      });
+      createdIds.push(selfOnlyTask.id);
+
+      const organizerItems = await ItemRepo.listForSpace({ spaceId: space.id, userId: organizer.id, from: '2026-11-01', to: '2026-11-30' });
+      const found = organizerItems.find((i) => i.id === selfOnlyTask.id);
+      expect(found).toBeDefined();
+      expect(found.status).toBeNull();
+
+      // items.created_by has no ON DELETE cascade — clear it before the users
+      await getPool().query('DELETE FROM items WHERE id = ?', [selfOnlyTask.id]);
+      await getPool().query('DELETE FROM users WHERE id IN (?, ?)', [organizer.id, member.id]);
     });
   });
 
@@ -584,6 +726,44 @@ describe('ItemRepo', () => {
       const result = await ItemRepo.update({ itemId: 999999999, userId: owner.id, title: 'x' });
       expect(result).toBeNull();
     });
+
+    // FR-O2: an Organizer can manage every item in their Space, even one a
+    // Member created and never assigned to them — findForUser would 404 on
+    // this (no assignment row), which is exactly why update() now goes
+    // through findEditable instead.
+    test('an Organizer can edit a Member-created item they were never assigned to; a plain Member cannot', async () => {
+      const organizer = await UserRepo.create({
+        googleSub: 'itemrepo-upd-org-' + Date.now(), email: `itemrepo-upd-org-${Date.now()}@example.com`, firstName: 'Org', lastName: 'Test',
+      });
+      const member = await UserRepo.create({
+        googleSub: 'itemrepo-upd-member-' + Date.now(), email: `itemrepo-upd-member-${Date.now()}@example.com`, firstName: 'Member', lastName: 'Test',
+      });
+      const otherMember = await UserRepo.create({
+        googleSub: 'itemrepo-upd-othermember-' + Date.now(), email: `itemrepo-upd-othermember-${Date.now()}@example.com`, firstName: 'Other', lastName: 'Test',
+      });
+      const space = await SpaceRepo.createSpace({ name: 'update organizer-edit test', creatorUserId: organizer.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: member.id });
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: otherMember.id });
+
+      const item = await ItemRepo.create({
+        createdBy: member.id, spaceId: space.id, kind: 'task', title: 'Member-only task, update test',
+        isOpenToAll: false, assigneeUserIds: [member.id],
+      });
+
+      const memberHijack = await ItemRepo.update({ itemId: item.id, userId: otherMember.id, title: 'Other member hijack' });
+      expect(memberHijack).toBeNull();
+
+      const organizerEdit = await ItemRepo.update({ itemId: item.id, userId: organizer.id, title: 'Retitled by organizer' });
+      expect(organizerEdit).not.toBeNull();
+      expect(organizerEdit.title).toBe('Retitled by organizer');
+      // the organizer has no assignment row on this item — nothing personal
+      // to report back for it
+      expect(organizerEdit.status).toBeNull();
+
+      await getPool().query('DELETE FROM items WHERE id = ?', [item.id]);
+      await getPool().query('DELETE FROM users WHERE id IN (?, ?, ?)', [organizer.id, member.id, otherMember.id]);
+    });
   });
 
   describe('remove', () => {
@@ -609,6 +789,59 @@ describe('ItemRepo', () => {
 
       const [assignments] = await getPool().query('SELECT * FROM item_assignments WHERE item_id = ?', [item.id]);
       expect(assignments).toHaveLength(0);
+    });
+
+    test('an Organizer can delete a Member-created item they were never assigned to', async () => {
+      const organizer = await UserRepo.create({
+        googleSub: 'itemrepo-rm-org-' + Date.now(), email: `itemrepo-rm-org-${Date.now()}@example.com`, firstName: 'Org', lastName: 'Test',
+      });
+      const member = await UserRepo.create({
+        googleSub: 'itemrepo-rm-member-' + Date.now(), email: `itemrepo-rm-member-${Date.now()}@example.com`, firstName: 'Member', lastName: 'Test',
+      });
+      const space = await SpaceRepo.createSpace({ name: 'remove organizer-delete test', creatorUserId: organizer.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: member.id });
+
+      const item = await ItemRepo.create({
+        createdBy: member.id, spaceId: space.id, kind: 'task', title: 'Member-only task, remove test',
+        isOpenToAll: false, assigneeUserIds: [member.id],
+      });
+
+      const deleted = await ItemRepo.remove({ itemId: item.id, userId: organizer.id });
+      expect(deleted).toBe(true);
+
+      const gone = await ItemRepo.findById(item.id);
+      expect(gone).toBeNull();
+
+      await getPool().query('DELETE FROM users WHERE id IN (?, ?)', [organizer.id, member.id]);
+    });
+  });
+
+  describe('findEditable', () => {
+    test('returns the item for the creator or an Organizer of its Space, null for a plain Member or non-member', async () => {
+      const organizer = await UserRepo.create({
+        googleSub: 'itemrepo-fe-org-' + Date.now(), email: `itemrepo-fe-org-${Date.now()}@example.com`, firstName: 'Org', lastName: 'Test',
+      });
+      const member = await UserRepo.create({
+        googleSub: 'itemrepo-fe-member-' + Date.now(), email: `itemrepo-fe-member-${Date.now()}@example.com`, firstName: 'Member', lastName: 'Test',
+      });
+      const space = await SpaceRepo.createSpace({ name: 'findEditable test', creatorUserId: organizer.id });
+      createdSpaceIds.push(space.id);
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: member.id });
+      await SpaceRepo.joinSpace({ joinCode: space.join_code, userId: intruder.id });
+
+      const item = await ItemRepo.create({
+        createdBy: organizer.id, spaceId: space.id, kind: 'task', title: 'findEditable test task', isOpenToAll: true,
+      });
+
+      expect(await ItemRepo.findEditable(item.id, organizer.id)).not.toBeNull();
+      // a plain Member can see it (open-to-all) but not edit it
+      expect(await ItemRepo.findEditable(item.id, member.id)).toBeNull();
+      // not even in the Space at all
+      expect(await ItemRepo.findEditable(item.id, intruder.id)).toBeNull();
+
+      await getPool().query('DELETE FROM items WHERE id = ?', [item.id]);
+      await getPool().query('DELETE FROM users WHERE id IN (?, ?)', [organizer.id, member.id]);
     });
   });
 });

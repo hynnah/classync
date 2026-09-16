@@ -402,6 +402,48 @@ describe('Space-scoped items on /api/items', () => {
     const res = await outsiderAgent.get(`/api/items?from=2026-01-01&to=2026-12-31&spaceId=${spaceId}`);
     expect(res.status).toBe(404);
   });
+
+  // FR-O2: only an Organizer can create a Space item at all (see the 403
+  // test above), so the real-world trigger for "an Organizer with no
+  // assignment row on an item" is promotion — an Organizer assigns a task to
+  // one Member, then promotes a DIFFERENT Member to Organizer. That newly
+  // promoted Organizer should see/edit/delete the item despite never being
+  // assigned to it; a plain (non-promoted, non-assigned) Member still can't.
+  test('a newly promoted Organizer sees, edits, and deletes an item assigned only to someone else; a plain Member cannot edit it', async () => {
+    const { orgAgent, spaceId } = await makeSpaceWithMember();
+    const { agent: assigneeAgent, userId: assigneeId } = await loggedInAgent('promo-assignee');
+    const { agent: promotedAgent, userId: promotedId } = await loggedInAgent('promo-target');
+    const { agent: plainMemberAgent } = await loggedInAgent('promo-plain');
+
+    const spaceListRes = await orgAgent.get('/api/spaces');
+    const joinCode = spaceListRes.body.spaces.find((s) => s.id === spaceId).joinCode;
+    await assigneeAgent.post('/api/spaces/join').send({ joinCode });
+    await promotedAgent.post('/api/spaces/join').send({ joinCode });
+    await plainMemberAgent.post('/api/spaces/join').send({ joinCode });
+
+    const created = await orgAgent.post('/api/items').send({
+      spaceId, kind: 'task', title: 'Assigned to one Member only, promotion test', dueDate: '2026-09-22',
+      isOpenToAll: false, assigneeUserIds: [assigneeId],
+    });
+    expect(created.status).toBe(201);
+    createdIds.push(created.body.item.id);
+    const itemId = created.body.item.id;
+
+    await orgAgent.post(`/api/spaces/${spaceId}/members/${promotedId}/promote`);
+
+    const promotedList = await promotedAgent.get(`/api/items?from=2026-01-01&to=2026-12-31&spaceId=${spaceId}`);
+    expect(promotedList.body.items.map((i) => i.id)).toContain(itemId);
+
+    const plainMemberEdit = await plainMemberAgent.patch(`/api/items/${itemId}`).send({ title: 'Hijacked by plain member' });
+    expect(plainMemberEdit.status).toBe(404);
+
+    const promotedEdit = await promotedAgent.patch(`/api/items/${itemId}`).send({ title: 'Retitled by promoted organizer' });
+    expect(promotedEdit.status).toBe(200);
+    expect(promotedEdit.body.item.title).toBe('Retitled by promoted organizer');
+
+    const promotedDelete = await promotedAgent.delete(`/api/items/${itemId}`);
+    expect(promotedDelete.status).toBe(204);
+  });
 });
 
 describe('/api/items/todo — the To Do view', () => {
