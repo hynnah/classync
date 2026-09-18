@@ -2637,11 +2637,20 @@ a.btn-secondary:hover {
 .page-app .todo-category-filter {
   font-family: var(--font-body);
   font-size: 12.5px;
-  padding: 7px 28px 7px 10px;
+  padding: 7px 30px 7px 10px;
   border: 1px solid #e2d9c6;
   background: var(--color-bg);
   color: var(--color-text-faint);
   cursor: pointer;
+  /* The native select arrow sits flush against the border regardless of
+     padding — padding only moves the text. Swap it for our own chevron
+     (same path as .picker-btn's) so we can actually control its offset
+     from the right edge via background-position. */
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%238b8579' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
 }
 .page-app .todo-category-filter:hover {
   color: var(--color-text);
