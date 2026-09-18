@@ -2623,6 +2623,29 @@ a.btn-secondary:hover {
   font-size: 10px;
   color: var(--color-text-faintest);
 }
+.page-app .todo-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.page-app .todo-switch-row .todo-switch {
+  margin-bottom: 0;
+}
+.page-app .todo-category-filter {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  padding: 7px 10px;
+  border: 1px solid #e2d9c6;
+  background: var(--color-bg);
+  color: var(--color-text-faint);
+  cursor: pointer;
+}
+.page-app .todo-category-filter:hover {
+  color: var(--color-text);
+}
 .page-app .todo-new-btn {
   font-family: var(--font-mono);
   font-size: 9px;
@@ -3882,6 +3905,9 @@ a.btn-secondary:hover {
     padding: 20px;
   }
   .page-app .todo-content .todo-switch {
+    width: 100%;
+  }
+  .page-app .todo-content .todo-category-filter {
     width: 100%;
   }
   .page-app .todo-content .todo-switch-btn {

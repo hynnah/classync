@@ -216,10 +216,22 @@
       </div>
       <div class="todo-content">
         <div class="todo-main">
-          <div class="todo-switch">
-            <button id="todo-tab-active" class="todo-switch-btn is-active" type="button">Active <span id="todo-count-active" class="todo-switch-count">00</span></button>
-            <button id="todo-tab-overdue" class="todo-switch-btn" type="button">Overdue <span id="todo-count-overdue" class="todo-switch-count">00</span></button>
-            <button id="todo-tab-done" class="todo-switch-btn" type="button">Completed <span id="todo-count-done" class="todo-switch-count">00</span></button>
+          <div class="todo-switch-row">
+            <div class="todo-switch">
+              <button id="todo-tab-active" class="todo-switch-btn is-active" type="button">Active <span id="todo-count-active" class="todo-switch-count">00</span></button>
+              <button id="todo-tab-overdue" class="todo-switch-btn" type="button">Overdue <span id="todo-count-overdue" class="todo-switch-count">00</span></button>
+              <button id="todo-tab-done" class="todo-switch-btn" type="button">Completed <span id="todo-count-done" class="todo-switch-count">00</span></button>
+            </div>
+            <select id="todo-category-filter" class="todo-category-filter" aria-label="Filter by category">
+              <option value="all">All categories</option>
+              <option value="Assignment">Assignment</option>
+              <option value="Activity">Activity</option>
+              <option value="Quiz">Quiz</option>
+              <option value="Project">Project</option>
+              <option value="Presentation">Presentation</option>
+              <option value="Exam">Exam</option>
+              <option value="Others">Others</option>
+            </select>
           </div>
           <div id="todo-body" class="todo-body"></div>
         </div>
@@ -417,10 +429,22 @@
       </div>
       <div class="todo-content">
         <div class="todo-main">
-          <div class="todo-switch">
-            <button id="space-todo-tab-active" class="todo-switch-btn is-active" type="button">Active <span id="space-todo-count-active" class="todo-switch-count">00</span></button>
-            <button id="space-todo-tab-overdue" class="todo-switch-btn" type="button">Overdue <span id="space-todo-count-overdue" class="todo-switch-count">00</span></button>
-            <button id="space-todo-tab-done" class="todo-switch-btn" type="button">Completed <span id="space-todo-count-done" class="todo-switch-count">00</span></button>
+          <div class="todo-switch-row">
+            <div class="todo-switch">
+              <button id="space-todo-tab-active" class="todo-switch-btn is-active" type="button">Active <span id="space-todo-count-active" class="todo-switch-count">00</span></button>
+              <button id="space-todo-tab-overdue" class="todo-switch-btn" type="button">Overdue <span id="space-todo-count-overdue" class="todo-switch-count">00</span></button>
+              <button id="space-todo-tab-done" class="todo-switch-btn" type="button">Completed <span id="space-todo-count-done" class="todo-switch-count">00</span></button>
+            </div>
+            <select id="space-todo-category-filter" class="todo-category-filter" aria-label="Filter by category">
+              <option value="all">All categories</option>
+              <option value="Assignment">Assignment</option>
+              <option value="Activity">Activity</option>
+              <option value="Quiz">Quiz</option>
+              <option value="Project">Project</option>
+              <option value="Presentation">Presentation</option>
+              <option value="Exam">Exam</option>
+              <option value="Others">Others</option>
+            </select>
           </div>
           <div id="space-todo-body" class="todo-body"></div>
         </div>
@@ -510,10 +534,22 @@
       </div>
       <div class="todo-content">
         <div class="todo-main">
-          <div class="todo-switch">
-            <button id="all-todo-tab-active" class="todo-switch-btn is-active" type="button">Active <span id="all-todo-count-active" class="todo-switch-count">00</span></button>
-            <button id="all-todo-tab-overdue" class="todo-switch-btn" type="button">Overdue <span id="all-todo-count-overdue" class="todo-switch-count">00</span></button>
-            <button id="all-todo-tab-done" class="todo-switch-btn" type="button">Completed <span id="all-todo-count-done" class="todo-switch-count">00</span></button>
+          <div class="todo-switch-row">
+            <div class="todo-switch">
+              <button id="all-todo-tab-active" class="todo-switch-btn is-active" type="button">Active <span id="all-todo-count-active" class="todo-switch-count">00</span></button>
+              <button id="all-todo-tab-overdue" class="todo-switch-btn" type="button">Overdue <span id="all-todo-count-overdue" class="todo-switch-count">00</span></button>
+              <button id="all-todo-tab-done" class="todo-switch-btn" type="button">Completed <span id="all-todo-count-done" class="todo-switch-count">00</span></button>
+            </div>
+            <select id="all-todo-category-filter" class="todo-category-filter" aria-label="Filter by category">
+              <option value="all">All categories</option>
+              <option value="Assignment">Assignment</option>
+              <option value="Activity">Activity</option>
+              <option value="Quiz">Quiz</option>
+              <option value="Project">Project</option>
+              <option value="Presentation">Presentation</option>
+              <option value="Exam">Exam</option>
+              <option value="Others">Others</option>
+            </select>
           </div>
           <div id="all-todo-body" class="todo-body"></div>
         </div>
@@ -2948,13 +2984,15 @@
 
     let todoTasksCache = [];
     let todoFilter = 'active';
+    let todoCategory = 'all';
 
     function renderTodoBody() {
       const todayIso = isoDate(new Date());
       const isLate = (t) => t.due_date && t.due_date < todayIso;
-      const overdue = todoTasksCache.filter((t) => t.status !== 'completed' && isLate(t));
-      const active = todoTasksCache.filter((t) => t.status !== 'completed' && !isLate(t));
-      const done = todoTasksCache.filter((t) => t.status === 'completed');
+      const byCategory = todoTasksCache.filter((t) => todoCategory === 'all' || t.category === todoCategory);
+      const overdue = byCategory.filter((t) => t.status !== 'completed' && isLate(t));
+      const active = byCategory.filter((t) => t.status !== 'completed' && !isLate(t));
+      const done = byCategory.filter((t) => t.status === 'completed');
       todoCountActive.textContent = String(active.length).padStart(2, '0');
       todoCountOverdue.textContent = String(overdue.length).padStart(2, '0');
       todoCountDone.textContent = String(done.length).padStart(2, '0');
@@ -3013,6 +3051,10 @@
     todoTabActive.addEventListener('click', () => { todoFilter = 'active'; renderTodoBody(); });
     todoTabOverdue.addEventListener('click', () => { todoFilter = 'overdue'; renderTodoBody(); });
     todoTabDone.addEventListener('click', () => { todoFilter = 'done'; renderTodoBody(); });
+    document.getElementById('todo-category-filter').addEventListener('change', (e) => {
+      todoCategory = e.target.value;
+      renderTodoBody();
+    });
 
     // --- Notes: its own list + editor view, split from To Do (2026-09-06
     // design review — see the reference mockups). Auto-saves the same
@@ -4849,6 +4891,7 @@
     const allTodoDueBody = document.getElementById('all-todo-due-body');
     let allTodoTasksCache = [];
     let allTodoFilter = 'active';
+    let allTodoCategory = 'all';
 
     function formatAllTodoMeta(raw, isOverdue) {
       const parts = [];
@@ -4954,9 +4997,10 @@
     function renderAllTodoBody() {
       const todayIso = isoDate(new Date());
       const isLate = (t) => t.due_date && t.due_date < todayIso;
-      const overdue = allTodoTasksCache.filter((t) => t.status !== 'completed' && isLate(t));
-      const active = allTodoTasksCache.filter((t) => t.status !== 'completed' && !isLate(t));
-      const done = allTodoTasksCache.filter((t) => t.status === 'completed');
+      const byCategory = allTodoTasksCache.filter((t) => allTodoCategory === 'all' || t.category === allTodoCategory);
+      const overdue = byCategory.filter((t) => t.status !== 'completed' && isLate(t));
+      const active = byCategory.filter((t) => t.status !== 'completed' && !isLate(t));
+      const done = byCategory.filter((t) => t.status === 'completed');
       allTodoCountActive.textContent = String(active.length).padStart(2, '0');
       allTodoCountOverdue.textContent = String(overdue.length).padStart(2, '0');
       allTodoCountDone.textContent = String(done.length).padStart(2, '0');
@@ -5006,6 +5050,10 @@
     allTodoTabActive.addEventListener('click', () => { allTodoFilter = 'active'; renderAllTodoBody(); });
     allTodoTabOverdue.addEventListener('click', () => { allTodoFilter = 'overdue'; renderAllTodoBody(); });
     allTodoTabDone.addEventListener('click', () => { allTodoFilter = 'done'; renderAllTodoBody(); });
+    document.getElementById('all-todo-category-filter').addEventListener('change', (e) => {
+      allTodoCategory = e.target.value;
+      renderAllTodoBody();
+    });
     document.getElementById('all-todo-new-btn').addEventListener('click', () => crossViewRefresh.openModal());
 
     // Guarded by allViewVisited (see its own comment) — never fires All's
@@ -5224,6 +5272,7 @@
     const spaceTodoCountDone = document.getElementById('space-todo-count-done');
     let spaceTodoTasksCache = [];
     let spaceTodoFilter = 'active';
+    let spaceTodoCategory = 'all';
 
     // Today / This week (next 7 days) / Later / No due date — only the
     // Active tab groups by this; Overdue and Completed stay flat lists
@@ -5352,9 +5401,10 @@
     function renderSpaceTodoBody() {
       const todayIso = isoDate(new Date());
       const isLate = (t) => t.due_date && t.due_date < todayIso;
-      const overdue = spaceTodoTasksCache.filter((t) => t.status !== 'completed' && isLate(t));
-      const active = spaceTodoTasksCache.filter((t) => t.status !== 'completed' && !isLate(t));
-      const done = spaceTodoTasksCache.filter((t) => t.status === 'completed');
+      const byCategory = spaceTodoTasksCache.filter((t) => spaceTodoCategory === 'all' || t.category === spaceTodoCategory);
+      const overdue = byCategory.filter((t) => t.status !== 'completed' && isLate(t));
+      const active = byCategory.filter((t) => t.status !== 'completed' && !isLate(t));
+      const done = byCategory.filter((t) => t.status === 'completed');
       spaceTodoCountActive.textContent = String(active.length).padStart(2, '0');
       spaceTodoCountOverdue.textContent = String(overdue.length).padStart(2, '0');
       spaceTodoCountDone.textContent = String(done.length).padStart(2, '0');
@@ -5422,6 +5472,10 @@
     spaceTodoTabActive.addEventListener('click', () => { spaceTodoFilter = 'active'; renderSpaceTodoBody(); });
     spaceTodoTabOverdue.addEventListener('click', () => { spaceTodoFilter = 'overdue'; renderSpaceTodoBody(); });
     spaceTodoTabDone.addEventListener('click', () => { spaceTodoFilter = 'done'; renderSpaceTodoBody(); });
+    document.getElementById('space-todo-category-filter').addEventListener('change', (e) => {
+      spaceTodoCategory = e.target.value;
+      renderSpaceTodoBody();
+    });
     document.getElementById('space-todo-new-btn').addEventListener('click', () => openSpaceItemModal(null));
 
     async function populateSpaceAssignees(selectedIds) {
