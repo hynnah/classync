@@ -36,6 +36,22 @@ test.describe('entrance page — age-confirmation gate', () => {
     await expect(button).toBeEnabled();
   });
 
+  test('clicking the button before ticking the box explains why, instead of doing nothing', async ({ page }) => {
+    await page.goto('/signin.html');
+
+    // force: Playwright won't click an aria-disabled button, but a real user
+    // can — and that click is exactly the case this feedback exists for.
+    await page.getByRole('button', { name: 'Continue with Google' }).click({ force: true });
+    await expect(page).toHaveURL(/\/signin\.html/);
+    await expect(page.locator('.age-confirm')).toHaveClass(/is-missing/);
+    await expect(page.locator('#age-confirm-hint')).toContainText('Tick this box to continue');
+    await expect(page.locator('#age-confirm')).toBeFocused();
+
+    await page.locator('#age-confirm').check();
+    await expect(page.locator('.age-confirm')).not.toHaveClass(/is-missing/);
+    await expect(page.locator('#age-confirm-hint')).toHaveText('Required to sign in');
+  });
+
   test('unchecking the box disables the button again', async ({ page }) => {
     await page.goto('/signin.html');
 

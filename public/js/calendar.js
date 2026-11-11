@@ -112,9 +112,28 @@
       year: year ?? now.getFullYear(),
       month: month ?? now.getMonth(),
     };
-    const todayISO = isoDate(now.getFullYear(), now.getMonth(), now.getDate());
+    let lastToday = now;
+
+    // "Today" is read fresh, not fixed at init, so a page left open past
+    // midnight moves its highlight on the next redraw. If the day changed
+    // while the user was looking at the old today's month (e.g. Nov 30 →
+    // Dec 1), follow it into the new month rather than leaving the highlight
+    // off-screen. Also run when the caller reads `state`, so a refresh that
+    // fetches items for the shown month fetches the new month, not the old.
+    function followToday() {
+      const today = new Date();
+      if (today.toDateString() !== lastToday.toDateString()
+          && state.year === lastToday.getFullYear() && state.month === lastToday.getMonth()) {
+        state.year = today.getFullYear();
+        state.month = today.getMonth();
+      }
+      lastToday = today;
+      return today;
+    }
 
     function repaint() {
+      const today = followToday();
+      const todayISO = isoDate(today.getFullYear(), today.getMonth(), today.getDate());
       paint(root, { ...state, itemsByDate, todayISO, weekStartsOn });
       if (onMonthChange) onMonthChange({ ...state });
     }
@@ -133,8 +152,9 @@
         repaint();
       },
       today() {
-        state.year = now.getFullYear();
-        state.month = now.getMonth();
+        const today = new Date();
+        state.year = today.getFullYear();
+        state.month = today.getMonth();
         repaint();
       },
       goTo(y, m) {
@@ -147,6 +167,7 @@
         repaint();
       },
       get state() {
+        followToday();
         return { ...state };
       },
     };

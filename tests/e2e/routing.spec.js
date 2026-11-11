@@ -2,9 +2,9 @@ const { test, expect } = require('@playwright/test');
 const { getPool } = require('../../server/src/db/pool');
 
 test.describe('landing page entry points require sign-in first', () => {
-  test('"See the app" redirects a signed-out visitor to sign-in, not straight into the app', async ({ page }) => {
+  test('the footer\'s "Open the app" redirects a signed-out visitor to sign-in, not straight into the app', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: 'See the app' }).click();
+    await page.locator('footer').getByRole('link', { name: 'Open the app' }).click();
     await expect(page).toHaveURL(/\/signin\.html\?next=app/);
   });
 
@@ -14,9 +14,10 @@ test.describe('landing page entry points require sign-in first', () => {
     await expect(page).toHaveURL(/\/signin\.html\?next=firstrun/);
   });
 
-  test('"Continue solo" redirects a signed-out visitor to sign-in, not straight into the app', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('link', { name: 'Continue solo' }).click();
+  test('/continue-solo redirects a signed-out visitor to sign-in, not straight into the app', async ({ page }) => {
+    // No longer linked from the landing page (first-run offers it instead), but
+    // the route itself must still refuse a signed-out visitor.
+    await page.goto('/continue-solo');
     await expect(page).toHaveURL(/\/signin\.html\?next=solo/);
   });
 });

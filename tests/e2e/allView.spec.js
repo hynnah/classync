@@ -366,7 +366,7 @@ test.describe('the unified All-Spaces calendar (FR-M1)', () => {
       await page.locator('.scope-switcher-item[data-scope="all"]').click();
       await page.locator('#all-nav-todo').click();
 
-      await expect(page.locator('#all-todo-view .urgent-title')).toHaveText('Events');
+      await expect(page.locator('#all-todo-view .urgent-title')).toHaveText('Upcoming events');
       const railEventRow = page.locator('#all-todo-due-body .todo-due-item', { hasText: 'E2E All To Do rail space event' });
       await expect(railEventRow).toBeVisible();
       await expect(railEventRow).toContainText('E2E All To Do Rail Test');

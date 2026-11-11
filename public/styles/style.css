@@ -15,6 +15,14 @@ body {
   margin: 0;
   font-family: var(--font-body);
   color: var(--color-text);
+  accent-color: var(--color-accent);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(182,130,53,0.45);
+  outline-offset: 1px;
 }
 
 img {
@@ -40,6 +48,9 @@ a.btn-secondary {
   transition: background-color .3s ease, color .25s ease, border-color .25s ease,
               transform .3s cubic-bezier(.22,.61,.36,1), box-shadow .3s ease;
   box-shadow: 0 1px 2px rgba(38,37,33,0.05), 0 2px 6px -2px rgba(38,37,33,0.06);
+}
+.page-app button {
+  border-radius: var(--radius-soft);
 }
 
 button:hover,
@@ -117,7 +128,81 @@ a.btn-secondary:hover {
 }
 
 .page-landing { background: var(--color-bg-landing); }
+/* Nav links glide to their section instead of jumping, and stop just below the
+   sticky nav rather than underneath it. Landing only — the app scrolls its own
+   panes and shouldn't inherit smooth programmatic scrolling. */
+html:has(> body.page-landing) {
+  scroll-behavior: smooth;
+  scroll-padding-top: 130px;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:has(> body.page-landing) { scroll-behavior: auto; }
+}
 .page-landing .content { position: relative; z-index: 1; }
+/* Reading veil: the drifting clouds pass behind every text block, so each one
+   gently lightens whatever is behind it (brighter, lower contrast — no blur, so
+   there's no sharp-vs-soft boundary to give its shape away), fading out over a
+   wide margin with no visible box. It filters the live backdrop rather than
+   painting a colour, so it matches the sky wherever it sits. Applied to
+   containers (not rows) so their divider lines stay crisp. The hosts are
+   deliberately not stacking contexts: every veil's z-index: -1 then resolves
+   against .content, putting all veils beneath all text — otherwise one block's
+   wide veil would wash out the neighbouring block's text it overlaps. */
+.page-landing .hero-copy,
+.page-landing .hero-bottom p,
+.page-landing .section-head h2,
+.page-landing .three-grid,
+.page-landing .planner-grid > div:first-child,
+.page-landing #how,
+.page-landing .begin-label,
+.page-landing .begin h2 {
+  position: relative;
+  --veil-x: 140px;
+  --veil-y: 100px;
+}
+/* The hero clips its overflow, so its veils may only reach as far as its
+   side padding — any further and the clip would cut the fade off square. */
+.page-landing .hero-copy,
+.page-landing .hero-bottom p {
+  --veil-x: 56px;
+}
+.page-landing .hero-copy::before,
+.page-landing .hero-bottom p::before,
+.page-landing .section-head h2::before,
+.page-landing .three-grid::before,
+.page-landing .planner-grid > div:first-child::before,
+.page-landing #how::before,
+.page-landing .begin-label::before,
+.page-landing .begin h2::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--veil-y)) calc(-1 * var(--veil-x));
+  z-index: -1;
+  pointer-events: none;
+  -webkit-backdrop-filter: contrast(0.32) brightness(1.45);
+  backdrop-filter: contrast(0.32) brightness(1.45);
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 140px, #000 calc(100% - 140px), transparent),
+    linear-gradient(to bottom, transparent, #000 100px, #000 calc(100% - 100px), transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, #000 140px, #000 calc(100% - 140px), transparent),
+    linear-gradient(to bottom, transparent, #000 100px, #000 calc(100% - 100px), transparent);
+  mask-composite: intersect;
+}
+/* Outside the hero, also blur what's behind the text: the cloud brushwork, not
+   just its tone, is what fights small body text. Safe here because these
+   sections don't clip, so the wide fade eases the blur in gradually. The hero
+   keeps the blur-free version — its overflow clip would cut the fade square. */
+.page-landing .section-head h2::before,
+.page-landing .three-grid::before,
+.page-landing .planner-grid > div:first-child::before,
+.page-landing #how::before,
+.page-landing .begin-label::before,
+.page-landing .begin h2::before {
+  -webkit-backdrop-filter: blur(3px) contrast(0.32) brightness(1.45);
+  backdrop-filter: blur(3px) contrast(0.32) brightness(1.45);
+}
 
 .page-landing nav {
   position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
@@ -126,7 +211,7 @@ a.btn-secondary:hover {
 }
 .page-landing .nav-brand { display: flex; align-items: center; gap: 14px; }
 .page-landing .nav-brand .wordmark { font-family: var(--font-heading); font-size: 25px; letter-spacing: 0.01em; }
-.page-landing .nav-brand .tagline { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase; color: #7d8b91; }
+.page-landing .nav-brand .tagline { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase; color: #4f5e64; }
 .page-landing nav > div:last-child { display: flex; align-items: center; gap: 34px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; }
 .page-landing nav a.plain { color: #4c5c63; }
 .page-landing nav a.plain:hover { color: var(--color-text); }
@@ -135,7 +220,7 @@ a.btn-secondary:hover {
 .page-landing header { position: relative; max-width: 1200px; margin: 0 auto; padding: 132px 56px 128px; overflow: hidden; }
 .page-landing .hero-magnolia { position: absolute; right: -30px; top: 40px; width: 300px; opacity: 0.4; transform: rotate(-120deg); pointer-events: none; }
 .page-landing .hero-copy { position: relative; max-width: 760px; }
-.page-landing .eyebrow { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.28em; text-transform: uppercase; color: #7d8b91; }
+.page-landing .eyebrow { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.28em; text-transform: uppercase; color: #45535a; }
 .page-landing .hero-copy h1 { font-family: var(--font-heading); font-weight: 300; font-size: 62px; line-height: 1.06; letter-spacing: -0.01em; margin: 22px 0 0; max-width: 20ch; }
 .page-landing .hero-bottom { position: relative; display: flex; align-items: flex-end; justify-content: space-between; gap: 60px; margin-top: 40px; flex-wrap: wrap; }
 .page-landing .hero-bottom p { font-size: 15px; line-height: 1.85; color: var(--color-text-muted); max-width: 44ch; margin: 0; }
@@ -152,17 +237,17 @@ a.btn-secondary:hover {
 .page-landing .three-grid h3 { font-family: var(--font-heading); font-weight: 400; font-size: 27px; margin: 0 0 12px; line-height: 1.1; }
 .page-landing .three-grid p { font-size: 14px; line-height: 1.85; color: var(--color-text-muted); margin: 0; }
 
-.page-landing #planner { padding-top: 120px; }
+.page-landing #planner { padding-top: 120px; scroll-margin-top: -120px; }
 .page-landing .planner-grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 60px; align-items: center; }
 .page-landing .planner-grid h2 { font-family: var(--font-heading); font-weight: 300; font-size: 40px; margin: 0 0 18px; line-height: 1.05; }
 .page-landing .planner-grid > div:first-child p { font-size: 14.5px; line-height: 1.85; color: var(--color-text-muted); margin: 0 0 24px; }
-.page-landing .legend { display: flex; flex-direction: column; gap: 11px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-text-faint); }
+.page-landing .legend { display: flex; flex-direction: column; gap: 11px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #5a564d; }
 .page-landing .legend .row { display: flex; align-items: center; gap: 12px; }
 .page-landing .swatch { width: 9px; height: 9px; display: inline-block; }
 .page-landing .swatch--task { background: var(--color-space-task); border: 1px solid var(--color-space-task-border); }
 .page-landing .swatch--event { background: var(--color-space-event); border: 1px solid var(--color-space-event-border); border-radius: 50%; }
 .page-landing .swatch--personal { background: transparent; border: 1px solid var(--color-personal-border); }
-.page-landing .planner-cta { margin-top: 30px; background: transparent; }
+.page-landing .planner-cta { margin-top: 30px; }
 .page-landing .preview-card { position: relative; }
 .page-landing .preview-inner { background: var(--color-bg-card); border: 1px solid var(--color-divider); padding: 16px; box-shadow: 0 22px 46px -34px rgba(38,37,33,0.38); }
 .page-landing .preview-window { border: 1px solid var(--color-divider-soft); padding: 20px 22px; }
@@ -212,21 +297,23 @@ a.btn-secondary:hover {
 .page-landing .date-chip-num { font-family: var(--font-heading); font-weight: 300; font-size: 44px; line-height: 1; margin: 4px 0 2px; }
 .page-landing .date-chip-due { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--color-accent-link); }
 
-.page-landing .quote { margin-top: 128px; background: var(--color-dark-bg); position: relative; max-width: none; padding: 0; }
+/* z-index lifts the dark banner above the neighbouring sections' reading veils,
+   so none of them can lighten or bleed into its edges. */
+.page-landing .quote { margin-top: 128px; background: var(--color-dark-bg); position: relative; z-index: 1; max-width: none; padding: 0; }
 .page-landing .quote-inner { position: relative; max-width: 1200px; margin: 0 auto; padding: 84px 56px; text-align: center; }
 .page-landing .quote-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--color-dark-muted); margin-bottom: 26px; }
 .page-landing .quote-inner p { font-family: var(--font-heading); font-weight: 300; font-style: italic; font-size: 36px; line-height: 1.38; color: var(--color-dark-text); margin: 0 auto; max-width: 32ch; }
 
-.page-landing #how { padding-top: 112px; }
+.page-landing #how { padding-top: 112px; scroll-margin-top: -112px; }
 .page-landing .how-head { border-bottom: 0; padding-bottom: 0; margin-bottom: 36px; }
 .page-landing .how-row { display: grid; grid-template-columns: 80px 1fr 1.2fr; gap: 30px; padding: 26px 0; border-top: 1px solid var(--color-divider); align-items: baseline; }
 .page-landing .how-row:last-child { border-bottom: 1px solid var(--color-divider); }
-.page-landing .how-row .num { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; color: var(--color-accent); }
+.page-landing .how-row .num { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; color: #7a5419; }
 .page-landing .how-row .title { font-family: var(--font-heading); font-size: 27px; font-weight: 400; }
 .page-landing .how-row .desc { font-size: 14px; line-height: 1.85; color: var(--color-text-muted); }
 
 .page-landing .begin { padding: 104px 56px 116px; text-align: center; }
-.page-landing .begin-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--color-accent-link); }
+.page-landing .begin-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: #7a5419; }
 .page-landing .begin h2 { font-family: var(--font-heading); font-weight: 300; font-size: 44px; line-height: 1.08; margin: 18px auto 0; max-width: 22ch; }
 .page-landing .begin-actions { display: flex; gap: 14px; justify-content: center; margin-top: 34px; flex-wrap: wrap; }
 
@@ -603,11 +690,11 @@ a.btn-secondary:hover {
   gap: 8px;
   padding: 8px 14px;
   color: var(--color-text);
-  background: rgba(255,253,248,0.92);
-  border: 1px solid rgba(120,134,142,0.42);
+  background: rgba(255,253,248,0.78);
+  border: 1px solid transparent;
+  border-radius: var(--radius-soft);
   cursor: pointer;
 }
-.page-signin header .fol { color: #8d6222; }
 
 .page-signin main {
   position: relative;
@@ -681,11 +768,14 @@ a.btn-secondary:hover {
   color: var(--color-text);
   background: rgba(253,252,248,0.9);
   border: 1px solid var(--color-accent);
+  border-radius: var(--radius-soft);
   padding: 17px 20px;
   gap: 12px;
 }
 .page-signin #google-signin:hover { background: var(--color-accent-hover-bg); }
-.page-signin .chrome-icon { width: 15px; height: 15px; color: var(--color-accent); }
+.page-signin #google-signin[aria-disabled="true"] { opacity: 0.55; }
+.page-signin #google-signin[aria-disabled="true"]:hover { background: rgba(253,252,248,0.9); box-shadow: none; transform: none; }
+.page-signin .google-icon { width: 16px; height: 16px; }
 
 .page-signin .age-confirm {
   display: flex;
@@ -695,6 +785,30 @@ a.btn-secondary:hover {
   line-height: 1.6;
   color: #3f3d36;
   cursor: pointer;
+  /* Padding offset by an equal negative margin: room for the "missing"
+     highlight below without shifting the layout when it appears. */
+  padding: 10px 12px;
+  margin: -10px -12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-soft);
+  transition: background-color .25s ease, border-color .25s ease;
+}
+/* Shown when "Continue with Google" is clicked before the box is ticked. */
+.page-signin .age-confirm.is-missing {
+  background: rgba(176,48,40,0.06);
+  border-color: var(--color-danger-border);
+  animation: age-nudge 0.4s ease;
+}
+.page-signin .age-confirm.is-missing small {
+  color: var(--color-danger-text);
+  white-space: normal;
+}
+@keyframes age-nudge {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
 }
 .page-signin .age-confirm input {
   width: 14px;
@@ -713,6 +827,13 @@ a.btn-secondary:hover {
   white-space: nowrap;
 }
 .page-signin .grant-note { font-size: 11.5px; line-height: 1.8; color: #6b665c; margin: 0; max-width: 42ch; }
+.page-signin .age-confirm a {
+  color: var(--color-accent-link);
+  text-decoration: underline;
+  text-decoration-color: rgba(162,115,44,0.4);
+  text-underline-offset: 2px;
+}
+.page-signin .age-confirm a:hover { text-decoration-color: currentColor; }
 .page-signin #signin-error { color: var(--color-danger-text); font-size: 12.5px; margin-top: 14px; }
 .page-signin #signin-error[hidden] { display: none; }
 
@@ -730,16 +851,12 @@ a.btn-secondary:hover {
 .page-signin .facts > div:not(:last-child) { border-right: 1px solid var(--color-divider); }
 .page-signin .facts > div:first-child { padding-left: 0; }
 .page-signin .facts > div:last-child { padding-right: 0; }
-.page-signin .facts .num { font-family: var(--font-mono); font-size: 10px; color: var(--color-accent); letter-spacing: 0.12em; }
-.page-signin .facts .fact { font-size: 13px; line-height: 1.7; color: #56534b; margin-top: 8px; }
+.page-signin .facts .fact { font-size: 13px; line-height: 1.7; color: #56534b; }
 .page-signin .facts .fact strong { color: var(--color-text); font-weight: 400; }
 
 @media (max-width: 640px) {
   .page-signin {
     padding: 16px 20px 24px;
-  }
-  .page-signin header .fol {
-    display: none;
   }
   .page-signin main {
     padding: 8px 0 4px;
@@ -887,12 +1004,14 @@ a.btn-secondary:hover {
   gap: 26px;
 }
 .page-firstrun .start-card {
-  border: 1px solid var(--color-divider);
-  background: var(--color-bg-card);
+  border: 1px solid #dcd3c0;
+  background: #fffefb;
+  box-shadow: 0 1px 0 #ffffff inset, 0 1px 2px rgba(38,37,33,0.05), 0 6px 14px -6px rgba(38,37,33,0.07), 0 26px 44px -26px rgba(38,37,33,0.24);
   padding: 30px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  border-radius: var(--radius-soft);
 }
 .page-firstrun .card-title {
   font-family: var(--font-heading);
@@ -925,6 +1044,7 @@ a.btn-secondary:hover {
   font-family: var(--font-body);
   font-size: 13.5px;
   color: var(--color-text);
+  border-radius: var(--radius-soft);
 }
 .page-firstrun .field input::placeholder {
   color: #a09889;
@@ -955,6 +1075,7 @@ a.btn-secondary:hover {
   padding: 13px;
   cursor: pointer;
   text-align: center;
+  border-radius: var(--radius-soft);
 }
 .page-firstrun .card-btn--primary {
   color: var(--color-text);
@@ -965,10 +1086,14 @@ a.btn-secondary:hover {
 }
 .page-firstrun .card-btn--secondary {
   color: var(--color-secondary-text);
-  border: 1px solid var(--color-secondary-border);
+  border: 1px solid transparent;
+  background: rgba(38,37,33,0.045);
+  box-shadow: none;
 }
 .page-firstrun .card-btn--secondary:not(:disabled):hover {
-  border-color: var(--color-secondary-border-hover);
+  background: var(--color-accent-hover-bg);
+  box-shadow: none;
+  transform: none;
 }
 .page-firstrun .card-btn:disabled {
   cursor: not-allowed;
@@ -985,6 +1110,7 @@ a.btn-secondary:hover {
 
 .page-firstrun .start-card--solo {
   background: var(--color-bg-landing);
+  box-shadow: 0 1px 2px rgba(38,37,33,0.04), 0 10px 22px -18px rgba(38,37,33,0.12);
   position: relative;
   overflow: hidden;
 }
@@ -1001,11 +1127,12 @@ a.btn-secondary:hover {
 }
 .page-firstrun .card-btn--solo {
   color: var(--color-text);
-  border: 1px solid #cfc6b2;
+  border: 1px solid transparent;
+  background: rgba(38,37,33,0.045);
   display: block;
 }
 .page-firstrun .card-btn--solo:hover {
-  border-color: var(--color-accent);
+  background: var(--color-accent-hover-bg);
 }
 
 @media (max-width: 1100px) {
@@ -1146,8 +1273,12 @@ a.btn-secondary:hover {
   flex-shrink: 0;
   height: 100%;
   overflow: hidden;
+  /* Stacked above main so its shadow falls across the toolbar and content,
+     reading as navigation on its own layer rather than another content pane. */
+  position: relative;
+  z-index: 2;
   border-right: 1px solid #d8cfbc;
-  box-shadow: 4px 0 16px -12px rgba(38,37,33,0.1);
+  box-shadow: inset -1px 0 0 rgba(255,255,255,0.6), 2px 0 4px -1px rgba(38,37,33,0.06), 12px 0 30px -10px rgba(38,37,33,0.2);
   background-color: var(--color-bg-landing);
   background-image:
     linear-gradient(to top, rgba(246,241,230,0) 0%, rgba(246,241,230,0.55) 62%, var(--color-bg-landing) 92%),
@@ -1157,12 +1288,30 @@ a.btn-secondary:hover {
   background-position: 0 0, 0 0;
   display: flex;
   flex-direction: column;
-  transition: width 220ms ease, opacity 220ms ease;
+  transition: width 340ms cubic-bezier(.22,.61,.36,1), border-color 340ms ease, box-shadow 340ms ease;
+}
+/* The panel closes like a drawer: its contents glide left and fade a beat
+   ahead of the width, so nothing is seen being clipped by the closing edge,
+   and fade back in just after it reopens. */
+.page-app .rail > * {
+  transition: opacity 240ms ease 90ms, transform 340ms cubic-bezier(.22,.61,.36,1);
 }
 .page-app .rail.is-collapsed {
   width: 0;
-  opacity: 0;
+  border-right-color: transparent;
+  box-shadow: none;
   pointer-events: none;
+}
+.page-app .rail.is-collapsed > * {
+  opacity: 0;
+  transform: translateX(-28px);
+  transition: opacity 160ms ease, transform 340ms cubic-bezier(.22,.61,.36,1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-app .rail,
+  .page-app .rail > * {
+    transition: none;
+  }
 }
 .page-app .rail-section {
   width: 262px;
@@ -1214,6 +1363,7 @@ a.btn-secondary:hover {
   border: 1px solid var(--color-divider);
   background: var(--color-bg-card);
   box-shadow: 0 10px 24px -12px rgba(38, 37, 33, 0.25);
+  border-radius: var(--radius-soft);
 }
 .page-app .scope-switcher-item {
   width: 100%;
@@ -1442,6 +1592,7 @@ a.btn-secondary:hover {
   border: 1px solid var(--color-danger-border);
   cursor: pointer;
   color: var(--color-danger-text);
+  border-radius: var(--radius-soft);
 }
 .page-app .rail-signout:hover {
   background: var(--color-danger-hover-bg);
@@ -1485,8 +1636,12 @@ a.btn-secondary:hover {
   z-index: 0;
   overflow: hidden;
   padding: 22px 40px;
+  /* Matches the rail's "You are in" block so both bottom dividers line up. */
+  box-sizing: border-box;
+  min-height: 107px;
   border-bottom: 1px solid var(--color-divider);
   background: var(--color-bg-panel);
+  box-shadow: 0 8px 16px -14px rgba(38,37,33,0.14);
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -1519,8 +1674,8 @@ a.btn-secondary:hover {
 .page-app .cal-nav-btn {
   width: 30px;
   height: 30px;
-  border: 1px solid #d8cfbc;
-  background: var(--color-bg-card);
+  border: 1px solid transparent;
+  background: rgba(38,37,33,0.045);
   color: var(--color-text-soft);
   display: flex;
   align-items: center;
@@ -1528,10 +1683,14 @@ a.btn-secondary:hover {
   cursor: pointer;
   padding: 0;
   font-size: 13px;
+  border-radius: var(--radius-soft);
+  box-shadow: none;
 }
 .page-app .cal-nav-btn:hover {
-  border-color: var(--color-accent);
   color: var(--color-text);
+  background: var(--color-accent-hover-bg);
+  box-shadow: none;
+  transform: none;
 }
 .page-app .cal-heading {
   font-family: var(--font-heading);
@@ -1579,6 +1738,7 @@ a.btn-secondary:hover {
   border: 1px solid #d8cfbc;
   background: var(--color-bg-card);
   padding: 8px 12px;
+  border-radius: var(--radius-soft);
 }
 .page-app .cal-jump-icon {
   color: var(--color-text-faint);
@@ -1598,6 +1758,8 @@ a.btn-secondary:hover {
   display: flex;
   border: 1px solid #d8cfbc;
   background: var(--color-bg-card);
+  border-radius: var(--radius-soft);
+  overflow: hidden;
 }
 .page-app .cal-segment button {
   font-family: var(--font-mono);
@@ -1633,6 +1795,7 @@ a.btn-secondary:hover {
   border: 1px solid var(--color-accent);
   padding: 10px 16px;
   cursor: pointer;
+  border-radius: var(--radius-soft);
 }
 .page-app .cal-new-task:disabled {
   cursor: not-allowed;
@@ -1890,7 +2053,9 @@ a.btn-secondary:hover {
   align-items: center;
   gap: 7px;
   padding: 9px 14px;
-  border: 1px solid var(--color-divider);
+  border: 1px solid transparent;
+  border-radius: var(--radius-soft);
+  background: rgba(38,37,33,0.045);
   font-family: var(--font-mono);
   font-size: 9.5px;
   letter-spacing: 0.12em;
@@ -1903,6 +2068,8 @@ a.btn-secondary:hover {
   grid-template-columns: repeat(3, 1fr);
   border: 1px solid var(--color-divider);
   background: var(--color-bg-panel);
+  border-radius: var(--radius-soft);
+  overflow: hidden;
 }
 .page-app .settings-stat {
   padding: 14px 20px;
@@ -1982,22 +2149,27 @@ a.btn-secondary:hover {
   font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  background: transparent;
-  border: 1px solid var(--color-accent);
+  background: rgba(38,37,33,0.045);
+  border: 1px solid transparent;
   color: var(--color-text);
   padding: 10px 18px;
   cursor: pointer;
   flex-shrink: 0;
+  border-radius: var(--radius-soft);
+  box-shadow: none;
 }
 .page-app .settings-toggle-btn:hover {
   background: var(--color-accent-hover-bg);
+  box-shadow: none;
+  transform: none;
 }
 .page-app .settings-toggle-btn.settings-toggle-btn--danger {
-  border-color: var(--color-danger-border);
+  border-color: transparent;
   color: var(--color-danger-text);
+  background: rgba(176, 48, 40, 0.05);
 }
 .page-app .settings-toggle-btn.settings-toggle-btn--danger:hover {
-  background: rgba(176, 48, 40, 0.08);
+  background: rgba(176, 48, 40, 0.1);
 }
 .page-app .settings-toggle-btn:disabled {
   opacity: 0.5;
@@ -2051,11 +2223,13 @@ a.btn-secondary:hover {
   padding: 6px;
   cursor: pointer;
   box-shadow: none;
+  border-radius: var(--radius-soft);
 }
 .page-app .admin-search-clear:hover {
   color: var(--color-accent);
   box-shadow: none;
   transform: none;
+  background: var(--color-accent-hover-bg);
 }
 .page-app .admin-filter-chips {
   display: flex;
@@ -2072,6 +2246,7 @@ a.btn-secondary:hover {
   color: var(--color-text-soft);
   cursor: pointer;
   box-shadow: none;
+  border-radius: var(--radius-soft);
 }
 .page-app .admin-filter-chip:hover {
   box-shadow: none;
@@ -2158,11 +2333,13 @@ a.btn-secondary:hover {
   padding: 6px;
   cursor: pointer;
   box-shadow: none;
+  border-radius: var(--radius-soft);
 }
 .page-app .admin-bulk-clear:hover {
   color: var(--color-text);
   box-shadow: none;
   transform: none;
+  background: var(--color-accent-hover-bg);
 }
 
 .page-app .admin-list {
@@ -2594,6 +2771,7 @@ a.btn-secondary:hover {
   padding: 3px;
   width: fit-content;
   margin-bottom: 10px;
+  border-radius: var(--radius-soft);
 }
 .page-app .todo-switch-btn {
   font-family: var(--font-body);
@@ -2607,6 +2785,7 @@ a.btn-secondary:hover {
   color: var(--color-text-faint);
   cursor: pointer;
   box-shadow: none;
+  border-radius: 2px;
 }
 .page-app .todo-switch-btn:hover {
   color: var(--color-text);
@@ -2651,6 +2830,7 @@ a.btn-secondary:hover {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%238b8579' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
+  border-radius: var(--radius-soft);
 }
 .page-app .todo-category-filter:hover {
   color: var(--color-text);
@@ -2675,6 +2855,16 @@ a.btn-secondary:hover {
 }
 .page-app .todo-body {
   margin-top: 8px;
+}
+/* Space Tasks renders its own cards, so only the plain-row lists get one. */
+.page-app #todo-body,
+.page-app #all-todo-body {
+  margin-top: 18px;
+  padding: 4px 24px;
+  border: 1px solid #dcd3c0;
+  border-radius: var(--radius-soft);
+  background: #fffefb;
+  box-shadow: 0 1px 0 #ffffff inset, 0 1px 2px rgba(38,37,33,0.05), 0 6px 14px -6px rgba(38,37,33,0.07), 0 26px 44px -26px rgba(38,37,33,0.24);
 }
 .page-app .todo-row {
   display: flex;
@@ -2761,11 +2951,13 @@ a.btn-secondary:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: var(--radius-soft);
 }
 .page-app .todo-row-action-btn:hover {
   color: var(--color-accent);
   box-shadow: none;
   transform: none;
+  background: var(--color-accent-hover-bg);
 }
 .page-app .todo-empty {
   font-size: 13.5px;
@@ -2982,11 +3174,13 @@ a.btn-secondary:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: var(--radius-soft);
 }
 .page-app .space-todo-row-action-btn:hover {
   color: var(--color-accent);
   box-shadow: none;
   transform: none;
+  background: var(--color-accent-hover-bg);
 }
 /* One shared layout for every empty state (teacup or checkmark) — a
    fixed-height icon slot the icon centers within, so the "Nothing left"/
@@ -3041,6 +3235,7 @@ a.btn-secondary:hover {
   flex-shrink: 0;
   border-left: 1px solid var(--color-divider);
   background: var(--color-bg-panel);
+  box-shadow: inset 10px 0 18px -16px rgba(38,37,33,0.12);
   padding: 34px 32px;
   overflow-y: auto;
 }
@@ -3112,19 +3307,24 @@ a.btn-secondary:hover {
   min-height: 0;
 }
 .page-app .notes-lock-now-btn {
+  box-shadow: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 34px;
   height: 34px;
-  border: 1px solid var(--color-accent);
-  background: transparent;
-  color: var(--color-text);
+  border: 1px solid transparent;
+  border-radius: var(--radius-soft);
+  background: rgba(38,37,33,0.045);
+  color: var(--color-text-soft);
   cursor: pointer;
   flex-shrink: 0;
 }
 .page-app .notes-lock-now-btn:hover {
   background: var(--color-accent-hover-bg);
+  color: var(--color-text);
+  box-shadow: none;
+  transform: none;
 }
 /* A locked-and-still-redacted list row: the title is real (the server only
    redacts description — see items.routes.js's redactIfLocked), but styled
@@ -3149,6 +3349,7 @@ a.btn-secondary:hover {
   color: #a09889;
 }
 .page-app .notes-lock-toggle-btn {
+  box-shadow: none;
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.1em;
@@ -3156,17 +3357,20 @@ a.btn-secondary:hover {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: transparent;
-  border: 1px solid var(--color-accent);
-  color: var(--color-text);
+  background: rgba(38,37,33,0.045);
+  border: 0;
+  border-radius: var(--radius-soft);
+  color: var(--color-text-muted);
   padding: 7px 11px;
   cursor: pointer;
 }
 .page-app .notes-lock-toggle-btn:hover {
   background: var(--color-accent-hover-bg);
+  color: var(--color-text);
+  box-shadow: none;
+  transform: none;
 }
 .page-app .notes-lock-toggle-btn.is-locked {
-  border-color: #b68235;
   color: #8a6427;
 }
 .page-app .notes-unlock-body {
@@ -3328,6 +3532,7 @@ a.btn-secondary:hover {
   transform: none;
 }
 .page-app .notes-delete-btn {
+  box-shadow: none;
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.1em;
@@ -3335,14 +3540,18 @@ a.btn-secondary:hover {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: transparent;
-  border: 1px solid var(--color-danger-border);
+  background: rgba(176, 48, 40, 0.05);
+  border: 0;
+  border-radius: var(--radius-soft);
   color: var(--color-danger-text);
   padding: 7px 11px;
   cursor: pointer;
 }
 .page-app .notes-delete-btn:hover {
-  background: rgba(176, 48, 40, 0.08);
+  background: rgba(176, 48, 40, 0.1);
+  color: var(--color-danger-text);
+  box-shadow: none;
+  transform: none;
 }
 .page-app .notes-editor-title-row {
   display: flex;
@@ -3374,7 +3583,7 @@ a.btn-secondary:hover {
   font-size: 40px;
   color: var(--color-text);
   padding: 0 0 14px;
-  border-bottom: 1px solid var(--color-divider-soft);
+  border-bottom: 1px solid transparent;
 }
 .page-app .notes-editor-title-input:focus {
   outline: none;
@@ -3513,11 +3722,13 @@ a.btn-secondary:hover {
 }
 .page-app .notes-editor-toolbar {
   display: flex;
+  align-self: flex-start;
   align-items: center;
   gap: 4px;
-  padding-bottom: 10px;
-  margin-bottom: 10px;
-  border-bottom: 1px solid #ece5d6;
+  padding: 4px;
+  margin-bottom: 18px;
+  border-radius: var(--radius-soft);
+  background: rgba(38,37,33,0.035);
 }
 .page-app .notes-toolbar-btn {
   display: inline-flex;
@@ -3566,8 +3777,8 @@ a.btn-secondary:hover {
 }
 .page-app .notes-toolbar-size {
   height: 26px;
-  border: 1px solid #e2d9c6;
-  background: #fffdf9;
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--color-text-soft);
   font-family: var(--font-mono);
   font-size: 9px;
@@ -3736,7 +3947,7 @@ a.btn-secondary:hover {
 .page-app .space-roster-action-btn {
   background: transparent;
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-soft);
   cursor: pointer;
   color: var(--color-text-faint);
   width: 26px;
@@ -3764,14 +3975,18 @@ a.btn-secondary:hover {
   text-transform: uppercase;
   white-space: nowrap;
   flex-shrink: 0;
-  background: transparent;
-  border: 1px solid var(--color-danger-border);
+  background: rgba(176, 48, 40, 0.05);
+  border: 1px solid transparent;
   color: var(--color-danger-text);
   padding: 10px 18px;
   cursor: pointer;
+  border-radius: var(--radius-soft);
+  box-shadow: none;
 }
 .page-app .space-leave-btn:hover {
-  background: rgba(176, 48, 40, 0.08);
+  background: rgba(176, 48, 40, 0.1);
+  box-shadow: none;
+  transform: none;
 }
 
 .page-app .urgent-panel {
@@ -3779,9 +3994,10 @@ a.btn-secondary:hover {
   box-sizing: border-box;
   flex-shrink: 0;
   border: 1px solid #dcd3c0;
-  border-radius: 3px;
+  border-top: 2px solid var(--color-accent);
+  border-radius: var(--radius-soft);
   background: linear-gradient(#fbf7ee, #f7f2e6);
-  box-shadow: 0 12px 26px -18px rgba(38,37,33,0.13), 0 2px 5px rgba(38,37,33,0.04);
+  box-shadow: 0 1px 2px rgba(38,37,33,0.04), 0 10px 22px -18px rgba(38,37,33,0.12);
   display: flex;
   flex-direction: column;
 }
@@ -3856,6 +4072,11 @@ a.btn-secondary:hover {
     height: calc(100dvh - 62px);
     left: 0;
     z-index: 4;
+    transition: transform 340ms cubic-bezier(.22,.61,.36,1), box-shadow 340ms ease;
+  }
+  .page-app .rail.is-collapsed {
+    width: 262px;
+    transform: translateX(-100%);
   }
   .page-app .rail:not(.is-collapsed) {
     box-shadow: 8px 0 24px rgba(38,37,33,0.18);
@@ -4067,9 +4288,9 @@ a.btn-secondary:hover {
   display: flex;
   flex-direction: column;
   border: 1px solid #dcd3c0;
-  border-radius: 3px;
-  background: #fefdf9;
-  box-shadow: 0 1px 0 #fffefb inset, 0 14px 30px -18px rgba(38,37,33,0.14), 0 2px 6px rgba(38,37,33,0.04);
+  border-radius: var(--radius-soft);
+  background: #fffefb;
+  box-shadow: 0 1px 0 #ffffff inset, 0 1px 2px rgba(38,37,33,0.05), 0 6px 14px -6px rgba(38,37,33,0.07), 0 26px 44px -26px rgba(38,37,33,0.24);
   overflow: hidden;
 }
 
@@ -4458,6 +4679,7 @@ a.btn-secondary:hover {
   background: var(--color-bg-card);
   border: 1px solid var(--color-divider);
   box-shadow: 0 24px 60px -20px rgba(38, 37, 33, 0.4);
+  border-radius: var(--radius-soft);
 }
 
 /* Wider than the default modal — roster rows need more room than a form,
@@ -4651,9 +4873,22 @@ a.btn-secondary:hover {
   font-family: var(--font-body);
   font-size: 13.5px;
   color: var(--color-text);
+  border-radius: var(--radius-soft);
 }
 .page-app .field textarea {
   resize: vertical;
+}
+/* Same custom chevron as .todo-category-filter, inset to line up with the
+   date/time pickers' icons beside it instead of the native arrow's flush edge. */
+.page-app .field select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%238b8579' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px;
+  cursor: pointer;
 }
 .page-app .field input:disabled,
 .page-app .field select:disabled,
@@ -4687,6 +4922,7 @@ a.btn-secondary:hover {
   color: var(--color-text);
   cursor: pointer;
   box-shadow: none;
+  border-radius: var(--radius-soft);
 }
 .page-app .picker-btn:hover {
   box-shadow: none;
@@ -4719,6 +4955,7 @@ a.btn-secondary:hover {
 .page-app .date-popover {
   width: 240px;
   padding: 10px;
+  border-radius: var(--radius-soft);
 }
 
 /* Same floating-panel treatment as date/time popovers, but position:
@@ -4806,18 +5043,19 @@ a.btn-secondary:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #d8cfbc;
-  background: transparent;
+  border: 1px solid transparent;
+  background: rgba(38,37,33,0.045);
   color: var(--color-text-soft);
   cursor: pointer;
   padding: 0;
   font-size: 11px;
   box-shadow: none;
+  border-radius: var(--radius-soft);
 }
 .page-app .date-popover-nav-btn:hover {
   box-shadow: none;
   transform: none;
-  border-color: var(--color-accent);
+  background: var(--color-accent-hover-bg);
 }
 .page-app .date-popover-label {
   font-family: var(--font-mono);
@@ -4931,11 +5169,13 @@ a.btn-secondary:hover {
   font-size: 10px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  background: transparent;
-  border: 1px solid var(--color-secondary-border);
+  background: rgba(38,37,33,0.045);
+  border: 1px solid transparent;
   color: var(--color-secondary-text);
   padding: 12px 20px;
   cursor: pointer;
+  border-radius: var(--radius-soft);
+  box-shadow: none;
 }
 .page-app .modal-submit,
 .page-app .add-space-submit {
@@ -4948,6 +5188,7 @@ a.btn-secondary:hover {
   color: var(--color-text);
   padding: 12px 22px;
   cursor: pointer;
+  border-radius: var(--radius-soft);
 }
 .page-app .modal-submit:hover,
 .page-app .add-space-submit:hover {
@@ -5080,11 +5321,13 @@ a.btn-secondary:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: var(--radius-soft);
 }
 .page-app .day-panel-add-btn:hover {
   color: var(--color-accent);
   box-shadow: none;
   transform: none;
+  background: var(--color-accent-hover-bg);
 }
 .page-app .day-panel-body {
   padding: 10px 24px 22px;
@@ -5225,15 +5468,18 @@ a.btn-secondary:hover {
   cursor: pointer;
   box-shadow: none;
   color: var(--color-text-faint);
+  border-radius: var(--radius-soft);
 }
 .page-app .day-panel-edit-btn:hover,
 .page-app .day-panel-delete-btn:hover {
   box-shadow: none;
   transform: none;
   color: var(--color-accent-link);
+  background: var(--color-accent-hover-bg);
 }
 .page-app .day-panel-delete-btn:hover {
   color: var(--color-danger-text);
+  background: rgba(176, 48, 40, 0.08);
 }
 
 /* Toasts — live-update notices (a role change pushed over SSE, so far),

@@ -4,14 +4,18 @@
   --font-body: 'Jost', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
 
+  /* Shape — one small corner radius for buttons, inputs and panels, so the UI
+     stays crisp without reading as hard-edged boxes. */
+  --radius-soft: 3px;
+
   /* Base surfaces */
   --color-bg: #f4efe4;
   --color-bg-landing: #f6f1e6;
   --color-bg-card: #fdfcf8;
   --color-bg-panel: #f9f5ec;
-  --color-bg-app-shell-start: #f6f1e6;
-  --color-bg-app-shell-mid: #efe8da;
-  --color-bg-app-shell-end: #e8e0cf;
+  --color-bg-app-shell-start: #fdfbf6;
+  --color-bg-app-shell-mid: #fbf8f1;
+  --color-bg-app-shell-end: #f8f4eb;
 
   /* Text */
   --color-text: #262521;

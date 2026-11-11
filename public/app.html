@@ -24,7 +24,6 @@
   <a class="brand" href="/">
     <img decoding="async" class="brand-mark" src="/assets/classync-mark.png" alt="Classync">
     <span class="wordmark">Classync</span>
-    <span class="tagline">Classic way to stay in sync</span>
   </a>
   <span class="spacer"></span>
   <span class="role-label">Personal planner</span>
@@ -67,7 +66,6 @@
     </div>
 
     <div id="rail-nav-personal" class="rail-section rail-nav">
-      <div class="rail-heading">Personal · view</div>
       <button id="personal-nav-calendar" class="rail-item is-active" type="button">
         <svg class="rail-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
         <span class="rail-item-label">Calendar</span>
@@ -84,7 +82,6 @@
     </div>
 
     <div id="rail-nav-space" class="rail-section rail-nav" hidden>
-      <div id="rail-nav-space-heading" class="rail-heading">Space · view</div>
       <button id="space-nav-calendar" class="rail-item is-active" type="button">
         <svg class="rail-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
         <span class="rail-item-label">Calendar</span>
@@ -101,7 +98,6 @@
     </div>
 
     <div id="rail-nav-all" class="rail-section rail-nav" hidden>
-      <div class="rail-heading">All · view</div>
       <button id="all-nav-calendar" class="rail-item is-active" type="button">
         <svg class="rail-item-icon" width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
         <span class="rail-item-label">Calendar</span>
@@ -157,7 +153,7 @@
     <div class="cal-toolbar">
       <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
       <div class="cal-toolbar-left">
-        <div class="cal-kicker">Personal · calendar</div>
+        <div class="cal-kicker">Personal</div>
         <div class="cal-nav">
           <button id="cal-prev" class="cal-nav-btn" type="button" aria-label="Previous">←</button>
           <div class="cal-heading"><span id="cal-month"></span> <span id="cal-year" class="cal-year"></span></div>
@@ -193,7 +189,6 @@
 
       <div class="urgent-panel">
         <div class="urgent-head">
-          <div class="urgent-kicker">Urgent</div>
           <div class="urgent-title">Due now</div>
         </div>
         <div id="urgent-body" class="urgent-body">
@@ -207,7 +202,7 @@
       <div class="cal-toolbar">
         <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
         <div class="cal-toolbar-left">
-          <div class="cal-kicker">Personal · to do</div>
+          <div class="cal-kicker">Personal</div>
           <div class="toolbar-heading">To Do</div>
         </div>
         <div class="cal-toolbar-right">
@@ -237,7 +232,6 @@
         </div>
         <div class="todo-rail">
           <div class="todo-rail-head">
-            <div class="urgent-kicker">Urgent</div>
             <div class="urgent-title">Due now</div>
           </div>
           <div id="todo-due-body" class="todo-due-body"></div>
@@ -251,7 +245,7 @@
       <div class="cal-toolbar">
         <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
         <div class="cal-toolbar-left">
-          <div class="cal-kicker">Personal · notes</div>
+          <div class="cal-kicker">Personal</div>
           <div class="toolbar-heading">Notes</div>
         </div>
         <div class="cal-toolbar-right">
@@ -337,7 +331,7 @@
       <div class="cal-toolbar">
         <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
         <div class="cal-toolbar-left">
-          <div id="space-cal-kicker" class="cal-kicker">Space · calendar</div>
+          <div id="space-cal-kicker" class="cal-kicker">Space</div>
           <div class="cal-nav">
             <button id="space-cal-prev" class="cal-nav-btn" type="button" aria-label="Previous">←</button>
             <div class="cal-heading"><span id="space-cal-month"></span> <span id="space-cal-year" class="cal-year"></span></div>
@@ -363,7 +357,6 @@
 
         <div class="urgent-panel">
           <div class="urgent-head">
-            <div class="urgent-kicker">Urgent</div>
             <div class="urgent-title">Due now</div>
           </div>
           <div id="space-urgent-body" class="urgent-body">
@@ -377,7 +370,7 @@
       <div class="cal-toolbar">
         <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
         <div class="cal-toolbar-left">
-          <div id="space-members-kicker" class="cal-kicker">Space · members</div>
+          <div id="space-members-kicker" class="cal-kicker">Space</div>
           <div class="toolbar-heading">Members</div>
         </div>
       </div>
@@ -420,7 +413,7 @@
       <div class="cal-toolbar">
         <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
         <div class="cal-toolbar-left">
-          <div id="space-todo-kicker" class="cal-kicker">Space · tasks</div>
+          <div id="space-todo-kicker" class="cal-kicker">Space</div>
           <div class="toolbar-heading">Tasks</div>
         </div>
         <div class="cal-toolbar-right">
@@ -455,7 +448,7 @@
       <div class="cal-toolbar">
         <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
         <div class="cal-toolbar-left">
-          <div class="cal-kicker">All Spaces · calendar</div>
+          <div class="cal-kicker">All Spaces</div>
           <div class="cal-nav">
             <button id="all-cal-prev" class="cal-nav-btn" type="button" aria-label="Previous">←</button>
             <div class="cal-heading"><span id="all-cal-month"></span> <span id="all-cal-year" class="cal-year"></span></div>
@@ -502,7 +495,6 @@
 
         <div class="urgent-panel">
           <div class="urgent-head">
-            <div class="urgent-kicker">Urgent</div>
             <div class="urgent-title">Due now</div>
           </div>
           <div id="all-urgent-body" class="urgent-body">
@@ -516,7 +508,7 @@
       <div class="cal-toolbar">
         <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
         <div class="cal-toolbar-left">
-          <div class="cal-kicker">All Spaces · to do</div>
+          <div class="cal-kicker">All Spaces</div>
           <div class="toolbar-heading">To Do</div>
         </div>
         <div class="cal-toolbar-right">
@@ -555,8 +547,7 @@
         </div>
         <div class="todo-rail">
           <div class="todo-rail-head">
-            <div class="urgent-kicker">Upcoming</div>
-            <div class="urgent-title">Events</div>
+            <div class="urgent-title">Upcoming events</div>
           </div>
           <div id="all-todo-due-body" class="todo-due-body"></div>
           <img class="todo-rail-plate" src="/assets/swan.png" alt="" aria-hidden="true">
@@ -569,7 +560,7 @@
       <div class="cal-toolbar">
         <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
         <div class="cal-toolbar-left">
-          <div class="cal-kicker">Account · settings</div>
+          <div class="cal-kicker">Account</div>
           <div class="toolbar-heading">Settings</div>
         </div>
       </div>
@@ -691,7 +682,6 @@
       <div class="cal-toolbar">
         <img class="cal-toolbar-plate" src="/assets/clouds.png" alt="" aria-hidden="true">
         <div class="cal-toolbar-left">
-          <div class="cal-kicker">Admin · console</div>
           <div class="toolbar-heading">Admin</div>
         </div>
         <div class="cal-toolbar-right">
@@ -3823,6 +3813,10 @@
     crossViewRefresh.personal = async () => {
       await Promise.all([refreshCalendarView(), loadUrgent(), refreshTodoView(), refreshNotesView()]);
     };
+    // Day view showing the day that just ended moves on to the new today.
+    crossViewRefresh.personalNewDay = (prevIso) => {
+      if (isoDate(dayDate) === prevIso) dayDate = new Date();
+    };
     // All's own "+ New" always creates a Personal task (there's no single
     // target Space in a merged view) — reuses this exact modal/flow rather
     // than a second one, so it gets the same validation, color picker, etc.
@@ -3851,7 +3845,6 @@
     const allView = document.getElementById('all-view');
     const railNavPersonal = document.getElementById('rail-nav-personal');
     const railNavSpace = document.getElementById('rail-nav-space');
-    const railNavSpaceHeading = document.getElementById('rail-nav-space-heading');
     const railNavAll = document.getElementById('rail-nav-all');
 
     const spaceNavCalendar = document.getElementById('space-nav-calendar');
@@ -3935,7 +3928,7 @@
       spaceView.hidden = false;
       spaceTodoView.hidden = true;
       spaceMembersView.hidden = true;
-      spaceCalKicker.textContent = `${currentSpace.name} · calendar`;
+      spaceCalKicker.textContent = currentSpace.name;
       saveViewState({ scope: 'space', spaceId: currentSpace.id, view: 'calendar' });
       refreshSpaceCalendarView();
       loadSpaceUrgent();
@@ -3948,7 +3941,7 @@
       spaceView.hidden = true;
       spaceTodoView.hidden = false;
       spaceMembersView.hidden = true;
-      spaceTodoKicker.textContent = `${currentSpace.name} · tasks`;
+      spaceTodoKicker.textContent = currentSpace.name;
       saveViewState({ scope: 'space', spaceId: currentSpace.id, view: 'tasks' });
       await refreshSpaceTodoView();
     }
@@ -3994,7 +3987,6 @@
       railNavPersonal.hidden = true;
       railNavSpace.hidden = false;
       railNavAll.hidden = true;
-      railNavSpaceHeading.textContent = `${space.name} · view`;
       showSpaceCalendar();
       closeSwitcher();
     }
@@ -4258,7 +4250,7 @@
       spaceMembersView.hidden = false;
 
       const isOrganizer = currentSpace.role === 'organizer';
-      spaceMembersKicker.textContent = `${currentSpace.name} · Members`;
+      spaceMembersKicker.textContent = currentSpace.name;
       spaceOrganizerTools.hidden = !isOrganizer;
       spaceRenameError.hidden = true;
       spaceLeaveError.hidden = true;
@@ -4292,9 +4284,8 @@
       }
       currentSpace.name = name;
       scopeLabel.textContent = name;
-      railNavSpaceHeading.textContent = `${name} · view`;
-      spaceCalKicker.textContent = `${name} · calendar`;
-      spaceMembersKicker.textContent = `${name} · Members`;
+      spaceCalKicker.textContent = name;
+      spaceMembersKicker.textContent = name;
       const switcherItem = spacesContainer.querySelector(`[data-space-id="${currentSpace.id}"] .scope-switcher-item-name`);
       if (switcherItem) switcherItem.textContent = name;
     });
@@ -5063,6 +5054,9 @@
       await Promise.all([refreshAllCalendarView(), loadAllUrgent(), refreshAllTodoView(), refreshAllDayPanel()]);
     }
     crossViewRefresh.all = refreshAllIfVisited;
+    crossViewRefresh.allNewDay = (prevIso) => {
+      if (isoDate(allDayDate) === prevIso) allDayDate = new Date();
+    };
 
     // Live-update handlers for events pushed over SSE (see the top-level
     // EventSource listener near the bottom of the file) — registered on
@@ -5765,11 +5759,40 @@
       updateConnectivityBanner();
     }
     setInterval(pollTick, POLL_INTERVAL_MS);
+
+    // The date can roll over while the app stays open — overnight, or a laptop
+    // waking from sleep. Every view already reads "today" fresh when it redraws,
+    // so on a new day: move any Day view that was on the old today along with
+    // it, then redraw right away instead of waiting for the next poll. Checked
+    // at midnight and whenever the tab comes back into view (timers don't run
+    // while a laptop sleeps).
+    let lastSeenToday = isoDate(new Date());
+    async function checkForNewDay() {
+      const nowIso = isoDate(new Date());
+      if (nowIso === lastSeenToday) return;
+      const prevIso = lastSeenToday;
+      lastSeenToday = nowIso;
+      crossViewRefresh.personalNewDay?.(prevIso);
+      crossViewRefresh.allNewDay?.(prevIso);
+      await pollTick();
+    }
+    function scheduleMidnightCheck() {
+      const now = new Date();
+      const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
+      setTimeout(async () => {
+        await checkForNewDay();
+        scheduleMidnightCheck();
+      }, nextMidnight - now);
+    }
+    scheduleMidnightCheck();
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) checkForNewDay();
+    });
   }
 
   document.getElementById('sign-out').addEventListener('click', async () => {
     await fetch('/auth/logout', { method: 'POST' });
-    window.location.href = '/';
+    window.location.href = '/signin.html';
   });
 
   const rail = document.getElementById('rail');
