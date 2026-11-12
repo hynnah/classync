@@ -138,7 +138,13 @@ html:has(> body.page-landing) {
 @media (prefers-reduced-motion: reduce) {
   html:has(> body.page-landing) { scroll-behavior: auto; }
 }
-.page-landing .content { position: relative; z-index: 1; }
+.page-landing .content {
+  position: relative; z-index: 1;
+  /* The reading veils (and tilted stationery) reach past their sections by
+     design; clip that sideways spill so it never widens the page. `clip`, not
+     `hidden`, so the sticky nav inside keeps working. */
+  overflow-x: clip;
+}
 /* Reading veil: the drifting clouds pass behind every text block, so each one
    gently lightens whatever is behind it (brighter, lower contrast — no blur, so
    there's no sharp-vs-soft boundary to give its shape away), fading out over a
@@ -151,7 +157,7 @@ html:has(> body.page-landing) {
 .page-landing .hero-copy,
 .page-landing .hero-bottom p,
 .page-landing .section-head h2,
-.page-landing .three-grid,
+.page-landing .piece figcaption,
 .page-landing .planner-grid > div:first-child,
 .page-landing #how,
 .page-landing .begin-label,
@@ -169,7 +175,7 @@ html:has(> body.page-landing) {
 .page-landing .hero-copy::before,
 .page-landing .hero-bottom p::before,
 .page-landing .section-head h2::before,
-.page-landing .three-grid::before,
+.page-landing .piece figcaption::before,
 .page-landing .planner-grid > div:first-child::before,
 .page-landing #how::before,
 .page-landing .begin-label::before,
@@ -179,8 +185,8 @@ html:has(> body.page-landing) {
   inset: calc(-1 * var(--veil-y)) calc(-1 * var(--veil-x));
   z-index: -1;
   pointer-events: none;
-  -webkit-backdrop-filter: contrast(0.32) brightness(1.45);
-  backdrop-filter: contrast(0.32) brightness(1.45);
+  -webkit-backdrop-filter: contrast(0.32) brightness(1.49) saturate(2.1);
+  backdrop-filter: contrast(0.32) brightness(1.49) saturate(2.1);
   -webkit-mask-image:
     linear-gradient(to right, transparent, #000 140px, #000 calc(100% - 140px), transparent),
     linear-gradient(to bottom, transparent, #000 100px, #000 calc(100% - 100px), transparent);
@@ -195,13 +201,13 @@ html:has(> body.page-landing) {
    sections don't clip, so the wide fade eases the blur in gradually. The hero
    keeps the blur-free version — its overflow clip would cut the fade square. */
 .page-landing .section-head h2::before,
-.page-landing .three-grid::before,
+.page-landing .piece figcaption::before,
 .page-landing .planner-grid > div:first-child::before,
 .page-landing #how::before,
 .page-landing .begin-label::before,
 .page-landing .begin h2::before {
-  -webkit-backdrop-filter: blur(3px) contrast(0.32) brightness(1.45);
-  backdrop-filter: blur(3px) contrast(0.32) brightness(1.45);
+  -webkit-backdrop-filter: blur(3px) contrast(0.32) brightness(1.49) saturate(2.1);
+  backdrop-filter: blur(3px) contrast(0.32) brightness(1.49) saturate(2.1);
 }
 
 .page-landing nav {
@@ -217,8 +223,32 @@ html:has(> body.page-landing) {
 .page-landing nav a.plain:hover { color: var(--color-text); }
 .page-landing nav .btn-primary { padding: 11px 20px; background: rgba(255,253,248,0.7); }
 
-.page-landing header { position: relative; max-width: 1200px; margin: 0 auto; padding: 132px 56px 128px; overflow: hidden; }
-.page-landing .hero-magnolia { position: absolute; right: -30px; top: 40px; width: 300px; opacity: 0.4; transform: rotate(-120deg); pointer-events: none; }
+.page-landing header {
+  position: relative; max-width: 1200px; margin: 0 auto; padding: 96px 56px; overflow: hidden;
+  /* The hero fills the first screen (below the 78px sticky nav), so the next
+     section always starts just below the fold; svh accounts for mobile
+     browser toolbars, with vh as the fallback. Taller content still grows. */
+  min-height: calc(100vh - 78px);
+  min-height: calc(100svh - 78px);
+  display: flex; flex-direction: column; justify-content: center;
+}
+.page-landing .hero-magnolia {
+  /* Outside the hero (which clips at its 1200px content box) so the stem can
+     enter from the true screen edge; .content clips the overhang. The image's
+     stem is at its bottom, so -90deg brings it in from the right. */
+  position: absolute; right: -150px; top: 20px; width: 420px; z-index: 0;
+  opacity: 0.6; transform: rotate(-98deg); pointer-events: none;
+}
+/* A fainter, flipped branch low on the left, balancing the one on the right. */
+.page-landing .hero-magnolia--left {
+  right: auto; left: -200px; top: 520px; width: 260px;
+  opacity: 0.55; transform: rotate(84deg) scaleX(-1);
+}
+/* It lives in the left margin beside the text; once the margin is too narrow
+   to hold it clear of the copy, drop it rather than tuck it behind words. */
+@media (max-width: 1400px) {
+  .page-landing .hero-magnolia--left { display: none; }
+}
 .page-landing .hero-copy { position: relative; max-width: 760px; }
 .page-landing .eyebrow { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.28em; text-transform: uppercase; color: #45535a; }
 .page-landing .hero-copy h1 { font-family: var(--font-heading); font-weight: 300; font-size: 62px; line-height: 1.06; letter-spacing: -0.01em; margin: 22px 0 0; max-width: 20ch; }
@@ -230,12 +260,84 @@ html:has(> body.page-landing) {
 .page-landing .section-head { display: flex; align-items: baseline; gap: 22px; padding-bottom: 40px; border-bottom: 1px solid var(--color-divider); }
 .page-landing .section-head .num { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-accent-link); }
 .page-landing .section-head h2 { font-family: var(--font-heading); font-weight: 300; font-size: 40px; margin: 0; line-height: 1; }
-.page-landing .three-grid { display: grid; grid-template-columns: repeat(3, 1fr); padding-top: 40px; }
-.page-landing .three-grid > div { padding: 0 40px; border-right: 1px solid var(--color-divider); }
-.page-landing .three-grid > div:first-child { padding-left: 0; }
-.page-landing .three-grid > div:last-child { border-right: 0; padding-right: 0; }
-.page-landing .three-grid h3 { font-family: var(--font-heading); font-weight: 400; font-size: 27px; margin: 0 0 12px; line-height: 1.1; }
-.page-landing .three-grid p { font-size: 14px; line-height: 1.85; color: var(--color-text-muted); margin: 0; }
+/* The three features as stationery laid down the page — a ticket stub, a
+   notebook page, an index card — one per row, zig-zagging left, right, centre,
+   each tilted, with its caption, instead of three equal text columns. */
+.page-landing .spread {
+  display: grid; grid-template-columns: repeat(12, 1fr); column-gap: 24px; row-gap: 72px;
+  padding-top: 80px;
+}
+.page-landing .piece { margin: 0; }
+.page-landing .piece--ticket { grid-column: 2 / span 5; grid-row: 1; --tilt: -3.5deg; }
+.page-landing .piece--notebook { grid-column: 7 / span 5; grid-row: 2; --tilt: 4deg; }
+.page-landing .piece--card { grid-column: 4 / span 5; grid-row: 3; --tilt: -1deg; }
+.page-landing .piece--card figcaption { margin-left: auto; margin-right: auto; text-align: center; }
+.page-landing .piece figcaption { margin-top: 26px; max-width: 38ch; }
+.page-landing .piece h3 { font-family: var(--font-heading); font-weight: 400; font-size: 28px; margin: 0 0 8px; line-height: 1.1; }
+.page-landing .piece figcaption p {
+  font-family: var(--font-heading); font-style: italic; font-size: 19px; line-height: 1.5;
+  color: var(--color-text-muted); margin: 0;
+}
+.page-landing .ticket,
+.page-landing .notebook,
+.page-landing .index-card {
+  transform: rotate(var(--tilt));
+  box-shadow: 0 1px 2px rgba(38,37,33,0.06), 0 18px 34px -22px rgba(38,37,33,0.4);
+}
+
+.page-landing .ticket { display: flex; background: var(--color-bg-card); border: 1px solid var(--color-divider); }
+.page-landing .ticket-main { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 22px 24px; }
+.page-landing .ticket-stub {
+  display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 22px 22px;
+  border-left: 1px dashed #cfc6b2; background: var(--color-bg-landing);
+}
+.page-landing .ticket-label { font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-text-faint); }
+.page-landing .ticket-name { font-family: var(--font-heading); font-size: 30px; line-height: 1; }
+.page-landing .ticket-meta { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-accent-link); }
+.page-landing .ticket-code { font-family: var(--font-mono); font-size: 19px; letter-spacing: 0.28em; color: var(--color-text); }
+
+.page-landing .notebook {
+  position: relative; padding: 22px 26px 18px 52px;
+  background-color: #fffdf8;
+  background-image:
+    linear-gradient(to right, transparent 36px, rgba(196,120,110,0.45) 36px 37px, transparent 37px),
+    linear-gradient(transparent 31px, #e8dfd0 31px 32px);
+  background-size: 100% 100%, 100% 32px;
+  background-position: 0 0, 0 14px;
+  /* Torn top edge. */
+  clip-path: polygon(0 6px, 4% 0, 9% 5px, 15% 1px, 22% 6px, 30% 2px, 37% 5px, 45% 0, 53% 6px, 61% 2px, 68% 5px, 76% 0, 84% 5px, 91% 1px, 100% 5px, 100% 100%, 0 100%);
+}
+.page-landing .notebook-head {
+  display: flex; align-items: center; gap: 8px; height: 32px;
+  font-family: var(--font-heading); font-style: italic; font-size: 21px; color: var(--color-text); }
+.page-landing .notebook-head svg { color: var(--color-text-faint); }
+.page-landing .notebook ul { list-style: none; margin: 0; padding: 0; }
+.page-landing .notebook li { display: flex; align-items: center; gap: 10px; height: 32px; font-size: 14px; color: var(--color-text-muted); }
+.page-landing .notebook li.is-done { color: var(--color-text-faintest); text-decoration: line-through; }
+.page-landing .nb-box { width: 11px; height: 11px; border: 1px solid var(--color-personal-border); flex-shrink: 0; }
+.page-landing .notebook li.is-done .nb-box { background: var(--color-personal-tint); }
+
+.page-landing .index-card {
+  background: var(--color-bg-card); border: 1px solid var(--color-divider); padding: 0 22px 14px;
+  background-image: linear-gradient(transparent 45px, rgba(196,120,110,0.5) 45px 46px, transparent 46px);
+}
+.page-landing .index-card-head {
+  height: 46px; display: flex; align-items: center;
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-text-faint);
+}
+.page-landing .index-card ul { list-style: none; margin: 0; padding: 4px 0 0; }
+.page-landing .index-card li {
+  display: grid; grid-template-columns: 11px 1fr auto 28px; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--color-divider-soft); font-size: 14px; color: var(--color-text-muted);
+}
+.page-landing .index-card li:last-child { border-bottom: 0; }
+.page-landing .ic-box { width: 11px; height: 11px; border: 1px solid var(--color-space-task-border); }
+.page-landing .ic-due { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-text-faint); }
+.page-landing .ic-who {
+  justify-self: end; width: 26px; height: 22px; display: grid; place-items: center;
+  border: 1px solid var(--color-accent); font-family: var(--font-mono); font-size: 8.5px; color: var(--color-accent-link);
+}
+.page-landing .ic-who--all { border-color: var(--color-divider); color: var(--color-text-faint); }
 
 .page-landing #planner { padding-top: 120px; scroll-margin-top: -120px; }
 .page-landing .planner-grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 60px; align-items: center; }
@@ -306,11 +408,87 @@ html:has(> body.page-landing) {
 
 .page-landing #how { padding-top: 112px; scroll-margin-top: -112px; }
 .page-landing .how-head { border-bottom: 0; padding-bottom: 0; margin-bottom: 36px; }
-.page-landing .how-row { display: grid; grid-template-columns: 80px 1fr 1.2fr; gap: 30px; padding: 26px 0; border-top: 1px solid var(--color-divider); align-items: baseline; }
-.page-landing .how-row:last-child { border-bottom: 1px solid var(--color-divider); }
-.page-landing .how-row .num { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; color: #7a5419; }
-.page-landing .how-row .title { font-family: var(--font-heading); font-size: 27px; font-weight: 400; }
-.page-landing .how-row .desc { font-size: 14px; line-height: 1.85; color: var(--color-text-muted); }
+/* How it works as a route: a dotted line down the middle that draws itself
+   as you scroll (landing-reveal.js sets --route-progress), with the three
+   steps as stops alternating either side of it. */
+.page-landing .route { position: relative; list-style: none; margin: 24px 0 0; padding: 0; }
+.page-landing .route::before {
+  content: ''; position: absolute; left: 50%; width: 2px; margin-left: -1px;
+  /* Ends set by landing-reveal.js to the first and last numerals' centres. */
+  top: var(--route-top, 28px); bottom: var(--route-bottom, 28px);
+  background: repeating-linear-gradient(to bottom, rgba(182,130,53,0.7) 0 3px, transparent 3px 10px);
+  transform-origin: top; transform: scaleY(var(--route-progress, 1));
+}
+.page-landing .stop {
+  display: grid; grid-template-columns: 1fr 120px 1fr; align-items: center;
+  padding: 44px 0;
+}
+.page-landing .stop-num {
+  grid-column: 2; grid-row: 1; justify-self: center; position: relative;
+  width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center;
+  background: #fbf8f1; border: 1px solid var(--color-accent);
+  font-family: var(--font-heading); font-size: 24px; letter-spacing: 0.04em; color: #7a5419;
+}
+.page-landing .stop-body { grid-column: 1; grid-row: 1; text-align: right; }
+.page-landing .stop-visual { grid-column: 3; grid-row: 1; justify-self: start; }
+.page-landing .stop:nth-child(even) .stop-body { grid-column: 3; text-align: left; }
+.page-landing .stop:nth-child(even) .stop-visual { grid-column: 1; justify-self: end; }
+.page-landing .stop h3 { font-family: var(--font-heading); font-weight: 400; font-size: 30px; margin: 0 0 10px; line-height: 1.1; }
+.page-landing .stop-body p { font-size: 14px; line-height: 1.85; color: var(--color-text-muted); margin: 0; max-width: 40ch; }
+.page-landing .stop:nth-child(odd) .stop-body p { margin-left: auto; }
+
+.page-landing .mini-google {
+  display: inline-flex; align-items: center; gap: 10px; padding: 12px 18px;
+  background: var(--color-bg-card); border: 1px solid var(--color-accent);
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase;
+  box-shadow: 0 14px 26px -20px rgba(38,37,33,0.45);
+}
+.page-landing .mini-choices { display: flex; }
+.page-landing .mini-choices span {
+  width: 74px; height: 92px; display: flex; align-items: flex-end; padding: 10px;
+  background: var(--color-bg-card); border: 1px solid var(--color-divider);
+  font-family: var(--font-heading); font-size: 17px; color: var(--color-text);
+  box-shadow: 0 14px 26px -20px rgba(38,37,33,0.45);
+}
+.page-landing .mini-choices span:nth-child(1) { transform: rotate(-6deg); }
+.page-landing .mini-choices span:nth-child(2) { transform: translateY(-6px); margin-left: -12px; position: relative; }
+.page-landing .mini-choices span:nth-child(3) { transform: rotate(6deg); margin-left: -12px; background: var(--color-bg-landing); }
+.page-landing .mini-week {
+  display: grid; grid-template-columns: repeat(5, 54px); gap: 6px 4px; padding: 14px;
+  background: var(--color-bg-card); border: 1px solid var(--color-divider);
+  box-shadow: 0 14px 26px -20px rgba(38,37,33,0.45);
+}
+.page-landing .mini-week span {
+  font-family: var(--font-mono); font-size: 8.5px; letter-spacing: 0.16em; color: var(--color-text-faint);
+  padding-bottom: 6px; border-bottom: 1px solid var(--color-divider-soft);
+}
+.page-landing .mini-week i {
+  font-style: normal; font-size: 10px; padding: 3px 6px;
+  border-left-width: 3px; border-left-style: solid; /* colour comes from .pill--task/event/personal */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--color-text-muted);
+}
+
+/* Scroll reveal (landing-reveal.js adds .js-reveal to <html>, then .is-in to
+   each .reveal as it scrolls into view). Without JS, nothing is hidden. The
+   stationery settles into its tilt as it lands. */
+.js-reveal .page-landing .reveal {
+  opacity: 0; transform: translateY(32px);
+  transition: opacity .8s ease, transform 1s cubic-bezier(.22,.61,.36,1);
+  transition-delay: var(--reveal-delay, 0s);
+}
+.js-reveal .page-landing .reveal.is-in { opacity: 1; transform: none; }
+.js-reveal .page-landing .reveal :is(.ticket, .notebook, .index-card) {
+  transform: rotate(0deg);
+  transition: transform 1.2s cubic-bezier(.22,.61,.36,1);
+  transition-delay: calc(var(--reveal-delay, 0s) + .15s);
+}
+.js-reveal .page-landing .reveal.is-in :is(.ticket, .notebook, .index-card) { transform: rotate(var(--tilt)); }
+.page-landing .piece--notebook { --reveal-delay: .12s; }
+.page-landing .piece--card { --reveal-delay: .24s; }
+@media (prefers-reduced-motion: reduce) {
+  .js-reveal .page-landing .reveal,
+  .js-reveal .page-landing .reveal :is(.ticket, .notebook, .index-card) { transition: none; }
+}
 
 .page-landing .begin { padding: 104px 56px 116px; text-align: center; }
 .page-landing .begin-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: #7a5419; }
@@ -387,9 +565,22 @@ html:has(> body.page-landing) {
   }
 }
 @media (max-width: 900px) {
-  .page-landing .three-grid, .page-landing .planner-grid { grid-template-columns: 1fr; }
-  .page-landing .three-grid > div, .page-landing .planner-grid > div { border: 0 !important; padding: 24px 0 !important; }
-  .page-landing .how-row { grid-template-columns: 1fr; gap: 8px; }
+  .page-landing .planner-grid { grid-template-columns: 1fr; }
+  .page-landing .planner-grid > div { border: 0 !important; padding: 24px 0 !important; }
+  .page-landing .spread { grid-template-columns: 1fr; row-gap: 48px; }
+  .page-landing .piece--ticket,
+  .page-landing .piece--notebook,
+  .page-landing .piece--card { grid-column: 1; grid-row: auto; margin-top: 0; max-width: 460px; }
+  .page-landing .piece--notebook { justify-self: end; }
+  /* Route: line down the left, every stop on its right. */
+  .page-landing .route::before { left: 30px; }
+  .page-landing .stop { grid-template-columns: 60px 1fr; column-gap: 22px; row-gap: 20px; padding: 28px 0; }
+  .page-landing .stop-num { grid-column: 1; }
+  .page-landing .stop .stop-body,
+  .page-landing .stop:nth-child(even) .stop-body { grid-column: 2; text-align: left; }
+  .page-landing .stop .stop-visual,
+  .page-landing .stop:nth-child(even) .stop-visual { grid-column: 2; grid-row: 2; justify-self: start; }
+  .page-landing .stop:nth-child(odd) .stop-body p { margin-left: 0; }
   .page-landing .sticky-note,
   .page-landing .date-chip {
     display: none;
@@ -420,7 +611,10 @@ html:has(> body.page-landing) {
   }
 
   .page-landing header {
-    padding: 60px 20px 56px;
+    padding: 48px 20px;
+    /* The nav is 70px at this width. */
+    min-height: calc(100vh - 70px);
+    min-height: calc(100svh - 70px);
   }
   .page-landing .hero-copy h1 {
     font-size: 32px;
@@ -477,19 +671,13 @@ html:has(> body.page-landing) {
   .page-landing .hero-bottom p {
     font-size: 16px;
   }
-  .page-landing .three-grid p {
+  .page-landing .stop-body p {
     font-size: 15px;
   }
   .page-landing .section-head .num,
   .page-landing .begin-label,
   .page-landing .quote-label {
     font-size: 10.5px;
-  }
-  .page-landing .how-row .num {
-    font-size: 12px;
-  }
-  .page-landing .how-row .desc {
-    font-size: 15px;
   }
   .page-landing .legend {
     font-size: 11px;
@@ -535,12 +723,7 @@ html:has(> body.page-landing) {
     min-width: 490px;
   }
 
-  .page-landing .three-grid > div {
-    margin-bottom: 12px;
-  }
-  .page-landing .how-row {
-    row-gap: 6px;
-  }
+  .page-landing .mini-week { grid-template-columns: repeat(5, 44px); }
 }
 
 .page-signin {
@@ -837,22 +1020,18 @@ html:has(> body.page-landing) {
 .page-signin #signin-error { color: var(--color-danger-text); font-size: 12.5px; margin-top: 14px; }
 .page-signin #signin-error[hidden] { display: none; }
 
-.page-signin .facts {
+.page-signin .signin-aside {
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border-top: 1px solid var(--color-divider);
-  max-width: 1000px;
-  width: 100%;
-  margin: 20px auto 0;
+  max-width: 44ch;
+  margin: 22px auto 0;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.5;
+  color: #56534b;
 }
-.page-signin .facts > div { padding: 12px 48px 0; }
-.page-signin .facts > div:not(:last-child) { border-right: 1px solid var(--color-divider); }
-.page-signin .facts > div:first-child { padding-left: 0; }
-.page-signin .facts > div:last-child { padding-right: 0; }
-.page-signin .facts .fact { font-size: 13px; line-height: 1.7; color: #56534b; }
-.page-signin .facts .fact strong { color: var(--color-text); font-weight: 400; }
 
 @media (max-width: 640px) {
   .page-signin {
@@ -889,25 +1068,9 @@ html:has(> body.page-landing) {
     font-size: 10.5px;
     line-height: 1.5;
   }
-  .page-signin .facts {
-    grid-template-columns: 1fr;
-    row-gap: 8px;
-    margin-top: 10px;
-    background: rgba(251, 248, 241, 0.82);
-    padding: 10px 14px;
-  }
-  .page-signin .facts > div {
-    padding: 8px 0 0 !important;
-    border-right: 0 !important;
-    border-top: 1px solid var(--color-divider);
-  }
-  .page-signin .facts > div:first-child {
-    border-top: 0;
-    padding-top: 0 !important;
-  }
-  .page-signin .facts .fact {
-    font-size: 11.5px;
-    margin-top: 3px;
+  .page-signin .signin-aside {
+    font-size: 15px;
+    margin-top: 12px;
   }
 }
 
